@@ -1,0 +1,7 @@
+# 모델 파일을 이 폴더에 배치하세요
+# 필요한 파일:
+# - config.json
+# - pytorch_model.bin (또는 model.pkl, model.pt)
+# - label_mapping.json
+# - tokenizer/ 폴더 및 파일들
+

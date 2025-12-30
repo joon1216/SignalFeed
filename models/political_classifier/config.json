@@ -1,0 +1,20 @@
+{
+  "BERT_MODEL_NAME": "klue/roberta-base",
+  "MAX_LENGTH": 512,
+  "USE_TITLE": true,
+  "NUM_FILTERS": 100,
+  "FILTER_SIZES": [
+    2,
+    3,
+    4
+  ],
+  "DROPOUT": 0.3,
+  "EPOCHS": 10,
+  "BATCH_SIZE": 8,
+  "LEARNING_RATE": 3e-05,
+  "NUM_CLASSES": 5,
+  "VALIDATION_ACCURACY": 0.6088888888888889,
+  "TEST_ACCURACY": 0.636,
+  "VERSION": "V5",
+  "TIMESTAMP": "20251215_064311"
+}

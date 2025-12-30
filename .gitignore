@@ -1,0 +1,78 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# 환경 변수 및 민감한 정보
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# 테스트 파일 및 샘플 데이터
+naver_news_sample.html
+test_*.py
+*_test.py
+
+# 데이터 파일 (선택사항 - 샘플 데이터만 포함하려면 주석 해제)
+# data/**/*.jsonl
+# data/**/*.json
+# data/**/*.csv
+
+# 모델 파일 - 큰 바이너리 파일만 제외 (설정 파일은 포함)
+models/**/*.bin
+models/**/*.pt
+models/**/*.pkl
+models/**/*.h5
+models/**/*.ckpt
+# 설정 파일과 tokenizer는 포함
+!models/**/*.json
+!models/**/*.txt
+!models/**/tokenizer/
+
+# 로그 파일
+*.log
+logs/
+
+# 임시 파일
+*.tmp
+*.temp
+.cache/
+
+# Streamlit
+.streamlit/secrets.toml
+
