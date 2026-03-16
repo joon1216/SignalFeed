@@ -1,0 +1,75 @@
+services:
+  # ─────────────────────────────────────────────
+  # Streamlit 웹 앱
+  # ─────────────────────────────────────────────
+  app:
+    build: .
+    container_name: issuefit-app
+    ports:
+      - "8501:8501"
+    volumes:
+      # data/ 는 호스트와 공유 (파이프라인 결과 파일 실시간 반영)
+      - ./data:/app/data
+    environment:
+      # Docker 네트워크 내에서 ollama 서비스 이름으로 접근
+      # (호스트의 .env 파일에 있는 localhost:11434 를 덮어씀)
+      OLLAMA_BASE_URL: http://ollama:11434
+    env_file:
+      - .env
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - issuefit-net
+
+  # ─────────────────────────────────────────────
+  # Ollama LLM 서버 (요약 단계에 사용)
+  # ─────────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    container_name: issuefit-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      # 모델 데이터를 named volume에 영구 저장 (재시작해도 유지)
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - issuefit-net
+
+  # ─────────────────────────────────────────────
+  # 최초 실행 시 Ollama 모델 자동 다운로드
+  # gemma2:2b ≈ 1.6GB / 한 번만 다운로드됨
+  # ─────────────────────────────────────────────
+  ollama-init:
+    image: ollama/ollama:latest
+    container_name: issuefit-ollama-init
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: >
+      /bin/sh -c "
+        echo '[ollama-init] Pulling model: ${OLLAMA_MODEL:-gemma2:2b} ...' &&
+        ollama pull ${OLLAMA_MODEL:-gemma2:2b} &&
+        echo '[ollama-init] Done.'
+      "
+    restart: "no"
+    networks:
+      - issuefit-net
+
+volumes:
+  ollama-data:
+    name: issuefit-ollama-data
+
+networks:
+  issuefit-net:
+    name: issuefit-network

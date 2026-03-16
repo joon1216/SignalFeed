@@ -4,7 +4,59 @@
 
 ---
 
-## 🚀 빠른 시작
+## 🐳 Docker로 빠르게 시작하기 (권장)
+
+다른 PC에서 환경 구성 없이 바로 실행할 수 있습니다.
+
+### 사전 요구사항
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) 설치
+
+### 1단계: 환경 파일 준비
+
+```bash
+cp .env.example .env
+# .env 파일을 열어 NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 입력
+```
+
+### 2단계: 실행
+
+```bash
+docker compose up -d
+```
+
+최초 실행 시 자동으로 수행됩니다:
+- Python 앱 이미지 빌드 (~5-10분)
+- Ollama 서버 시작
+- gemma2:2b 모델 다운로드 (~1.6GB, 한 번만)
+
+### 3단계: 브라우저에서 열기
+
+```
+http://localhost:8501
+```
+
+### 파이프라인 실행 (데이터 갱신)
+
+```bash
+# 크롤링 → 분류 → 요약 전체 실행
+docker compose exec app python pipeline.py --steps 1,3,4
+
+# 특정 단계만 실행
+docker compose exec app python pipeline.py --steps 4
+```
+
+### 종료 / 재시작
+
+```bash
+docker compose down        # 중지
+docker compose up -d       # 재시작 (모델 재다운로드 없음)
+docker compose logs -f app # 로그 확인
+```
+
+---
+
+## 🚀 로컬 직접 실행
 
 ### 1. 설치
 

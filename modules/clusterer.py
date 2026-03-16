@@ -43,7 +43,8 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
         return output_jsonl
     
     df = pd.DataFrame(articles)
-    print(f"✅ {len(df)}개 기사 로드")
+    n_samples = len(df)
+    print(f"✅ {n_samples}개 기사 로드")
     
     # 2. 텍스트 전처리 및 벡터화
     print(f"\n>>> 텍스트 전처리 및 벡터화 중...")
@@ -53,17 +54,20 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     df['title'] = df['title'].fillna('').astype(str)
     df['content'] = df['content'].fillna('').astype(str)
     
-    # 제목과 본문을 결합 (제목에 더 높은 가중치, 본문은 핵심 부분만)
-    combined_text = (df['title'] + ' ' + df['title'] + ' ' + 
-                     df['content'].str[:2000])
+    # 제목 위주: 같은 이슈는 제목이 유사함. 본문은 '국회','정부' 등 공통어로 이질 기사가 섞임
+    combined_text = (df['title'] + ' ') * 8 + df['content'].str[:600]
     
-    # TF-IDF 벡터화 (단어 단위)
+    # 소규모 데이터(n<15)에서는 min_df 완화
+    min_df_word = 1 if n_samples < 15 else 2
+    min_df_char = 2 if n_samples < 15 else 3
+    
+    # TF-IDF 벡터화 (단어 단위, 2-gram까지로 축소해 과도한 유사도 억제)
     tfidf_word = TfidfVectorizer(
         analyzer='word',
-        ngram_range=(1, 3),
+        ngram_range=(1, 2),
         max_features=5000,
-        min_df=2,
-        max_df=0.9,
+        min_df=min_df_word,
+        max_df=0.85,
         sublinear_tf=True
     )
     word_vectors = tfidf_word.fit_transform(combined_text)
@@ -73,7 +77,7 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
         analyzer='char',
         ngram_range=(2, 4),
         max_features=1500,
-        min_df=3,
+        min_df=min_df_char,
         max_df=0.95
     )
     char_vectors = tfidf_char.fit_transform(combined_text)
@@ -86,9 +90,9 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     # 3. UMAP 차원 축소
     print(f"\n>>> UMAP 차원 축소 중...")
     
-    n_samples = combined_vectors.shape[0]
-    n_neighbors = min(15, n_samples - 1)
-    n_components = min(50, n_samples - 1)
+    # n_components가 n_samples에 가까우면 UMAP spectral layout에서 eigsh 오류 발생
+    n_neighbors = max(2, min(15, n_samples - 1))
+    n_components = 2 if n_samples < 60 else min(50, n_samples // 2)
     
     # 희소 행렬을 밀집 행렬로 변환
     if hasattr(combined_vectors, 'toarray'):
@@ -112,8 +116,13 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     # 4. HDBSCAN 클러스터링
     print(f"\n>>> HDBSCAN 클러스터링 중...")
     
-    min_cluster_size = max(3, int(n_samples * 0.05))  # 최소 3개 또는 전체의 5%
-    min_samples = max(2, min_cluster_size // 3)
+    # 클러스터 품질: 최소 4개로 올려 이슈 섞임 방지 (2~3개는 이질 기사가 잘못 묶일 수 있음)
+    if n_samples < 8:
+        min_cluster_size = 3
+        min_samples = 2
+    else:
+        min_cluster_size = max(4, int(n_samples * 0.1))
+        min_samples = max(2, min_cluster_size // 2)
     
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=min_cluster_size,
@@ -143,13 +152,14 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     clustered_df = df[df['cluster_id'] != -1].copy()
     clustered_clusters = sorted([c for c in clustered_df['cluster_id'].unique()])
     
-    # 일관성 낮은 클러스터를 노이즈로 재분류
+    # 일관성 낮은 클러스터를 노이즈로 재분류 (threshold 상향으로 이질 기사 혼합 방지)
     low_quality_clusters = []
     for cluster_id in clustered_clusters:
         cluster_data = clustered_df[clustered_df['cluster_id'] == cluster_id]
-        if not _check_cluster_consistency(cluster_data, threshold=0.3):
+        if not _check_cluster_consistency(cluster_data, threshold=0.7):
             low_quality_clusters.append(cluster_id)
             clustered_df.loc[clustered_df['cluster_id'] == cluster_id, 'cluster_id'] = -1
+            df.loc[df['cluster_id'] == cluster_id, 'cluster_id'] = -1  # 원본 df에도 반영
     
     if low_quality_clusters:
         print(f"  ⚠️ 일관성 낮은 클러스터 {len(low_quality_clusters)}개를 노이즈로 재분류했습니다.")
@@ -161,13 +171,15 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     
     print(f"✅ 최종 클러스터 수: {num_issues}개")
     
-    # 각 클러스터에 레이블 부여 (대표 제목 또는 주요 키워드)
+    # 각 클러스터에 레이블 부여 (대표 제목 또는 본문 기반 키워드)
     cluster_labels_dict = {}
     for cluster_id in clustered_clusters:
         cluster_data = clustered_df[clustered_df['cluster_id'] == cluster_id]
-        keywords = _get_cluster_keywords(cluster_data, top_n=3)
-        # 가장 긴 제목을 레이블로 사용
-        representative_title = max(cluster_data['title'], key=len)
+        # 제목이 비어있으면 본문에서 키워드 추출해서 레이블로 사용
+        representative_title = max(cluster_data['title'].astype(str), key=len)
+        if not representative_title or len(representative_title.strip()) < 5:
+            keywords = _get_cluster_keywords(cluster_data, top_n=3)
+            representative_title = ' '.join(keywords) if keywords else f"이슈 {cluster_id}"
         if len(representative_title) > 50:
             representative_title = representative_title[:50] + "..."
         cluster_labels_dict[cluster_id] = representative_title
@@ -194,38 +206,49 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     return output_jsonl
 
 
-def _get_cluster_keywords(cluster_data, top_n=5):
+def _get_cluster_keywords(cluster_data, top_n=5, use_content=True):
     """클러스터 내 가장 빈도 높은 키워드 추출"""
-    # 모든 제목을 합쳐서 키워드 추출
-    all_titles = ' '.join(cluster_data['title'].astype(str))
+    all_titles = ' '.join(cluster_data['title'].fillna('').astype(str))
+    text_for_keywords = all_titles
+    # 제목이 비어있으면 본문 앞부분(각 500자) 사용
+    if (not all_titles.strip() or len(all_titles.strip()) < 20) and 'content' in cluster_data.columns:
+        content_previews = cluster_data['content'].fillna('').astype(str).str[:500].fillna('')
+        text_for_keywords = ' '.join(content_previews)
     # 한글 단어만 추출 (2글자 이상)
-    words = re.findall(r'[가-힣]{2,}', all_titles)
+    words = re.findall(r'[가-힣]{2,}', text_for_keywords)
     word_counts = Counter(words)
     
-    # 너무 흔한 단어 제외
-    common_words = {'의원', '기자', '대통령', '정부', '국회', '당', '시', '군', '도', '구', '면', '동', '위원', '위원장', '의회', '의장'}
+    # 너무 흔한 단어 제외 (정치 뉴스 공통어 + 이슈 혼동 유발어)
+    common_words = {
+        '의원', '기자', '대통령', '정부', '국회', '당', '시', '군', '도', '구', '면', '동',
+        '위원', '위원장', '의회', '의장', '정치', '뉴스', '오늘', '사실', '관련', '발표',
+        '대표', '청와대', '여야', '야당', '여당', '국민', '우리', 'SBS', 'KBS', '조사', '기자'
+    }
     filtered_words = {word: count for word, count in word_counts.items() if word not in common_words}
     
     top_words = sorted(filtered_words.items(), key=lambda x: x[1], reverse=True)[:top_n]
     return [word for word, count in top_words]
 
 
-def _check_cluster_consistency(cluster_data, threshold=0.3):
-    """클러스터 내 일관성 검사"""
-    if len(cluster_data) < 3:
-        return True  # 작은 클러스터는 검증 스킵
+def _check_cluster_consistency(cluster_data, threshold=0.7):
+    """클러스터 내 일관성 검사 - 동일 이슈만 묶였는지 확인 (이질 기사 섞임 방지)"""
+    if len(cluster_data) < 2:
+        return True
     
-    keywords = _get_cluster_keywords(cluster_data, top_n=3)
-    if len(keywords) < 2:
-        return False  # 공통 키워드가 너무 적으면 일관성 낮음
+    keywords = _get_cluster_keywords(cluster_data, top_n=5, use_content=True)
+    if len(keywords) < 1:
+        return False
     
-    # 각 제목에서 주요 키워드가 나타나는 비율 확인
-    keyword_in_title_count = 0
+    # 가장 대표적인 키워드(상위 1개)가 70% 이상 기사에 있어야 같은 이슈
+    top1 = keywords[0]
+    match_count = 0
     for _, row in cluster_data.iterrows():
-        title = str(row['title'])
-        if any(keyword in title for keyword in keywords[:2]):  # 상위 2개 키워드 중 하나라도 있으면
-            keyword_in_title_count += 1
+        text = str(row.get('title', '') or '') + ' ' + str(row.get('content', '') or '')[:800]
+        if top1 in text:
+            match_count += 1
     
-    consistency_ratio = keyword_in_title_count / len(cluster_data)
-    return consistency_ratio >= threshold
+    ratio = match_count / len(cluster_data)
+    # 70% 미만이면 이질 기사 섞인 클러스터로 판단
+    return ratio >= threshold
+
 

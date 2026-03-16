@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # 모듈 임포트
-from modules.crawler import crawl_political_news
+from modules.clawler_ver2 import PoliticsNewsCrawler
 from modules.classifier import PoliticalClassifier
 from modules.summarizer import PoliticalNewsSummarizer
 from modules.clusterer import cluster_news_articles
@@ -45,28 +45,101 @@ def create_directories():
         print(f"✅ {folder}")
 
 
-def step1_crawling(keywords, max_per_keyword=100):
+def step1_crawling(keywords, max_per_keyword=100, all_sources=False, balanced_crawl=True):
     """
-    Step 1: 크롤링
+    Step 1: 크롤링 (clawler_ver2 - 진보/중도/보수 11곳 균형 수집)
     
     Args:
         keywords: 검색 키워드 리스트
         max_per_keyword: 키워드당 최대 기사 수
-    
-    Returns:
-        str: 출력 파일 경로
+        balanced_crawl: True면 한겨레·경향·오마이·프레시안·한국일보·서울·세계·조선·중앙·동아·국민일보에서 균형 수집
     """
     print("\n" + "="*70)
-    print("1️⃣ 크롤링 단계")
+    mode = "균형(진보/중도/보수 11곳)" if balanced_crawl else ("전체 언론사" if all_sources else "주요 언론사")
+    print("1️⃣ 크롤링 단계 (clawler_ver2) - " + mode)
     print("="*70)
     
-    # 환경 변수에서 API 키 읽기
     client_id = os.getenv('NAVER_CLIENT_ID')
     client_secret = os.getenv('NAVER_CLIENT_SECRET')
     
-    output_file = 'data/1_crawled/news.jsonl'
-    crawl_political_news(keywords, max_per_keyword, output_file, client_id, client_secret)
+    if not client_id or not client_secret:
+        raise ValueError("NAVER_CLIENT_ID, NAVER_CLIENT_SECRET을 .env에 설정해주세요.")
     
+    crawler = PoliticsNewsCrawler(client_id, client_secret)
+    all_articles = []
+    seen_urls = set()
+    use_balanced = balanced_crawl and not all_sources
+    
+    for keyword in keywords:
+        print(f"\n🔍 '{keyword}' 크롤링 중...")
+        articles = crawler.crawl_politics_news(
+            keyword=keyword,
+            max_articles=max_per_keyword,
+            allowed_sources_only=not all_sources,
+            balanced_crawl=use_balanced,
+        )
+        for a in articles:
+            if a.get("url") and a["url"] not in seen_urls:
+                seen_urls.add(a["url"])
+                all_articles.append({
+                    "title": a.get("title") or "",
+                    "content": a.get("content") or "",
+                    "url": a.get("url") or "",
+                    "published_at": a.get("pubDate") or a.get("published_at", ""),
+                    "thumbnail": None,
+                    "source": a.get("source"),
+                    "media_stance": a.get("media_stance"),
+                })
+        print(f"   '{keyword}': {len(articles)}개 (중복 제외 후 누적: {len(all_articles)}개)")
+    
+    # 균형 크롤링에서 0개 또는 100개 미만일 때 폴백: 전체 언론사(all_sources)로 확대
+    target_total = 100
+    if use_balanced and len(all_articles) == 0:
+        print("\n⚠️ 균형 크롤링(11개 언론사)에서 기사 0건 → 전체 언론사 방식으로 폴백")
+        seen_urls.clear()
+        all_articles.clear()
+        use_balanced = False
+        all_sources = True
+    elif len(all_articles) < target_total and not all_sources:
+        print(f"\n⚠️ 수집량 {len(all_articles)}개 < 목표 {target_total}개 → 전체 언론사로 보완 크롤링")
+        all_sources = True
+
+    if (use_balanced and len(all_articles) == 0) or (len(all_articles) < target_total and all_sources):
+        # 단일 키워드로 검색 폭 확대해 수집량 증대
+        fallback_keywords = ['정치', '국회', '대통령', '여야', '정당', '선거', '정책', '법안', '국정감사', '여론조사', '지지율', '국정']
+        use_balanced = False
+        for keyword in fallback_keywords:
+            if len(all_articles) >= target_total:
+                break
+            remain = target_total - len(all_articles)
+            print(f"\n🔍 '{keyword}' 크롤링 (전체 언론사, 목표 {min(max_per_keyword, remain)}개)...")
+            articles = crawler.crawl_politics_news(
+                keyword=keyword,
+                max_articles=min(max_per_keyword, max(remain, 50)),
+                allowed_sources_only=False,
+                balanced_crawl=False,
+            )
+            for a in articles:
+                if a.get("url") and a["url"] not in seen_urls:
+                    seen_urls.add(a["url"])
+                    all_articles.append({
+                        "title": a.get("title") or "",
+                        "content": a.get("content") or "",
+                        "url": a.get("url") or "",
+                        "published_at": a.get("pubDate") or a.get("published_at", ""),
+                        "thumbnail": None,
+                        "source": a.get("source"),
+                        "media_stance": a.get("media_stance"),
+                    })
+            print(f"   '{keyword}': {len(articles)}개 (누적: {len(all_articles)}개)")
+    
+    output_file = 'data/1_crawled/news.jsonl'
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    with open(output_file, 'w', encoding='utf-8') as f:
+        for article in all_articles:
+            f.write(json.dumps(article, ensure_ascii=False) + '\n')
+    
+    print(f"\n✅ 크롤링 완료! 총 {len(all_articles)}개 기사 → {output_file}")
     return output_file
 
 
@@ -92,7 +165,7 @@ def step2_clustering(input_file):
     return output_file
 
 
-def step3_classification(input_file, model_dir, device='cuda', batch_size=32):
+def step3_classification(input_file, model_dir, device='cuda', batch_size=32, mock=False):
     """
     Step 3: 정치 성향 분류
     
@@ -101,36 +174,37 @@ def step3_classification(input_file, model_dir, device='cuda', batch_size=32):
         model_dir: 모델 디렉토리
         device: 디바이스 ('cuda' 또는 'cpu')
         batch_size: 배치 크기
+        mock: True면 모델 없이 neutral로 통과 (테스트용)
     
     Returns:
         str: 출력 파일 경로
     """
     print("\n" + "="*70)
-    print("3️⃣ 정치 성향 분류 단계")
+    print("3️⃣ 정치 성향 분류 단계" + (" [Mock]" if mock else ""))
     print("="*70)
     
-    # 입력 파일 확인
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"입력 파일을 찾을 수 없습니다: {input_file}")
     
-    # 분류기 초기화
-    classifier = PoliticalClassifier(
-        model_dir=model_dir,
-        device=device
-    )
-    
-    # JSONL 로드
-    articles = []
-    with open(input_file, 'r', encoding='utf-8') as f:
-        for line in f:
-            articles.append(json.loads(line))
-    
-    print(f"📰 {len(articles)}개 기사 로드")
-    
-    # 분류 실행
     output_file = 'data/3_classified/classified.jsonl'
-    classifier.classify_jsonl(input_file, output_file, batch_size=batch_size)
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
+    if mock:
+        articles = []
+        with open(input_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                if line.strip():
+                    articles.append(json.loads(line))
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for a in articles:
+                a['political_stance'] = 'neutral'
+                a['stance_confidence'] = 0.5
+                f.write(json.dumps(a, ensure_ascii=False) + '\n')
+        print(f"📰 {len(articles)}개 기사 Mock 분류 (neutral) 완료")
+        return output_file
+    
+    classifier = PoliticalClassifier(model_dir=model_dir, device=device)
+    classifier.classify_jsonl(input_file, output_file, batch_size=batch_size)
     return output_file
 
 
@@ -184,7 +258,7 @@ def main():
     parser.add_argument(
         '--keywords',
         nargs='+',
-        default=['국회 정치', '대통령 정책', '여야 협상'],
+        default=['정치', '국회', '대통령', '여야', '정당', '선거', '정책', '법안', '국정감사', '여론조사'],
         help='크롤링 키워드'
     )
     parser.add_argument(
@@ -221,6 +295,26 @@ def main():
         default=None,
         help='Ollama 모델 이름 (기본값: .env 파일 또는 gemma2:2b)'
     )
+    parser.add_argument(
+        '--mock-classify',
+        action='store_true',
+        help='분류 모델 없이 neutral로 통과 (테스트용)'
+    )
+    parser.add_argument(
+        '--skip-summarize',
+        action='store_true',
+        help='요약 단계 건너뛰기 (Ollama 없을 때)'
+    )
+    parser.add_argument(
+        '--all-sources',
+        action='store_true',
+        help='주요 언론사 필터 없이 전체 수집 (균형 크롤링 비활성화)'
+    )
+    parser.add_argument(
+        '--no-balanced',
+        action='store_true',
+        help='균형 크롤링 비활성화 (기존 주요 언론사 방식)'
+    )
     
     args = parser.parse_args()
     
@@ -245,7 +339,11 @@ def main():
     # 단계별 실행
     try:
         if '1' in steps:
-            crawled_file = step1_crawling(args.keywords, args.max_articles)
+            crawled_file = step1_crawling(
+                args.keywords, args.max_articles,
+                all_sources=args.all_sources,
+                balanced_crawl=not args.all_sources and not args.no_balanced
+            )
             print(f"\\n✅ Step 1 완료: {crawled_file}")
         
         if '2' in steps:
@@ -257,16 +355,32 @@ def main():
                 clustered_file,
                 args.model_dir,
                 args.device,
-                args.batch_size
+                args.batch_size,
+                mock=args.mock_classify
             )
             print(f"\\n✅ Step 3 완료: {classified_file}")
         
         if '4' in steps:
-            summarized_file = step4_summarization(
-                classified_file,
-                args.ollama_model
-            )
-            print(f"\\n✅ Step 4 완료: {summarized_file}")
+            if args.skip_summarize:
+                # 요약 건너뛰기: 플레이스홀더 summaries.json 생성
+                from collections import defaultdict
+                clusters = defaultdict(lambda: {'article_count': 0, 'cluster_label': ''})
+                with open(classified_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.strip():
+                            a = json.loads(line)
+                            cid = a.get('cluster_id', -1)
+                            if cid >= 0:
+                                clusters[cid]['article_count'] += 1
+                                clusters[cid]['cluster_label'] = a.get('cluster_label', '')
+                summaries = {str(cid): {'cluster_label': info['cluster_label'], 'article_count': info['article_count'], 'summaries': {'progressive': None, 'conservative': None, 'neutral': '(요약 생략)', 'overall': None}} for cid, info in clusters.items()}
+                os.makedirs(os.path.dirname(summarized_file), exist_ok=True)
+                with open(summarized_file, 'w', encoding='utf-8') as f:
+                    json.dump(summaries, f, ensure_ascii=False, indent=2)
+                print(f"\\n✅ Step 4 건너뜀 (플레이스홀더 생성): {summarized_file}")
+            else:
+                summarized_file = step4_summarization(classified_file, args.ollama_model)
+                print(f"\\n✅ Step 4 완료: {summarized_file}")
         
         # 최종 결과
         print("\\n" + "="*70)

@@ -1,20 +1,27 @@
 {
-  "BERT_MODEL_NAME": "klue/roberta-base",
-  "MAX_LENGTH": 512,
-  "USE_TITLE": true,
-  "NUM_FILTERS": 100,
-  "FILTER_SIZES": [
-    2,
-    3,
-    4
+  "model_name": "monologg/kobigbird-bert-base",
+  "max_length": 1024,
+  "num_classes": 3,
+  "dropout": 0.3,
+  "attention_heads": 8,
+  "num_filters": 256,
+  "filter_sizes": [2, 3, 4, 5],
+  "focal_alpha": [
+    1.3,
+    0.7,
+    1.0
   ],
-  "DROPOUT": 0.3,
-  "EPOCHS": 10,
-  "BATCH_SIZE": 8,
-  "LEARNING_RATE": 3e-05,
-  "NUM_CLASSES": 5,
-  "VALIDATION_ACCURACY": 0.6088888888888889,
-  "TEST_ACCURACY": 0.636,
-  "VERSION": "V5",
-  "TIMESTAMP": "20251215_064311"
+  "focal_gamma": 2.0,
+  "label_smoothing": 0.1,
+  "learning_rate": 2e-05,
+  "batch_size": 16,
+  "epochs": 10,
+  "val_accuracy": 0.7155555555555555,
+  "test_accuracy": 0.716,
+  "label_names": {
+    "0": "진보",
+    "1": "중립",
+    "2": "보수"
+  },
+  "timestamp": "20260103_161000"
 }

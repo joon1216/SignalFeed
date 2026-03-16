@@ -1,0 +1,52 @@
+# ── Git ──────────────────────────────────────
+.git
+.gitignore
+
+# ── Python 캐시 ──────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.Python
+
+# ── Jupyter 노트북 ────────────────────────────
+*.ipynb
+
+# ── 원본 훈련 모델 디렉토리 (대용량, serving 모델은 models/ 사용) ──
+kobigbird_textcnn_attention_v7_20260103_161000/
+
+# ── 데이터 (docker-compose 볼륨으로 마운트) ──
+data/
+
+# ── 환경 변수 (호스트 .env 파일로 관리, 이미지에 포함 금지) ──
+.env
+
+# ── 테스트 / 유틸리티 스크립트 ───────────────
+fix_*.py
+check_files.py
+migrate_model.py
+run_hani_crawl.py
+run_outlet_crawl_test.py
+run_steps_3_4.py
+
+# ── 임시 크롤링 테스트 파일 ──────────────────
+politics_news*.json
+politics_news*.jsonl
+naver_news_sample.html
+
+# ── 문서 ─────────────────────────────────────
+docs/
+README.md
+
+# ── 백업 파일 ────────────────────────────────
+*.backup
+*.bak
+models/political_classifier/pytorch_model.bin.backup
+
+# ── 가상환경 ──────────────────────────────────
+venv/
+.venv/
+env/

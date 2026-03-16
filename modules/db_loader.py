@@ -92,7 +92,7 @@ def load_to_database(classified_jsonl: str, summary_json: str, db_path: str):
                 article.get('content', ''),
                 article.get('url', ''),
                 article.get('thumbnail', ''),
-                article.get('published_at', ''),
+                article.get('published_at') or article.get('pubDate', ''),
                 article.get('cluster_id'),
                 article.get('cluster_label'),
                 keywords_str,

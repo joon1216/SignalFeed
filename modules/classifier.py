@@ -13,11 +13,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset as TorchDataset
 from transformers import AutoTokenizer, AutoModel
+from safetensors.torch import load_file as safetensors_load
 from tqdm.auto import tqdm
 
 
 class BertTextCNN(nn.Module):
-    """BERT + TextCNN 모델"""
+    """BERT + TextCNN 모델 (기본 버전)"""
     def __init__(self, model_name, num_classes, num_filters=100, 
                  filter_sizes=[2, 3, 4], dropout=0.5):
         super(BertTextCNN, self).__init__()
@@ -40,6 +41,66 @@ class BertTextCNN(nn.Module):
         pooled = [F.max_pool1d(conv, conv.shape[2]).squeeze(2) for conv in conved]
         cat = self.dropout(torch.cat(pooled, dim=1))
         logits = self.classifier(cat)
+        return logits
+
+
+class BertTextCNNAttention(nn.Module):
+    """BERT + TextCNN + Attention 모델 (개선 버전)"""
+    def __init__(self, model_name, num_classes, num_filters=256, 
+                 filter_sizes=[2, 3, 4], dropout=0.3, attention_heads=8):
+        super(BertTextCNNAttention, self).__init__()
+        self.bert = AutoModel.from_pretrained(model_name)
+        bert_dim = self.bert.config.hidden_size
+        
+        # TextCNN 레이어들
+        self.convs = nn.ModuleList([
+            nn.Conv2d(1, num_filters, (k, bert_dim)) for k in filter_sizes
+        ])
+        
+        # 추가 conv 레이어 (convs.3)
+        if len(filter_sizes) == 3:
+            self.convs.append(nn.Conv2d(1, num_filters, (5, bert_dim)))
+        
+        # Attention 레이어
+        self.attention = nn.MultiheadAttention(
+            embed_dim=num_filters * len(self.convs),
+            num_heads=attention_heads,
+            batch_first=True
+        )
+        
+        # Layer Normalization
+        self.layer_norm = nn.LayerNorm(num_filters * len(self.convs))
+        
+        # Dropout
+        self.dropout = nn.Dropout(dropout)
+        
+        # 최종 분류 레이어 (fc)
+        self.fc = nn.Linear(num_filters * len(self.convs), num_classes)
+        
+        nn.init.xavier_uniform_(self.fc.weight)
+        nn.init.zeros_(self.fc.bias)
+
+    def forward(self, input_ids, attention_mask=None, labels=None, **kwargs):
+        bert_outputs = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        bert_embeddings = bert_outputs.last_hidden_state
+        embedded = bert_embeddings.unsqueeze(1)
+        
+        # TextCNN 적용
+        conved = [F.relu(conv(embedded)).squeeze(3) for conv in self.convs]
+        pooled = [F.max_pool1d(conv, conv.shape[2]).squeeze(2) for conv in conved]
+        cat = torch.cat(pooled, dim=1)  # [batch, num_filters * num_convs]
+        
+        # Attention 적용 (배치 차원 추가)
+        cat_expanded = cat.unsqueeze(1)  # [batch, 1, num_filters * num_convs]
+        attn_out, _ = self.attention(cat_expanded, cat_expanded, cat_expanded)
+        attn_out = attn_out.squeeze(1)  # [batch, num_filters * num_convs]
+        
+        # Layer Norm + Dropout
+        attn_out = self.layer_norm(attn_out)
+        attn_out = self.dropout(attn_out)
+        
+        # 최종 분류
+        logits = self.fc(attn_out)
         return logits
 
 
@@ -89,20 +150,36 @@ class PoliticalClassifier:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = json.load(f)
         
-        # label_mapping.json 로드
-        label_mapping_path = os.path.join(model_dir, 'label_mapping.json')
-        if not os.path.exists(label_mapping_path):
-            raise FileNotFoundError(f"label_mapping.json이 없습니다: {label_mapping_path}")
+        # config.json 형식 정규화 (새 형식과 기존 형식 모두 지원)
+        config = self._normalize_config(config)
         
-        with open(label_mapping_path, 'r', encoding='utf-8') as f:
-            label_mapping = json.load(f)
+        # label_mapping.json 로드 또는 자동 생성
+        label_mapping_path = os.path.join(model_dir, 'label_mapping.json')
+        if os.path.exists(label_mapping_path):
+            with open(label_mapping_path, 'r', encoding='utf-8') as f:
+                label_mapping = json.load(f)
+        else:
+            # label_mapping.json이 없으면 config.json의 label_names로부터 생성
+            print(f"   ⚠️ label_mapping.json이 없습니다. config.json의 label_names로부터 생성합니다.")
+            if 'label_names' in config:
+                # 새 형식: label_names가 {0: "진보", 1: "중립", 2: "보수"} 형태
+                label_mapping = {str(k): k for k in config['label_names'].keys()}
+            else:
+                # 기본값: 3개 클래스 (진보, 중립, 보수)
+                label_mapping = {"0": 0, "1": 1, "2": 2}
+            # 파일로 저장
+            with open(label_mapping_path, 'w', encoding='utf-8') as f:
+                json.dump(label_mapping, f, ensure_ascii=False, indent=2)
+            print(f"   ✅ label_mapping.json 생성 완료")
         
         reverse_label_mapping = {int(v): int(k) for k, v in label_mapping.items()}
         
-        # 토크나이저 로드
+        # 토크나이저 로드 (tokenizer 폴더 또는 루트에서)
         tokenizer_path = os.path.join(model_dir, 'tokenizer')
         if not os.path.exists(tokenizer_path):
-            raise FileNotFoundError(f"tokenizer 폴더가 없습니다: {tokenizer_path}")
+            # tokenizer 폴더가 없으면 루트에서 직접 로드 시도
+            tokenizer_path = model_dir
+            print(f"   ⚠️ tokenizer 폴더가 없습니다. 루트에서 로드 시도합니다.")
         
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_path)
         
@@ -117,8 +194,68 @@ class PoliticalClassifier:
         
         return model, tokenizer, config, reverse_label_mapping
     
+    def _normalize_config(self, config):
+        """config.json 형식을 정규화 (새 형식과 기존 형식 모두 지원)"""
+        normalized = config.copy()
+        
+        # 새 형식 -> 기존 형식 변환
+        if 'model_name' in config:
+            normalized['BERT_MODEL_NAME'] = config['model_name']
+        if 'num_classes' in config:
+            normalized['NUM_CLASSES'] = config['num_classes']
+        if 'max_length' in config:
+            normalized['MAX_LENGTH'] = config['max_length']
+        if 'dropout' in config:
+            normalized['DROPOUT'] = config['dropout']
+        if 'num_filters' in config:
+            normalized['NUM_FILTERS'] = config['num_filters']
+        if 'filter_sizes' in config:
+            normalized['FILTER_SIZES'] = config['filter_sizes']
+        else:
+            # 기본값 설정
+            if 'NUM_FILTERS' not in normalized:
+                normalized['NUM_FILTERS'] = 100
+            if 'FILTER_SIZES' not in normalized:
+                normalized['FILTER_SIZES'] = [2, 3, 4]
+        
+        # Attention 관련 설정
+        if 'attention_heads' in config:
+            normalized['ATTENTION_HEADS'] = config['attention_heads']
+        
+        # USE_TITLE 기본값
+        if 'USE_TITLE' not in normalized:
+            normalized['USE_TITLE'] = True
+        
+        return normalized
+    
+    def _detect_model_type(self, state_dict):
+        """state_dict를 분석하여 모델 타입 감지"""
+        has_attention = any('attention' in key for key in state_dict.keys())
+        has_fc = 'fc.weight' in state_dict or 'fc.bias' in state_dict
+        has_classifier = 'classifier.weight' in state_dict or 'classifier.bias' in state_dict
+        has_convs3 = 'convs.3.weight' in state_dict or 'convs.3.bias' in state_dict
+        
+        if has_attention or has_fc or has_convs3:
+            return 'attention'
+        else:
+            return 'basic'
+    
+    def _convert_conv1d_to_conv2d(self, state_dict):
+        """Conv1d weight를 Conv2d weight로 변환"""
+        new_state_dict = {}
+        for key, value in state_dict.items():
+            if 'convs' in key and 'weight' in key and len(value.shape) == 3:
+                # Conv1d shape: (out_channels, in_channels, kernel_size)
+                # Conv2d shape: (out_channels, 1, kernel_size, in_channels)
+                out_ch, in_ch, kernel_size = value.shape
+                new_value = value.unsqueeze(1).permute(0, 1, 3, 2)  # (out_ch, 1, in_ch, kernel_size)
+                new_state_dict[key] = new_value
+            else:
+                new_state_dict[key] = value
+        return new_state_dict
+    
     def _load_model_file(self, model_dir, config):
-        """모델 파일 로드 (pkl/bin/pt 자동 감지)"""
+        """모델 파일 로드 (pkl/bin/pt/safetensors 자동 감지)"""
         
         # 1. pkl 파일 확인
         pkl_path = os.path.join(model_dir, 'model.pkl')
@@ -127,25 +264,78 @@ class PoliticalClassifier:
             model = torch.load(pkl_path, map_location=self.device)
             return model
         
-        # 2. bin 파일 확인
+        # 2. safetensors 파일 확인 (새 형식)
+        safetensors_path = os.path.join(model_dir, 'model.safetensors')
+        if os.path.exists(safetensors_path):
+            print(f"   📦 Safetensors 파일 로드: {safetensors_path}")
+            # 가중치 먼저 로드하여 모델 타입 감지
+            state_dict = safetensors_load(safetensors_path)
+            model_type = self._detect_model_type(state_dict)
+            
+            # Conv1d -> Conv2d 변환이 필요한지 확인
+            needs_conversion = any('convs' in k and len(state_dict[k].shape) == 3 for k in state_dict.keys())
+            if needs_conversion:
+                print(f"   🔄 Conv1d -> Conv2d 변환 중...")
+                state_dict = self._convert_conv1d_to_conv2d(state_dict)
+            
+            if model_type == 'attention':
+                print(f"   🔍 Attention 모델 감지")
+                # Attention 모델 생성
+                model = BertTextCNNAttention(
+                    model_name=config['BERT_MODEL_NAME'],
+                    num_classes=config['NUM_CLASSES'],
+                    num_filters=config.get('NUM_FILTERS', 256),
+                    filter_sizes=config.get('FILTER_SIZES', [2, 3, 4]),
+                    dropout=config['DROPOUT'],
+                    attention_heads=config.get('ATTENTION_HEADS', 8)
+                )
+            else:
+                print(f"   🔍 기본 TextCNN 모델 감지")
+                # 기본 TextCNN 모델 생성
+                model = BertTextCNN(
+                    model_name=config['BERT_MODEL_NAME'],
+                    num_classes=config['NUM_CLASSES'],
+                    num_filters=config.get('NUM_FILTERS', 100),
+                    filter_sizes=config.get('FILTER_SIZES', [2, 3, 4]),
+                    dropout=config['DROPOUT']
+                )
+            
+            # 가중치 로드
+            model.load_state_dict(state_dict)
+            return model
+        
+        # 3. bin 파일 확인
         bin_path = os.path.join(model_dir, 'pytorch_model.bin')
         if os.path.exists(bin_path):
             print(f"   📦 BIN 파일 로드: {bin_path}")
-            # 모델 구조 먼저 생성
-            model = BertTextCNN(
-                model_name=config['BERT_MODEL_NAME'],
-                num_classes=config['NUM_CLASSES'],
-                num_filters=config['NUM_FILTERS'],
-                filter_sizes=config['FILTER_SIZES'],
-                dropout=config['DROPOUT']
-            )
-            # 가중치 로드
-            model.load_state_dict(
-                torch.load(bin_path, map_location=self.device)
-            )
+            # 가중치 먼저 로드하여 모델 타입 감지
+            state_dict = torch.load(bin_path, map_location=self.device)
+            model_type = self._detect_model_type(state_dict)
+            
+            if model_type == 'attention':
+                print(f"   🔍 Attention 모델 감지")
+                model = BertTextCNNAttention(
+                    model_name=config['BERT_MODEL_NAME'],
+                    num_classes=config['NUM_CLASSES'],
+                    num_filters=config.get('NUM_FILTERS', 256),
+                    filter_sizes=config.get('FILTER_SIZES', [2, 3, 4]),
+                    dropout=config['DROPOUT'],
+                    attention_heads=config.get('ATTENTION_HEADS', 8)
+                )
+            else:
+                print(f"   🔍 기본 TextCNN 모델 감지")
+                model = BertTextCNN(
+                    model_name=config['BERT_MODEL_NAME'],
+                    num_classes=config['NUM_CLASSES'],
+                    num_filters=config.get('NUM_FILTERS', 100),
+                    filter_sizes=config.get('FILTER_SIZES', [2, 3, 4]),
+                    dropout=config['DROPOUT']
+                )
+            
+            model.load_state_dict(state_dict)
             return model
         
-        # 3. pt 파일 확인
+        # 4. pt 파일 확인
         pt_path = os.path.join(model_dir, 'model.pt')
         if os.path.exists(pt_path):
             print(f"   📦 PT 파일 로드: {pt_path}")
@@ -157,6 +347,7 @@ class PoliticalClassifier:
             f"모델 파일을 찾을 수 없습니다.\n"
             f"다음 중 하나를 {model_dir}에 배치하세요:\n"
             f"  - model.pkl\n"
+            f"  - model.safetensors\n"
             f"  - pytorch_model.bin\n"
             f"  - model.pt"
         )

@@ -53,16 +53,31 @@ test_*.py
 # data/**/*.json
 # data/**/*.csv
 
-# 모델 파일 - 큰 바이너리 파일만 제외 (설정 파일은 포함)
+# 모델 파일 - 큰 바이너리 파일 제외 (GitHub 100MB 제한)
 models/**/*.bin
 models/**/*.pt
 models/**/*.pkl
 models/**/*.h5
 models/**/*.ckpt
+models/**/*.safetensors
+models/**/*.backup
 # 설정 파일과 tokenizer는 포함
 !models/**/*.json
 !models/**/*.txt
 !models/**/tokenizer/
+
+# 원본 훈련 모델 디렉토리 (대용량)
+kobigbird_textcnn_attention_v7_20260103_161000/
+
+# 임시 크롤링 테스트 파일
+politics_news*.json
+politics_news*.jsonl
+naver_news_sample.html
+
+# 유틸리티/수정 스크립트
+fix_*.py
+check_files.py
+migrate_model.py
 
 # 로그 파일
 *.log

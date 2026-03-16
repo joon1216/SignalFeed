@@ -1,6 +1,6 @@
 {
   "bos_token": {
-    "content": "[CLS]",
+    "content": "<s>",
     "lstrip": false,
     "normalized": false,
     "rstrip": false,
@@ -14,7 +14,7 @@
     "single_word": false
   },
   "eos_token": {
-    "content": "[SEP]",
+    "content": "</s>",
     "lstrip": false,
     "normalized": false,
     "rstrip": false,

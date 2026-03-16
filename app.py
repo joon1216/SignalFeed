@@ -280,14 +280,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-@st.cache_data
 def load_classified_articles(file_path):
     """분류된 기사 JSONL 로드"""
+    import os
     articles = []
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             for line in f:
-                articles.append(json.loads(line))
+                line = line.strip()
+                if line:  # 빈 줄 제외
+                    articles.append(json.loads(line))
         return pd.DataFrame(articles)
     except FileNotFoundError:
         st.error(f"❌ 파일을 찾을 수 없습니다: {file_path}")
@@ -297,7 +299,6 @@ def load_classified_articles(file_path):
         return pd.DataFrame()
 
 
-@st.cache_data
 def load_summaries(file_path):
     """요약 JSON 로드"""
     try:
@@ -333,17 +334,20 @@ def main():
     # 사이드바 - 파일 경로
     st.sidebar.title("⚙️ 설정")
     
-    classified_path = st.sidebar.text_input(
-        "분류 JSONL 파일",
-        value="data/3_classified/classified.jsonl",
-        help="분류된 기사 JSONL 파일 경로"
+    data_preset = st.sidebar.selectbox(
+        "데이터 선택",
+        ["기본 (classified.jsonl)", "테스트 데이터 (test_classified.jsonl)"],
+        help="클러스터링된 이슈가 없다면 '테스트 데이터'를 선택해 보세요."
     )
     
-    summary_path = st.sidebar.text_input(
-        "요약 JSON 파일",
-        value="data/4_summarized/summaries.json",
-        help="요약 JSON 파일 경로"
-    )
+    if "테스트 데이터" in data_preset:
+        classified_path = "data/3_classified/test_classified.jsonl"
+        summary_path = "data/4_summarized/summaries.json"
+    else:
+        classified_path = "data/3_classified/classified.jsonl"
+        summary_path = "data/4_summarized/summaries.json"
+    
+    st.sidebar.text(f"분류: {classified_path}")
     
     # 데이터 로드
     df = load_classified_articles(classified_path)
@@ -359,6 +363,17 @@ def main():
     stats = get_statistics(df)
     
     st.sidebar.markdown("---")
+    if stats['total_articles'] < 20:
+        st.sidebar.caption("💡 기사가 적을 땐: 터미널에서 `python pipeline.py --all-sources` 실행")
+    # 언론사별 기사 수
+    if 'source' in df.columns and not df['source'].isna().all():
+        src_counts = df['source'].value_counts()
+        with st.sidebar.expander("📰 언론사별 기사 수"):
+            for src, cnt in src_counts.items():
+                sub = df[df['source']==src]
+                stance = sub['media_stance'].iloc[0] if 'media_stance' in df.columns and len(sub) and pd.notna(sub['media_stance'].iloc[0]) else ''
+                badge = {'progressive':'🔴', 'moderate':'⚪', 'conservative':'🔵'}.get(stance, '')
+                st.caption(f"{badge} {str(src)}: {cnt}개")
     st.sidebar.markdown("### 📊 전체 통계")
     st.sidebar.metric("총 이슈", f"{stats['total_issues']}개")
     st.sidebar.metric("총 기사", f"{stats['total_articles']:,}개")
@@ -387,8 +402,15 @@ def show_issue_list(df, summaries):
     
     st.header("📰 최신 정치 이슈")
     
-    # 이슈별 집계
-    issue_stats = df.groupby(['cluster_id', 'cluster_label']).agg({
+    # 선택된 이슈 상세 - 먼저 표시 (스크롤 없이 바로 보이도록)
+    if 'selected_issue' in st.session_state:
+        show_issue_detail(df, summaries, st.session_state.selected_issue)
+        st.markdown("---")
+        st.markdown("### 📋 다른 이슈")
+    
+    # 이슈별 집계 (노이즈 제외)
+    df_valid = df[df['cluster_id'] >= 0]
+    issue_stats = df_valid.groupby(['cluster_id', 'cluster_label']).agg({
         'title': 'count',
         'political_stance': lambda x: (
             (x == 'progressive').sum(),
@@ -396,6 +418,17 @@ def show_issue_list(df, summaries):
             (x == 'neutral').sum()
         )
     }).reset_index()
+    
+    if len(issue_stats) == 0:
+        st.info("""클러스터링된 이슈가 없습니다.
+        
+**원인:** 모든 기사가 노이즈로 분류되었거나 데이터가 너무 적을 수 있습니다.
+
+**해결 방법:**
+1. **테스트 데이터 사용**: 왼쪽 사이드바에서 "데이터 선택" → **테스트 데이터** 를 선택하세요.
+2. **파이프라인 재실행**: 더 많은 기사를 크롤링한 뒤 `python pipeline.py`를 실행하세요.
+3. **기사 수 확보**: 현재 기사 수가 적으면(예: 9개) 유사 주제가 2~3개 이상 있어야 클러스터가 형성됩니다.""")
+        return
     
     issue_stats.columns = ['cluster_id', 'cluster_label', 'article_count', 'stance_counts']
     issue_stats[['progressive_count', 'conservative_count', 'neutral_count']] = pd.DataFrame(
@@ -444,15 +477,17 @@ def show_issue_list(df, summaries):
                 with col2:
                     st.metric("총 기사", f"{issue['article_count']}개")
                     
-                    if st.button("상세보기", key=f"btn_{issue['cluster_id']}"):
-                        st.session_state.selected_issue = int(issue['cluster_id'])
+                    # 이미 선택된 이슈는 "선택됨" 표시, 아니면 상세보기
+                    is_selected = st.session_state.get('selected_issue') == int(issue['cluster_id'])
+                    btn_label = "✓ 선택됨" if is_selected else "상세보기"
+                    if st.button(btn_label, key=f"btn_{issue['cluster_id']}"):
+                        if is_selected:
+                            del st.session_state.selected_issue
+                        else:
+                            st.session_state.selected_issue = int(issue['cluster_id'])
                         st.rerun()
                 
                 st.markdown("---")
-        
-        # 선택된 이슈 상세 표시
-        if 'selected_issue' in st.session_state:
-            show_issue_detail(df, summaries, st.session_state.selected_issue)
 
 
 def show_issue_detail(df, summaries, cluster_id):
@@ -474,7 +509,7 @@ def show_issue_detail(df, summaries, cluster_id):
     with st.expander(f"📋 {cluster_label} - 상세 정보", expanded=True):
         
         # 닫기 버튼
-        if st.button("❌ 닫기"):
+        if st.button("❌ 닫기", key=f"close_{cluster_id}"):
             del st.session_state.selected_issue
             st.rerun()
         
@@ -494,20 +529,23 @@ def show_issue_detail(df, summaries, cluster_id):
             col1, col2, col3 = st.columns(3)
             
             with col1:
-                if summaries_dict.get('progressive'):
-                    st.markdown(f'<div class="summary-box summary-progressive"><strong>🔴 진보 관점</strong><br>{summaries_dict["progressive"]}</div>', unsafe_allow_html=True)
+                progressive_summary = summaries_dict.get('progressive')
+                if progressive_summary and progressive_summary is not None:
+                    st.markdown(f'<div class="summary-box summary-progressive"><strong>🔴 진보 관점</strong><br>{progressive_summary}</div>', unsafe_allow_html=True)
                 else:
                     st.info("진보 관점 요약 없음")
             
             with col2:
-                if summaries_dict.get('conservative'):
-                    st.markdown(f'<div class="summary-box summary-conservative"><strong>🔵 보수 관점</strong><br>{summaries_dict["conservative"]}</div>', unsafe_allow_html=True)
+                conservative_summary = summaries_dict.get('conservative')
+                if conservative_summary and conservative_summary is not None:
+                    st.markdown(f'<div class="summary-box summary-conservative"><strong>🔵 보수 관점</strong><br>{conservative_summary}</div>', unsafe_allow_html=True)
                 else:
                     st.info("보수 관점 요약 없음")
             
             with col3:
-                if summaries_dict.get('neutral'):
-                    st.markdown(f'<div class="summary-box summary-neutral"><strong>⚪ 중립 관점</strong><br>{summaries_dict["neutral"]}</div>', unsafe_allow_html=True)
+                neutral_summary = summaries_dict.get('neutral')
+                if neutral_summary and neutral_summary is not None:
+                    st.markdown(f'<div class="summary-box summary-neutral"><strong>⚪ 중립 관점</strong><br>{neutral_summary}</div>', unsafe_allow_html=True)
                 else:
                     st.info("중립 관점 요약 없음")
         
@@ -550,8 +588,8 @@ def show_issue_detail(df, summaries, cluster_id):
                 article_url = article.get('url', '')
                 url_link = f'<a href="{article_url}" target="_blank" class="article-link">원문 보기 →</a>' if article_url else ''
                 
-                # 발행일 처리
-                published_date = article.get('published_at', '')
+                # 발행일 처리 (published_at 또는 pubDate)
+                published_date = article.get('published_at') or article.get('pubDate', '')
                 if published_date:
                     date_display = f'<span style="color: #aaaaaa;">📅 {published_date}</span>'
                 else:
