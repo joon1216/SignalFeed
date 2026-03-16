@@ -4,6 +4,16 @@
 
 ---
 
+## ⚠️ 모델 파일 안내
+
+`models/political_classifier/model.safetensors` (460MB) 는 GitHub 용량 제한으로 저장소에 포함되지 않습니다.  
+아래 중 하나로 준비하세요:
+
+- **방법 A (Docker Hub 사용):** `docker-compose.hub.yml` 로 실행하면 모델이 이미 이미지 안에 포함되어 있어 별도 준비 불필요
+- **방법 B (직접 빌드):** 모델 파일을 별도로 받아 `models/political_classifier/model.safetensors` 에 배치 후 `docker compose up -d --build`
+
+---
+
 ## 🐳 Docker로 빠르게 시작하기 (권장)
 
 다른 PC에서 환경 구성 없이 바로 실행할 수 있습니다.
