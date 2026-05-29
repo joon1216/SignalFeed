@@ -145,7 +145,7 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 - `collector.py` (NEW): Polygon.io + Finnhub API 호출, 영문 뉴스 수집, 화이트리스트 필터링
 - `auto_labeler.py` (NEW): GPT-4o-mini로 bullish/bearish/neutral 자동 레이블링 (학습 데이터 생성)
 - `clusterer.py` (REUSE): TF-IDF + UMAP + HDBSCAN, IssueFit에서 재사용
-- `classifier.py` (RETRAIN): BERT + TextCNN + Attention, political → signal 레이블로 재학습
+- `classifier.py` (NEW): FinBERT (ProsusAI/finbert) 기반 bullish/bearish/neutral 신호 분류
 - `content_gen.py` (NEW): EXAONE 3.5로 Instagram 5-slide 스크립트 + YouTube Shorts 스크립트 생성
 - `card_gen.py` (NEW): Pillow로 Instagram 카드 이미지 생성 (1080x1920px, dark mode)
 - `shorts_gen.py` (NEW): MoviePy + gTTS로 YouTube Shorts 영상 생성 (60초, AI 음성)
@@ -178,7 +178,7 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 | 5.2 | CLAUDE.md Full Rewrite (Pivot) | ✅ Complete | Project pivot to SignalFeed |
 | 5.3 | Data Pipeline Rebuild | ✅ Complete | collector.py + fake_filter.py, 10/10 tests passed |
 | 5.4a | Auto Labeling (GPT-4o-mini) | ✅ Complete | auto_labeler.py, 6/6 tests passed |
-| 5.4b | BERT Retraining | ⬜ Planned | Retrain classifier (bullish/bearish/neutral) |
+| 5.4b | Signal Classifier (FinBERT) | ✅ Complete | classifier.py (ProsusAI/finbert), 7/7 tests passed |
 | 5.5 | Content Generation Pipeline | ⬜ Planned | EXAONE 3.5 + card/shorts generation |
 | 5.6 | Instagram Auto-Upload | ⬜ Planned | Instagram Graph API integration |
 | 5.7 | YouTube Shorts Auto-Upload | ⬜ Planned | YouTube Data API v3 integration |
@@ -241,10 +241,11 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 
 ### Model & Algorithms
 
-**9. BERT + TextCNN + Attention (Reuse from IssueFit)**
-- **Decision**: Retrain same architecture, change labels from political → signal
-- **Rationale**: Proven architecture (F1 ~0.85 on political data), transfer learning from financial domain
-- **Tradeoff**: Requires retraining (~10K labeled samples), may not outperform fine-tuned FinBERT
+**9. FinBERT for Signal Classification (ProsusAI/finbert)**
+- **Decision**: Use pretrained ProsusAI/finbert instead of custom BERT+TextCNN+Attention
+- **Rationale**: No training needed, proven on financial sentiment (positive/negative/neutral), directly usable
+- **Tradeoff**: Less customizable vs. custom model, relies on Hugging Face availability
+- **Implementation**: Map FinBERT labels (positive→bullish, negative→bearish, neutral→neutral)
 
 **10. UMAP + HDBSCAN Clustering (Reuse from IssueFit)**
 - **Decision**: Reuse clustering pipeline without modification
@@ -629,6 +630,45 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - Dry run skipped (no OPENAI_API_KEY in .env)
   - Updated CLAUDE.md: Phase 5.4a marked ✅ Complete
 - **Result**: ✅ Success — Auto labeler ready, all tests passed
+
+#### Session 7: Phase 5.4b — Signal Classifier (FinBERT)
+- **Task**: Replace political classifier with FinBERT-based signal classifier
+- **Actions**:
+  - Installed packages: transformers (4.47.1), torch (2.6.0), sentencepiece (0.2.0), scikit-learn (1.7.0), numpy (2.2.3)
+  - COMPLETELY refactored backend/modules/classifier.py (230 LOC):
+    - SignalClassifier class using ProsusAI/finbert pretrained model
+    - Label mapping: positive→bullish, negative→bearish, neutral→neutral
+    - classify_single(text): returns {signal, confidence, raw_scores}
+    - classify_batch(articles, batch_size=32): batch processing with tqdm progress
+    - evaluate(labeled_articles): precision/recall/F1 calculation vs GPT labels
+    - save_local(output_dir): save model locally for deployment
+    - run(input_path): full pipeline to data/4_classified/classified.jsonl
+    - Device management: cuda if available, else cpu
+    - Max 512 tokens, truncation enabled
+    - Error handling: fallback to neutral on classification failure
+  - Updated backend/pipeline.py (full rewrite):
+    - Removed political news crawler imports
+    - Added SignalClassifier, AutoLabeler, NewsCollector imports
+    - Renamed steps: step1_collection, step2_auto_labeling, step3_clustering, step4_classification
+    - Removed step4_summarization (deprecated for SignalFeed)
+    - Updated directory structure: data/1_collected, 2_labeled, 3_clustered, 4_classified
+    - Updated argparser: removed --keywords, --ollama-model, --mock-classify, --skip-summarize
+    - Added --model-path for FinBERT local model path
+  - Created tests/backend/modules/test_classifier.py (7 tests):
+    - test_label_mapping: verify positive→bullish, negative→bearish, neutral→neutral
+    - test_reverse_mapping: verify reverse mapping for evaluation
+    - test_classify_single_structure: verify output format (signal, confidence, raw_scores)
+    - test_classify_batch_size: verify batch processing
+    - test_classify_batch_error_handling: verify fallback to neutral on error
+    - test_evaluate_metrics: verify precision/recall/F1/accuracy calculation
+    - test_save_and_load_roundtrip: verify save_pretrained calls
+  - Fixed test_classify_single_structure mock: tokenizer output must support dict unpacking (**)
+  - Test Results: 7/7 passed ✅
+  - Updated CLAUDE.md:
+    - Phase 5.4b marked ✅ Complete
+    - Updated Key File Descriptions: classifier.py (NEW) → FinBERT-based
+    - Updated Design Decision #9: BERT+TextCNN → FinBERT (ProsusAI/finbert)
+- **Result**: ✅ Success — FinBERT classifier ready, pipeline updated, all tests passed
 
 ---
 
