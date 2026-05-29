@@ -43,10 +43,12 @@ env/
 .ipynb_checkpoints
 *.ipynb
 
-# 테스트 파일 및 샘플 데이터
+# 테스트 샘플 데이터
 naver_news_sample.html
-test_*.py
-*_test.py
+
+# Legacy test files (exclude from root, allow in tests/)
+/test_*.py
+/*_test.py
 
 # 데이터 파일 (선택사항 - 샘플 데이터만 포함하려면 주석 해제)
 # data/**/*.jsonl
