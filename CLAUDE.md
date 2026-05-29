@@ -181,7 +181,7 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 | 5.4b | Signal Classifier (FinBERT) | ✅ Complete | classifier.py (ProsusAI/finbert), 7/7 tests passed |
 | 5.5 | Content Generation Pipeline | ✅ Complete | content_gen.py (template fallback), 9/9 tests passed |
 | 5.6 | Instagram Card Image Generator | ✅ Complete | card_gen.py (Pillow 1080x1920px), 6/6 tests passed |
-| 5.7 | YouTube Shorts Auto-Upload | ⬜ Planned | YouTube Data API v3 integration |
+| 5.7 | YouTube Shorts Video Generator | ✅ Complete | shorts_gen.py (MoviePy + gTTS), 6/6 tests passed |
 | **Phase 6: Advanced Features** |
 | 6.1 | APScheduler Integration | ⬜ Planned | Periodic crawling (every 4 hours) |
 | 6.2 | Newsletter Module | ⬜ Planned | Stibee/Substack integration |
@@ -397,13 +397,16 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 - **Instagram 자동 업로드**: MVP는 로컬 폴더 저장 후 수동 업로드 (Phase 5.6 완료)
   - Instagram Graph API 완전 자동화는 Phase 2에서 Buffer API 활용 예정
   - 현재: data/6_cards/cluster_X/slide_*.png 생성 후 Instagram 앱에서 수동 업로드
-- **YouTube Shorts 자동 업로드**: YouTube Data API v3 활용 (Phase 5.7 예정)
-  - containsSyntheticMedia: true 플래그 필수 (2026 AI 콘텐츠 라벨링 정책 준수)
-  - C2PA 메타데이터 + disclaimer 자동 삽입
+- **YouTube Shorts 영상 생성**: MoviePy + gTTS 활용 (Phase 5.7 완료)
+  - 1080x1920px 세로 영상, 60초 길이
+  - 파티클 배경 애니메이션 + 텍스트 오버레이 + gTTS 나레이션
+  - containsSyntheticMedia: true 플래그 포함 (2026 AI 콘텐츠 라벨링 정책 준수)
+  - 영상 내 disclaimer 자동 삽입 (outro 섹션, 54초~60초)
+  - C2PA 메타데이터: ffmpeg_params로 삽입
 - **AI 콘텐츠 라벨링 준수**: Meta/YouTube 2026 정책 대응
   - 모든 AI 생성 콘텐츠에 명시적 disclaimer 표시
   - Instagram: 슬라이드 5에 디스클레이머 텍스트
-  - YouTube: description에 디스클레이머 + containsSyntheticMedia 플래그
+  - YouTube: 영상 내 디스클레이머 (54초~60초) + containsSyntheticMedia 플래그
 
 **6. UI/UX Design (Confirmed)**
 - **Color System**:
@@ -756,6 +759,45 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
       - YouTube: containsSyntheticMedia flag required
       - AI content labeling: 2026 policy compliance
 - **Result**: ✅ Success — Instagram card generator ready, dark mode 1080x1920px cards created
+
+#### Session 10: Phase 5.7 — YouTube Shorts Video Generator
+- **Task**: Implement MoviePy + gTTS based YouTube Shorts video generator (1080x1920px, 60sec)
+- **Actions**:
+  - Installed packages: moviepy (2.1.2), gTTS (2.5.4), numpy (already installed), Pillow (already installed)
+  - Created backend/modules/shorts_gen.py (370 LOC):
+    - ShortsGenerator class with MoviePy + gTTS integration
+    - Video specs: 1080x1920px (9:16 vertical), 30 FPS, MP4 (H.264), ~60 seconds
+    - Particle background animation: 40 dots moving slowly (sine/cosine motion)
+    - Video structure (7 sections):
+      - Intro (0-3s): SIGNALFEED brand + subtitle fade-in
+      - Issue title (3-11s): issue title + signal badge + sources
+      - Bullish section (11-23s): green label + sectors (crossfade)
+      - Bearish section (23-35s): red label + sectors (crossfade)
+      - Key fact (35-43s): fact label + fact text
+      - Conclusion (43-53s): summary + CTA
+      - Outro (53-60s): logo + CTA + disclaimer
+    - generate_narration(): gTTS Korean TTS, save to data/7_shorts/temp/narration_{id}.mp3
+    - generate_video(): composite all clips + audio, export with containsSyntheticMedia flag
+    - _create_particle_frame(): numpy-based particle animation (40 dots, dark bg)
+    - run(): full pipeline (load scripts → generate videos → return paths)
+    - FFmpeg metadata: containsSyntheticMedia=true, comment="AI-generated content"
+  - Created tests/backend/modules/test_shorts_gen.py (6 tests):
+    - test_narration_file_created: mock gTTS, verify mp3 path
+    - test_video_output_path: verify path format
+    - test_particle_frame_shape: verify (1920, 1080, 3) numpy array
+    - test_particle_frame_not_empty: verify particles exist (>100 non-bg pixels)
+    - test_run_returns_paths: mock generate_video, verify list returned
+    - test_hex_to_rgb: verify color conversion
+  - Fixed moviepy import: `from moviepy.editor` → `from moviepy` (v2.1.2 API change)
+  - Test Results: 6/6 passed ✅
+  - Updated CLAUDE.md:
+    - Phase 5.7 marked ✅ Complete
+    - Updated Research Notes: YouTube Shorts strategy
+      - MVP: 로컬 폴더 저장 (data/7_shorts/)
+      - 파티클 배경 + 텍스트 애니메이션 + gTTS 나레이션
+      - containsSyntheticMedia 플래그 포함
+      - 영상 내 disclaimer (54초~60초)
+- **Result**: ✅ Success — YouTube Shorts generator ready, 60초 세로 영상 생성 가능
 
 ---
 
