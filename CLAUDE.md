@@ -180,7 +180,7 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 | 5.4a | Auto Labeling (GPT-4o-mini) | ✅ Complete | auto_labeler.py, 6/6 tests passed |
 | 5.4b | Signal Classifier (FinBERT) | ✅ Complete | classifier.py (ProsusAI/finbert), 7/7 tests passed |
 | 5.5 | Content Generation Pipeline | ✅ Complete | content_gen.py (template fallback), 9/9 tests passed |
-| 5.6 | Instagram Auto-Upload | ⬜ Planned | Instagram Graph API integration |
+| 5.6 | Instagram Card Image Generator | ✅ Complete | card_gen.py (Pillow 1080x1920px), 6/6 tests passed |
 | 5.7 | YouTube Shorts Auto-Upload | ⬜ Planned | YouTube Data API v3 integration |
 | **Phase 6: Advanced Features** |
 | 6.1 | APScheduler Integration | ⬜ Planned | Periodic crawling (every 4 hours) |
@@ -393,7 +393,19 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   5. **Disclaimer**: All content marked as "AI analysis, not investment advice"
 - **Expected Error Rate**: <1% fake news propagation (vs. 5-10% for single-layer whitelist)
 
-**5. UI/UX Design (Confirmed)**
+**5. Instagram & YouTube Distribution Strategy**
+- **Instagram 자동 업로드**: MVP는 로컬 폴더 저장 후 수동 업로드 (Phase 5.6 완료)
+  - Instagram Graph API 완전 자동화는 Phase 2에서 Buffer API 활용 예정
+  - 현재: data/6_cards/cluster_X/slide_*.png 생성 후 Instagram 앱에서 수동 업로드
+- **YouTube Shorts 자동 업로드**: YouTube Data API v3 활용 (Phase 5.7 예정)
+  - containsSyntheticMedia: true 플래그 필수 (2026 AI 콘텐츠 라벨링 정책 준수)
+  - C2PA 메타데이터 + disclaimer 자동 삽입
+- **AI 콘텐츠 라벨링 준수**: Meta/YouTube 2026 정책 대응
+  - 모든 AI 생성 콘텐츠에 명시적 disclaimer 표시
+  - Instagram: 슬라이드 5에 디스클레이머 텍스트
+  - YouTube: description에 디스클레이머 + containsSyntheticMedia 플래그
+
+**6. UI/UX Design (Confirmed)**
 - **Color System**:
   - Background: #121212 (darkest)
   - Surface: #1A1A1A (cards)
@@ -702,6 +714,48 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - Test Results: 9/9 passed ✅
   - Updated CLAUDE.md: Phase 5.5 marked ✅ Complete
 - **Result**: ✅ Success — Content generation pipeline ready with template fallback
+
+#### Session 9: Phase 5.6 — Instagram Card Image Generator
+- **Task**: Implement Pillow-based Instagram card image generator (1080x1920px dark mode)
+- **Actions**:
+  - Installed packages: Pillow, requests (already satisfied)
+  - Downloaded NanumGothicBold.ttf from Google Fonts (300KB) to assets/fonts/
+  - Created assets/colors.py (SignalFeed color system):
+    - Dark mode palette: #121212 bg, #00C853 bullish, #FF3D3D bearish, #666666 neutral
+    - Bullish/bearish/neutral background colors for cards
+  - Created backend/modules/card_gen.py (430 LOC):
+    - CardGenerator class with Pillow-based rendering
+    - Canvas: 1080x1920px (Instagram Story/Reels ratio)
+    - generate_slide1_cover(): brand tag + issue title + signal emoji + sources
+    - generate_slide2_bullish(): green bar + sector cards (dark green bg) + fact box
+    - generate_slide3_bearish(): red bar + sector cards (dark red bg) + fact box
+    - generate_slide4_neutral(): gray bar + neutral cards + AI caution box
+    - generate_slide5_conclusion(): 3 summary rows (color bars) + CTA + disclaimer
+    - Helper methods: _draw_text_wrapped (word wrap), _draw_rounded_rect, _hex_to_rgb
+    - generate_all_slides(): batch all 5 slides
+    - save_slides(): PNG output to data/6_cards/cluster_X/slide_*.png
+    - run(): full pipeline (load scripts → generate → save)
+  - Created tests/backend/modules/test_card_gen.py (6 tests):
+    - test_slide_dimensions: verify 1080x1920px
+    - test_slide_count: verify 5 slides
+    - test_slide_is_image: verify PIL Image output
+    - test_save_creates_files: verify PNG files created
+    - test_hex_to_rgb: verify color conversion
+    - test_all_slides_dark_bg: verify #121212 background (±10 tolerance)
+  - Test Results: 6/6 passed ✅
+  - Generated sample cards:
+    - cluster_0: 5 slides (bullish - Fed rate cut)
+    - cluster_1: 5 slides (bearish - inflation spike)
+    - cluster_2: 5 slides (neutral - Fed meeting)
+    - Total: 15 PNG files (14-15KB each)
+  - Updated CLAUDE.md:
+    - Phase 5.6 marked ✅ Complete
+    - Added Research Notes: Instagram/YouTube distribution strategy
+      - MVP: manual upload from data/6_cards/
+      - Full automation (Buffer API): Phase 2
+      - YouTube: containsSyntheticMedia flag required
+      - AI content labeling: 2026 policy compliance
+- **Result**: ✅ Success — Instagram card generator ready, dark mode 1080x1920px cards created
 
 ---
 
