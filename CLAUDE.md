@@ -799,6 +799,21 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
       - 영상 내 disclaimer (54초~60초)
 - **Result**: ✅ Success — YouTube Shorts generator ready, 60초 세로 영상 생성 가능
 
+#### Session 11: .env 세팅 및 파이프라인 검증
+- **Task**: .env 파일 생성 및 엔드투엔드 파이프라인 import 검증
+- **Actions**:
+  - Created .env file with API key placeholders:
+    - POLYGON_API_KEY, FINNHUB_API_KEY, OPENAI_API_KEY (필수)
+    - EXAONE_API_KEY, INSTAGRAM_ACCESS_TOKEN, YOUTUBE_API_KEY (옵션)
+  - Verified .env loading: python-dotenv 정상 작동 확인
+  - Tested all module imports:
+    - ✅ NewsCollector, AutoLabeler, cluster_news_articles
+    - ✅ SignalClassifier, ContentGenerator, CardGenerator, ShortsGenerator
+    - ✅ backend.pipeline 모듈 로드 성공
+  - Pipeline functions verified: step1_collection, step2_auto_labeling, step3_clustering, step4_classification
+- **Status**: 엔드투엔드 파이프라인 준비 완료, API 키 입력 대기 중
+- **Result**: ✅ Success — All modules load successfully, ready for end-to-end test
+
 ---
 
 **Last Updated**: 2026-05-29  
