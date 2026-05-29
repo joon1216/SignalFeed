@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class NewsCollector:
     """글로벌 경제 뉴스 수집기 (Polygon.io + Finnhub)"""
 
-    # Source whitelists
+    # Source whitelists (updated with actual Polygon.io publishers)
     POLYGON_WHITELIST = {
         "Reuters",
         "Bloomberg",
@@ -31,7 +31,14 @@ class NewsCollector:
         "The Wall Street Journal",
         "CNBC",
         "MarketWatch",
-        "Associated Press"
+        "Associated Press",
+        "GlobeNewswire Inc.",
+        "Benzinga",
+        "The Motley Fool",
+        "Seeking Alpha",
+        "Yahoo Finance",
+        "Investor's Business Daily",
+        "Barron's"
     }
 
     FINNHUB_WHITELIST = {
@@ -45,8 +52,11 @@ class NewsCollector:
         "AP News"
     }
 
-    # Default tickers for Polygon.io
-    DEFAULT_TICKERS = ["AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN", "META", "SPY", "QQQ"]
+    # Default tickers for Polygon.io (expanded)
+    DEFAULT_TICKERS = [
+        "AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN", "META",
+        "JPM", "GS", "SPY", "QQQ", "BTC-USD", "ETH-USD"
+    ]
 
     # Default categories for Finnhub
     DEFAULT_CATEGORIES = ["general", "forex", "crypto", "merger"]
@@ -85,7 +95,7 @@ class NewsCollector:
         self,
         api_key: str,
         ticker_list: Optional[List[str]] = None,
-        limit: int = 50
+        limit: int = 100
     ) -> List[Dict]:
         """
         Polygon.io에서 뉴스 수집

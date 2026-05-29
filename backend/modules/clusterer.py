@@ -200,9 +200,12 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     with open(output_jsonl, 'w', encoding='utf-8') as f:
         for _, row in df.iterrows():
             article_dict = row.to_dict()
-            # NaN 값을 None으로 변환
+            # NaN 값을 None으로 변환 (handle arrays and scalars)
             for key, value in article_dict.items():
-                if pd.isna(value):
+                # Check if value is array-like (list, numpy array)
+                if isinstance(value, (list, np.ndarray)):
+                    article_dict[key] = [None if pd.isna(v) else v for v in value] if isinstance(value, list) else value.tolist()
+                elif pd.isna(value):
                     article_dict[key] = None
             f.write(json.dumps(article_dict, ensure_ascii=False) + '\n')
     

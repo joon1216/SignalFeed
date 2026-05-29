@@ -842,6 +842,43 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
     - 또는 샘플 데이터로 파이프라인 검증 후 실전 배포
 - **Result**: ⚠️ Partial Success — 뉴스 수집 성공 (50개), 클러스터링 실패 (유사도 낮음)
 
+#### Session 13: Polygon.io 화이트리스트 수정 및 대량 수집 테스트
+- **Task**: Polygon.io publisher 화이트리스트 확장 및 기사 수집량 증가
+- **Actions**:
+  - **Step 1: Polygon.io API 디버깅**
+    - 실제 API 응답 조사: GlobeNewswire Inc., Benzinga, The Motley Fool 발견
+    - 기존 whitelist (Reuters, Bloomberg, FT, WSJ 등) → 실제 API에서 0개 반환
+    - 신규 whitelist 추가: GlobeNewswire, Benzinga, The Motley Fool, Seeking Alpha, Yahoo Finance, IBD, Barron's
+  - **Step 2: collector.py 업데이트**
+    - POLYGON_WHITELIST: 7개 → 14개 소스로 확장
+    - DEFAULT_TICKERS: 9개 → 13개 (JPM, GS, BTC-USD, ETH-USD 추가)
+    - Polygon.io limit: 50 → 100개/티커
+  - **Step 3: 대량 수집 테스트 (691개 기사)**
+    - Polygon.io: 953개 수집 (중복 제거 전) → 13개 티커 × 100개/티커
+    - Finnhub: 50개 (general, forex, crypto, merger)
+    - 중복 제거: 1003개 → 691개 (최종)
+    - 소스 분포: The Motley Fool (340개), Benzinga (222개), GlobeNewswire (79개), Reuters (38개), CNBC (8개), Bloomberg (4개)
+  - **Step 4: 클러스터링 테스트 (691개 기사)**
+    - TF-IDF: (691, 11500) → UMAP: (691, 50) → HDBSCAN: 2개 후보 클러스터
+    - 품질 검증: 일관성 낮은 2개 → 노이즈 재분류
+    - 최종: **0개 클러스터** (691개 모두 노이즈)
+    - 원인: 기사 주제 다양성 높음 (투자 팁, 개별 종목 분석, ETF, 암호화폐 등)
+    - 최소 클러스터 크기 69개 → 작은 그룹은 모두 노이즈 처리됨
+  - **clusterer.py 버그 수정**
+    - ValueError: "array with more than one element is ambiguous" 해결
+    - pd.isna() 배열 처리: isinstance() 체크 추가
+- **분석 및 결론**:
+  - **성공**: 뉴스 수집 파이프라인 정상 작동 (50개 → 691개로 13.8배 증가)
+  - **실패**: 클러스터링 여전히 0개 (기사 주제 분산도 높음)
+  - **근본 원인**: SignalFeed는 "글로벌 경제 뉴스 이슈 분석"이 목표이나, 수집 기사는 개별 종목 투자 팁 중심
+    - Polygon.io: 티커별 수집 → 종목별 흩어진 기사 (AAPL, TSLA, NVDA 각각 분리)
+    - Finnhub: 카테고리별 수집 → 주제 혼재 (general, forex, crypto, merger)
+  - **다음 단계**:
+    - ✅ 파이프라인 코드 완성 (collector, clusterer 모두 정상 작동)
+    - ⚠️ 실전 배포는 샘플 데이터로 우선 검증 (data/4_classified/sample_classified.jsonl 활용)
+    - 🔄 실제 경제 이슈 중심 수집을 위한 API 전략 재검토 필요 (Phase 6)
+- **Result**: ✅ 기술적 성공 (691개 수집, 코드 버그 수정) / ⚠️ 비즈니스 실패 (클러스터링 0개)
+
 ---
 
 **Last Updated**: 2026-05-29  
