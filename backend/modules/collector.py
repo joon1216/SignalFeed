@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class NewsCollector:
     """글로벌 경제 뉴스 수집기 (Polygon.io + Finnhub)"""
 
-    # Source whitelists (updated with actual Polygon.io publishers)
+    # Source whitelists (strict - macro economic news only)
     POLYGON_WHITELIST = {
         "Reuters",
         "Bloomberg",
@@ -31,14 +31,7 @@ class NewsCollector:
         "The Wall Street Journal",
         "CNBC",
         "MarketWatch",
-        "Associated Press",
-        "GlobeNewswire Inc.",
-        "Benzinga",
-        "The Motley Fool",
-        "Seeking Alpha",
-        "Yahoo Finance",
-        "Investor's Business Daily",
-        "Barron's"
+        "Associated Press"
     }
 
     FINNHUB_WHITELIST = {
@@ -52,14 +45,15 @@ class NewsCollector:
         "AP News"
     }
 
-    # Default tickers for Polygon.io (expanded)
-    DEFAULT_TICKERS = [
-        "AAPL", "TSLA", "NVDA", "MSFT", "GOOGL", "AMZN", "META",
-        "JPM", "GS", "SPY", "QQQ", "BTC-USD", "ETH-USD"
+    # Macro economic keywords for Polygon.io (instead of tickers)
+    MACRO_KEYWORDS = [
+        "federal reserve", "interest rate", "inflation", "GDP", "employment",
+        "S&P 500", "nasdaq", "recession", "economic", "Fed", "FOMC",
+        "treasury", "tariff", "trade war", "oil price", "dollar"
     ]
 
-    # Default categories for Finnhub
-    DEFAULT_CATEGORIES = ["general", "forex", "crypto", "merger"]
+    # Default categories for Finnhub (removed crypto - too specific)
+    DEFAULT_CATEGORIES = ["general", "forex", "merger"]
 
     def __init__(self):
         """Initialize NewsCollector"""
@@ -94,62 +88,79 @@ class NewsCollector:
     def collect_polygon(
         self,
         api_key: str,
-        ticker_list: Optional[List[str]] = None,
-        limit: int = 100
+        keywords: Optional[List[str]] = None,
+        limit: int = 50
     ) -> List[Dict]:
         """
-        Polygon.io에서 뉴스 수집
+        Polygon.io에서 매크로 경제 뉴스 수집 (키워드 기반)
 
         Args:
             api_key: Polygon.io API key
-            ticker_list: 티커 리스트 (기본값: DEFAULT_TICKERS)
-            limit: 티커당 최대 기사 수
+            keywords: 검색 키워드 리스트 (기본값: MACRO_KEYWORDS)
+            limit: 최대 기사 수
 
         Returns:
             List of news articles
         """
-        if ticker_list is None:
-            ticker_list = self.DEFAULT_TICKERS
+        if keywords is None:
+            keywords = self.MACRO_KEYWORDS
 
         all_articles = []
+        seen_urls = set()
 
-        for ticker in ticker_list:
-            logger.info(f"Collecting Polygon.io news for {ticker}...")
+        # Get yesterday's date for time filtering
+        from datetime import datetime, timedelta
+        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-            def fetch():
-                params = {
-                    "ticker": ticker,
-                    "limit": limit,
-                    "apiKey": api_key
-                }
-                response = requests.get(self.polygon_base_url, params=params, timeout=30)
-                response.raise_for_status()
-                return response.json()
+        # Use general news endpoint (no ticker filter for macro news)
+        logger.info(f"Collecting Polygon.io macro economic news (last 24h)...")
 
-            data = self._retry_request(fetch)
+        def fetch():
+            params = {
+                "limit": limit,
+                "published_utc.gte": yesterday,
+                "apiKey": api_key
+            }
+            response = requests.get(self.polygon_base_url, params=params, timeout=30)
+            response.raise_for_status()
+            return response.json()
 
-            if data and "results" in data:
-                for article in data["results"]:
-                    # Filter by whitelist
-                    publisher = article.get("publisher", {}).get("name", "")
-                    if publisher not in self.POLYGON_WHITELIST:
-                        continue
+        data = self._retry_request(fetch)
 
-                    # Extract fields
-                    all_articles.append({
-                        "title": article.get("title", ""),
-                        "description": article.get("description", ""),
-                        "url": article.get("article_url", ""),
-                        "published_at": article.get("published_utc", ""),
-                        "source": publisher,
-                        "tickers": article.get("tickers", []),
-                        "raw_source": "polygon"
-                    })
+        if data and "results" in data:
+            for article in data["results"]:
+                # Filter by whitelist
+                publisher = article.get("publisher", {}).get("name", "")
+                if publisher not in self.POLYGON_WHITELIST:
+                    continue
 
-                logger.info(f"Collected {len(data.get('results', []))} articles from Polygon.io for {ticker}")
+                # Filter by macro keywords in title/description
+                title = article.get("title", "").lower()
+                description = article.get("description", "").lower()
+                text = f"{title} {description}"
 
-            # Rate limit: Polygon free plan = 5 req/min → sleep 12s
-            time.sleep(12)
+                has_keyword = any(keyword.lower() in text for keyword in keywords)
+                if not has_keyword:
+                    continue
+
+                # Deduplicate by URL
+                url = article.get("article_url", "")
+                if url in seen_urls:
+                    continue
+                seen_urls.add(url)
+
+                # Extract fields
+                all_articles.append({
+                    "title": article.get("title", ""),
+                    "description": article.get("description", ""),
+                    "url": url,
+                    "published_at": article.get("published_utc", ""),
+                    "source": publisher,
+                    "tickers": article.get("tickers", []),
+                    "raw_source": "polygon"
+                })
+
+            logger.info(f"Collected {len(all_articles)} macro articles from Polygon.io")
 
         logger.info(f"Total Polygon.io articles: {len(all_articles)}")
         return all_articles
@@ -158,7 +169,7 @@ class NewsCollector:
         self,
         api_key: str,
         categories: Optional[List[str]] = None,
-        limit: int = 50
+        limit: int = 100
     ) -> List[Dict]:
         """
         Finnhub에서 뉴스 수집

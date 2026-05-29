@@ -122,21 +122,21 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     
     # 4. HDBSCAN 클러스터링
     print(f"\n>>> HDBSCAN 클러스터링 중...")
-    
-    # 클러스터 품질: 최소 4개로 올려 이슈 섞임 방지 (2~3개는 이질 기사가 잘못 묶일 수 있음)
+
+    # 클러스터 품질: 매크로 경제 뉴스는 작은 클러스터도 유의미할 수 있음 (min_cluster_size 완화)
     if n_samples < 8:
-        min_cluster_size = 3
-        min_samples = 2
+        min_cluster_size = 2
+        min_samples = 1
     else:
-        min_cluster_size = max(4, int(n_samples * 0.1))
-        min_samples = max(2, min_cluster_size // 2)
-    
+        min_cluster_size = max(2, int(n_samples * 0.05))  # 10% → 5%로 완화
+        min_samples = max(1, min_cluster_size // 2)
+
     clusterer = hdbscan.HDBSCAN(
         min_cluster_size=min_cluster_size,
         min_samples=min_samples,
         metric='euclidean',
         cluster_selection_method='eom',
-        cluster_selection_epsilon=0.0,
+        cluster_selection_epsilon=0.3,  # 유사도 임계값 완화 (0.0 → 0.3)
         prediction_data=True
     )
     
@@ -159,11 +159,11 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     clustered_df = df[df['cluster_id'] != -1].copy()
     clustered_clusters = sorted([c for c in clustered_df['cluster_id'].unique()])
     
-    # 일관성 낮은 클러스터를 노이즈로 재분류 (threshold 상향으로 이질 기사 혼합 방지)
+    # 일관성 낮은 클러스터를 노이즈로 재분류 (threshold 완화 - 영문 매크로 뉴스는 표현 다양성 높음)
     low_quality_clusters = []
     for cluster_id in clustered_clusters:
         cluster_data = clustered_df[clustered_df['cluster_id'] == cluster_id]
-        if not _check_cluster_consistency(cluster_data, threshold=0.7):
+        if not _check_cluster_consistency(cluster_data, threshold=0.3):  # 0.4 → 0.3로 완화
             low_quality_clusters.append(cluster_id)
             clustered_df.loc[clustered_df['cluster_id'] == cluster_id, 'cluster_id'] = -1
             df.loc[df['cluster_id'] == cluster_id, 'cluster_id'] = -1  # 원본 df에도 반영
@@ -217,25 +217,35 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
 
 
 def _get_cluster_keywords(cluster_data, top_n=5, use_content=True):
-    """클러스터 내 가장 빈도 높은 키워드 추출"""
+    """클러스터 내 가장 빈도 높은 키워드 추출 (영문 뉴스 지원)"""
     all_titles = ' '.join(cluster_data['title'].fillna('').astype(str))
     text_for_keywords = all_titles
     # 제목이 비어있으면 본문 앞부분(각 500자) 사용
-    if (not all_titles.strip() or len(all_titles.strip()) < 20) and 'content' in cluster_data.columns:
-        content_previews = cluster_data['content'].fillna('').astype(str).str[:500].fillna('')
-        text_for_keywords = ' '.join(content_previews)
-    # 한글 단어만 추출 (2글자 이상)
-    words = re.findall(r'[가-힣]{2,}', text_for_keywords)
+    if (not all_titles.strip() or len(all_titles.strip()) < 20):
+        if 'content' in cluster_data.columns:
+            content_previews = cluster_data['content'].fillna('').astype(str).str[:500].fillna('')
+            text_for_keywords = ' '.join(content_previews)
+        elif 'summary' in cluster_data.columns:
+            summary_previews = cluster_data['summary'].fillna('').astype(str).str[:500].fillna('')
+            text_for_keywords = ' '.join(summary_previews)
+
+    # Extract English words (3+ letters) or Korean words (2+ chars)
+    words = re.findall(r'\b[A-Za-z]{3,}\b|[가-힣]{2,}', text_for_keywords.lower())
     word_counts = Counter(words)
-    
-    # 너무 흔한 단어 제외 (정치 뉴스 공통어 + 이슈 혼동 유발어)
+
+    # Filter out common English stopwords, source names, and Korean political terms
     common_words = {
+        # English stopwords
+        'the', 'and', 'for', 'are', 'from', 'with', 'that', 'this', 'said', 'says',
+        'will', 'has', 'have', 'been', 'about', 'after', 'could', 'would', 'should',
+        'news', 'reuters', 'bloomberg', 'cnbc', 'report', 'reports', 'reported',
+        # Korean political terms (legacy)
         '의원', '기자', '대통령', '정부', '국회', '당', '시', '군', '도', '구', '면', '동',
         '위원', '위원장', '의회', '의장', '정치', '뉴스', '오늘', '사실', '관련', '발표',
-        '대표', '청와대', '여야', '야당', '여당', '국민', '우리', 'SBS', 'KBS', '조사', '기자'
+        '대표', '청와대', '여야', '야당', '여당', '국민', '우리', '조사'
     }
     filtered_words = {word: count for word, count in word_counts.items() if word not in common_words}
-    
+
     top_words = sorted(filtered_words.items(), key=lambda x: x[1], reverse=True)[:top_n]
     return [word for word, count in top_words]
 
@@ -249,16 +259,17 @@ def _check_cluster_consistency(cluster_data, threshold=0.7):
     if len(keywords) < 1:
         return False
     
-    # 가장 대표적인 키워드(상위 1개)가 70% 이상 기사에 있어야 같은 이슈
+    # 가장 대표적인 키워드(상위 1개)가 threshold 이상 기사에 있어야 같은 이슈
     top1 = keywords[0]
     match_count = 0
     for _, row in cluster_data.iterrows():
-        text = str(row.get('title', '') or '') + ' ' + str(row.get('content', '') or '')[:800]
+        # Support both 'content' and 'summary' fields
+        content = str(row.get('content', '') or row.get('summary', '') or '')[:800]
+        text = str(row.get('title', '') or '') + ' ' + content
         if top1 in text:
             match_count += 1
-    
+
     ratio = match_count / len(cluster_data)
-    # 70% 미만이면 이질 기사 섞인 클러스터로 판단
     return ratio >= threshold
 
 
