@@ -377,11 +377,25 @@ issuefit_project/
 
 ## Notes
 
+- **GitHub Repository**: https://github.com/joon1216/issuefit_project (Public)
 - Model file (`model.safetensors`) is 460MB and excluded from Git due to GitHub's 100MB file size limit. Use Docker Hub image `beakwol/issuefit:latest` for pre-packaged deployment, or download model separately.
 - Ollama service requires ~4GB RAM and ~2GB disk for `gemma2:2b` model. First run downloads model automatically (1.6GB, takes 5-10 minutes).
 - Streamlit UI reads files on every page load — not suitable for >10K articles without database backend.
 - Clustering step (Step 2) is separate because it requires heavy computation and hyperparameter tuning — not included in default `--steps 1,3,4` workflow.
 - If running on CPU, classification speed is ~5-10 articles/sec (batch_size=32). GPU (CUDA) achieves ~50-100 articles/sec.
+
+---
+
+## Session Log
+
+### 2026-05-29
+- **Task**: Initial GitHub repository setup and CLAUDE.md creation
+- **Actions**:
+  - Created comprehensive CLAUDE.md documentation (390 lines)
+  - Updated remote URL from beakwol/issuefit_project to joon1216/issuefit_project
+  - Verified .gitignore excludes model.safetensors (460MB) and .env (sensitive)
+  - Pushed initial commit to GitHub
+- **Result**: ✅ Success — Repository live at https://github.com/joon1216/issuefit_project
 
 ---
 
