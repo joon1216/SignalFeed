@@ -24,7 +24,7 @@
 ### Architecture Philosophy
 - **File-based pipeline**: No database dependency, all intermediate results stored as JSONL/JSON files
 - **Modular design**: Each step (crawl/cluster/classify/summarize) is independent and can be run separately
-- **Docker-first deployment**: One-command setup with Docker Compose for reproducibility
+- **Service-oriented structure**: Backend/frontend separation for flexible deployment (local, cloud, containerized)
 
 ---
 
@@ -48,12 +48,12 @@
 - **requests**: HTTP client for crawling
 
 ### Deployment & DevOps
-- **Docker + Docker Compose**: Containerized deployment
-- **Ollama container**: Separate service for LLM inference
-- **Streamlit server**: Web UI container
+- **Local execution**: Direct Python execution with virtual environment
+- **Cloud deployment ready**: Modular structure for service deployment
 
 ### External APIs
 - **Naver Search API**: News search endpoint (optional, fallback to direct crawling)
+- **Ollama**: Local LLM server (runs separately, default: http://localhost:11434)
 
 ---
 
@@ -62,25 +62,21 @@
 ```
 issuefit_project/
 │
-├── app.py                     # Streamlit web UI (main entry point)
-├── pipeline.py                # Orchestrates all 4 steps (crawl/cluster/classify/summarize)
-├── requirements.txt           # Python dependencies
-├── .env.example               # Environment variable template
-├── Dockerfile                 # App container definition (Python + PyTorch CPU)
-├── docker-compose.yml         # Multi-container orchestration (app + ollama + init)
-├── docker-compose.hub.yml     # Alternative: uses pre-built Docker Hub image
-├── .gitignore                 # Excludes large model files & data
-├── .dockerignore              # Minimizes Docker build context
+├── backend/                   # Backend services and pipeline
+│   ├── modules/              # Core functional modules (~2700 LOC total)
+│   │   ├── __init__.py
+│   │   ├── clawler_ver2.py  # News crawler (Naver API + scraping, balanced collection)
+│   │   ├── clusterer.py     # Issue clustering (TF-IDF + UMAP + HDBSCAN)
+│   │   ├── classifier.py    # Political stance classifier (BERT + TextCNN + Attention)
+│   │   ├── summarizer.py    # Multi-perspective summarization (Ollama LLM)
+│   │   ├── crawler.py       # Legacy crawler (v1)
+│   │   ├── crawler_v3.py    # Experimental crawler (v3)
+│   │   └── db_loader.py     # Database loader (unused in current file-based version)
+│   ├── pipeline.py          # CLI orchestrator: orchestrates all 4 steps
+│   └── scheduler.py         # Scheduler placeholder (TODO: APScheduler/Celery)
 │
-├── modules/                   # Core functional modules (~2700 LOC total)
-│   ├── __init__.py
-│   ├── clawler_ver2.py       # News crawler (Naver API + scraping, balanced collection)
-│   ├── clusterer.py          # Issue clustering (TF-IDF + UMAP + HDBSCAN)
-│   ├── classifier.py         # Political stance classifier (BERT + TextCNN + Attention)
-│   ├── summarizer.py         # Multi-perspective summarization (Ollama LLM)
-│   ├── crawler.py            # Legacy crawler (v1)
-│   ├── crawler_v3.py         # Experimental crawler (v3)
-│   └── db_loader.py          # Database loader (unused in current file-based version)
+├── frontend/                  # Frontend application
+│   └── app.py                # Streamlit web UI (main entry point)
 │
 ├── models/                    # Pre-trained classification model
 │   └── political_classifier/
@@ -99,25 +95,35 @@ issuefit_project/
 │   └── 4_summarized/
 │       └── summaries.json    # Multi-perspective summaries by cluster_id (Step 4 output)
 │
-└── docs/                      # Documentation
-    ├── paper_summary.md       # Technical documentation (crawler + classifier architecture)
-    └── outlet_crawler_plan.md # Design notes for outlet-specific crawlers
+├── tests/                     # Test suite (TODO: pytest)
+│   └── __init__.py
+│
+├── docs/                      # Documentation
+│   ├── paper_summary.md       # Technical documentation (crawler + classifier architecture)
+│   └── outlet_crawler_plan.md # Design notes for outlet-specific crawlers
+│
+├── requirements.txt           # Python dependencies
+├── .env.example               # Environment variable template
+├── .gitignore                 # Excludes large model files & data
+├── README.md                  # User documentation (Korean)
+└── CLAUDE.md                  # This file
 ```
 
 ### Key File Descriptions
 
-**Root Scripts**
-- `app.py` (719 LOC): Streamlit UI with dark theme, issue cards, stance badges, article thumbnails, multi-select filters, Plotly charts
-- `pipeline.py` (411 LOC): CLI orchestrator with argparse, supports `--steps 1,3,4`, `--all-sources`, `--mock-classify`, `--skip-summarize`
+**Backend**
+- `backend/pipeline.py` (420 LOC): CLI orchestrator with argparse, supports `--steps 1,3,4`, `--all-sources`, `--mock-classify`, `--skip-summarize`
+- `backend/scheduler.py` (25 LOC): Placeholder for scheduled pipeline execution
+- `backend/modules/clawler_ver2.py`: Balanced crawler across 11 outlets (4 progressive + 3 moderate + 4 conservative), fallback to all sources if <100 articles
+- `backend/modules/clusterer.py`: TF-IDF (word + char n-grams) → UMAP (adaptive n_components) → HDBSCAN (min_cluster_size=2)
+- `backend/modules/classifier.py`: `BertTextCNNAttention` model with 4 conv layers + multi-head attention + layer norm
+- `backend/modules/summarizer.py`: LangChain + Ollama integration, 4 summaries per cluster (progressive/conservative/neutral/overall)
 
-**Modules**
-- `clawler_ver2.py`: Balanced crawler across 11 outlets (4 progressive + 3 moderate + 4 conservative), fallback to all sources if <100 articles, deduplication by URL
-- `clusterer.py`: TF-IDF (word + char n-grams) → UMAP (n_components adaptive to sample size) → HDBSCAN (min_cluster_size=2 for small datasets)
-- `classifier.py`: `BertTextCNNAttention` model with 4 conv layers (filter sizes 2/3/4/5) + multi-head attention + layer norm + dropout
-- `summarizer.py`: LangChain + Ollama integration, generates 4 summaries per cluster (progressive/conservative/neutral/overall) with prompt templates
+**Frontend**
+- `frontend/app.py` (730 LOC): Streamlit UI with dark theme, issue cards, stance badges, article thumbnails, multi-select filters, Plotly charts
 
 **Data Flow**
-- Each step writes to its numbered directory (`1_crawled/`, `2_clustered/`, etc.)
+- Each step writes to its numbered directory (`data/1_crawled/`, `data/2_clustered/`, etc.)
 - JSONL format for line-by-line processing of articles (supports streaming)
 - JSON format for final summaries (structured by cluster_id)
 
@@ -149,15 +155,16 @@ issuefit_project/
 | 4.1 | README (Korean) | ✅ Complete | Docker quickstart, local setup, troubleshooting |
 | 4.2 | Technical Docs | ✅ Complete | `paper_summary.md` with architecture details |
 | 4.3 | CLAUDE.md | ✅ Complete | This file |
-| **Phase 5: Future Enhancements** |
-| 5.1 | Real-time Monitoring | ⬜ Planned | Cron-based periodic crawling |
-| 5.2 | Database Backend | ⬜ Planned | SQLite/PostgreSQL for historical data |
-| 5.3 | API Server | ⬜ Planned | FastAPI for programmatic access |
-| 5.4 | Advanced Clustering | ⬜ Planned | Hierarchical topic models, temporal clustering |
-| 5.5 | Multilingual Support | ⬜ Planned | English translation, cross-lingual models |
+| **Phase 5: Service Deployment** |
+| 5.1 | Docker Removal & Restructure | ✅ Complete | Backend/frontend separation, removed Docker deps |
+| 5.2 | Real-time Monitoring | ⬜ Planned | APScheduler/Celery-based periodic crawling |
+| 5.3 | Database Backend | ⬜ Planned | SQLite/PostgreSQL for historical data |
+| 5.4 | API Server | ⬜ Planned | FastAPI for programmatic access |
+| 5.5 | Advanced Clustering | ⬜ Planned | Hierarchical topic models, temporal clustering |
+| 5.6 | Multilingual Support | ⬜ Planned | English translation, cross-lingual models |
 
 ### Current Milestone
-**v1.0 (Local)** — File-based pipeline with Docker deployment, suitable for single-user research and demos.
+**v1.1 (Service-Ready)** — Restructured for service deployment, backend/frontend separated, Docker removed.
 
 ---
 
@@ -170,10 +177,10 @@ issuefit_project/
 - **Rationale**: Simplifies deployment, eliminates DB setup/migration overhead, easy to inspect/debug intermediate states
 - **Tradeoff**: Not suitable for large-scale production (lacks indexing, query optimization, concurrent access)
 
-**2. Docker-First Deployment**
-- **Decision**: Primary deployment via Docker Compose, local setup as secondary option
-- **Rationale**: Ensures reproducibility across environments, bundles Ollama LLM service, avoids "works on my machine" issues
-- **Tradeoff**: Requires Docker knowledge, larger initial download (~2GB for Ollama + models)
+**2. Backend/Frontend Separation**
+- **Decision**: Separate backend (pipeline/modules) from frontend (Streamlit UI)
+- **Rationale**: Enables independent deployment (backend as API service, frontend as web app), easier testing, better separation of concerns
+- **Tradeoff**: Slightly more complex import paths, requires sys.path management
 
 **3. Modular Step Execution**
 - **Decision**: Each pipeline step can run independently via `--steps` flag
@@ -288,12 +295,11 @@ issuefit_project/
 - NEVER pin exact versions unless critical (e.g., `safetensors>=0.4.0` not `==0.4.1`)
 - Document special install notes (PyTorch CUDA, Ollama binary) in README, not requirements.txt
 
-**13. Docker Best Practices**
-- Multi-stage builds NOT used (simplicity over size optimization)
-- Use CPU-only PyTorch in Docker (CUDA adds ~2GB, not needed for inference)
-- COPY requirements.txt before code (leverage layer caching)
-- Use named volumes for persistent data (`ollama-data`)
-- Health checks MUST be defined for all services
+**13. Project Structure Conventions**
+- Backend code MUST add project root to sys.path (enables `from backend.modules import X`)
+- Frontend code MUST change working directory to project root (enables `data/` path access)
+- New modules go in `backend/modules/`, new UI components in `frontend/`
+- Tests go in `tests/` with mirror structure (e.g., `tests/backend/modules/test_classifier.py`)
 
 **14. UI Conventions (Streamlit)**
 - Dark theme enforced via custom CSS (background `#0e1117`, text `#ffffff`)
@@ -378,17 +384,21 @@ issuefit_project/
 ## Notes
 
 - **GitHub Repository**: https://github.com/joon1216/issuefit_project (Public)
-- Model file (`model.safetensors`) is 460MB and excluded from Git due to GitHub's 100MB file size limit. Use Docker Hub image `beakwol/issuefit:latest` for pre-packaged deployment, or download model separately.
-- Ollama service requires ~4GB RAM and ~2GB disk for `gemma2:2b` model. First run downloads model automatically (1.6GB, takes 5-10 minutes).
-- Streamlit UI reads files on every page load — not suitable for >10K articles without database backend.
-- Clustering step (Step 2) is separate because it requires heavy computation and hyperparameter tuning — not included in default `--steps 1,3,4` workflow.
-- If running on CPU, classification speed is ~5-10 articles/sec (batch_size=32). GPU (CUDA) achieves ~50-100 articles/sec.
+- **Docker Removed (Phase 5.1)**: Transitioned from Docker deployment to direct local/cloud execution for better service flexibility
+- Model file (`model.safetensors`) is 460MB and excluded from Git due to GitHub's 100MB file size limit — download separately or use pre-configured environment
+- Ollama service must run separately (e.g., `ollama serve`) — requires ~4GB RAM and ~2GB disk for `gemma2:2b` model
+- Streamlit UI reads files on every page load — not suitable for >10K articles without database backend
+- Clustering step (Step 2) is separate because it requires heavy computation and hyperparameter tuning — not included in default `--steps 1,3,4` workflow
+- If running on CPU, classification speed is ~5-10 articles/sec (batch_size=32). GPU (CUDA) achieves ~50-100 articles/sec
+- **Running the project**: Use `python backend/pipeline.py` for backend, `streamlit run frontend/app.py` for UI (from project root)
 
 ---
 
 ## Session Log
 
 ### 2026-05-29
+
+#### Session 1: Initial Setup
 - **Task**: Initial GitHub repository setup and CLAUDE.md creation
 - **Actions**:
   - Created comprehensive CLAUDE.md documentation (390 lines)
@@ -397,8 +407,25 @@ issuefit_project/
   - Pushed initial commit to GitHub
 - **Result**: ✅ Success — Repository live at https://github.com/joon1216/issuefit_project
 
+#### Session 2: Phase 5.1 — Docker Removal & Restructure
+- **Task**: Remove Docker dependencies and restructure project for service deployment
+- **Actions**:
+  - Deleted Docker files: Dockerfile, docker-compose.yml, docker-compose.hub.yml, .dockerignore
+  - Created new structure: `backend/` (modules + pipeline + scheduler), `frontend/` (app.py), `tests/`
+  - Moved modules → backend/modules, pipeline.py → backend/, app.py → frontend/
+  - Fixed imports: added sys.path management in pipeline.py and app.py for proper module resolution
+  - Updated backend/modules/__init__.py to use lazy imports (avoid automatic torch loading)
+  - Created scheduler.py placeholder (APScheduler/Celery TODO)
+  - Created tests/__init__.py (pytest TODO)
+  - Updated CLAUDE.md: File Structure, Tech Stack, Design Decisions, Development Status (Phase 5.1 ✅)
+- **Verification**:
+  - ✓ Syntax validation: `python -m py_compile backend/pipeline.py` ✅
+  - ✓ Syntax validation: `python -m py_compile frontend/app.py` ✅
+  - ✓ Directory structure confirmed (backend/modules/, frontend/, tests/)
+- **Result**: ✅ Success — Project restructured for flexible deployment (local, cloud, containerized)
+
 ---
 
 **Last Updated**: 2026-05-29  
-**Version**: 1.0 (Local/Docker)  
+**Version**: 1.1 (Service-Ready)  
 **Maintainer**: joon1216 (rlawnsdudrlawnsdud1216@gmail.com)

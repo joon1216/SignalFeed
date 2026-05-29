@@ -3,6 +3,19 @@ IssueFit Streamlit 웹 UI (DB 없는 버전)
 JSONL 파일을 직접 읽어서 표시
 """
 
+import os
+import sys
+from pathlib import Path
+
+# 프로젝트 루트를 sys.path에 추가 (frontend에서 실행될 때)
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# 작업 디렉토리를 프로젝트 루트로 변경 (data/ 경로 접근용)
+os.chdir(project_root)
+
 import streamlit as st
 import pandas as pd
 import json

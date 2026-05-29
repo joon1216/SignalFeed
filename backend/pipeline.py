@@ -13,14 +13,20 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
+# 프로젝트 루트를 sys.path에 추가 (backend에서 실행될 때)
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 # .env 파일 로드
 load_dotenv()
 
 # 모듈 임포트
-from modules.clawler_ver2 import PoliticsNewsCrawler
-from modules.classifier import PoliticalClassifier
-from modules.summarizer import PoliticalNewsSummarizer
-from modules.clusterer import cluster_news_articles
+from backend.modules.clawler_ver2 import PoliticsNewsCrawler
+from backend.modules.classifier import PoliticalClassifier
+from backend.modules.summarizer import PoliticalNewsSummarizer
+from backend.modules.clusterer import cluster_news_articles
 
 
 def create_directories():
