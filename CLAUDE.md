@@ -814,6 +814,34 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 - **Status**: 엔드투엔드 파이프라인 준비 완료, API 키 입력 대기 중
 - **Result**: ✅ Success — All modules load successfully, ready for end-to-end test
 
+#### Session 12: 실제 API 엔드투엔드 파이프라인 테스트
+- **Task**: Polygon.io + Finnhub API로 실제 뉴스 수집 및 클러스터링 테스트
+- **Actions**:
+  - Verified API keys loaded: Polygon.io (iAqoXvMR...nyR6), Finnhub (d8cjse1r...8mc0)
+  - **Step 1: News Collection** (실시간 API 호출)
+    - Polygon.io: 9개 티커 × 50개 기사 요청 (rate limit: 12s/request, 총 ~2분 30초 소요)
+    - Polygon.io 결과: 0개 (모든 티커에서 whitelist 필터링 후 0개)
+    - Finnhub: 4개 카테고리 (general, forex, crypto, merger) 수집
+    - Finnhub 결과: 50개 (중복 제거 후)
+    - 최종 수집: **50개 기사** (Reuters 38개, CNBC 8개, Bloomberg 4개)
+    - 샘플: "Morning Bid: Another day, another Iran deal moment - Reuters" (2026-05-29T13:35:00)
+  - **Step 2: Clustering** (UMAP + HDBSCAN)
+    - Fixed clusterer.py: 'content' → 'summary' field 지원 추가 (SignalFeed schema)
+    - TF-IDF 벡터화: (50, 1505) 차원
+    - UMAP 차원 축소: (50, 2) 차원
+    - HDBSCAN 클러스터링: 4개 후보 클러스터 발견
+    - 품질 검증: 일관성 낮은 4개 클러스터 → 노이즈로 재분류
+    - 최종 클러스터: **0개** (50개 기사 모두 노이즈 = 유사도 낮음)
+  - **이슈 원인 분석**:
+    - Polygon.io whitelist 필터가 너무 엄격 (Reuters/Bloomberg/FT만 허용 → 실제 응답에서 0개)
+    - Finnhub 기사는 다양한 주제 (Iran deal, crypto, forex, M&A) → 클러스터 형성 실패
+    - 최소 클러스터 크기 5개 설정 → 작은 그룹은 노이즈 처리
+  - **다음 단계**:
+    - Polygon.io API 응답 디버깅 필요 (whitelist 필터 완화 또는 API 파라미터 조정)
+    - 더 많은 기사 수집 필요 (현재 50개 → 목표 100-200개)
+    - 또는 샘플 데이터로 파이프라인 검증 후 실전 배포
+- **Result**: ⚠️ Partial Success — 뉴스 수집 성공 (50개), 클러스터링 실패 (유사도 낮음)
+
 ---
 
 **Last Updated**: 2026-05-29  

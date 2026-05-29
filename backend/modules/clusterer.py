@@ -52,10 +52,17 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     
     # 제목 및 본문 전처리
     df['title'] = df['title'].fillna('').astype(str)
-    df['content'] = df['content'].fillna('').astype(str)
-    
-    # 제목 위주: 같은 이슈는 제목이 유사함. 본문은 '국회','정부' 등 공통어로 이질 기사가 섞임
-    combined_text = (df['title'] + ' ') * 8 + df['content'].str[:600]
+
+    # Use 'summary' field if 'content' doesn't exist (SignalFeed uses summary instead of content)
+    if 'content' in df.columns:
+        df['content'] = df['content'].fillna('').astype(str)
+        combined_text = (df['title'] + ' ') * 8 + df['content'].str[:600]
+    elif 'summary' in df.columns:
+        df['summary'] = df['summary'].fillna('').astype(str)
+        combined_text = (df['title'] + ' ') * 8 + df['summary'].str[:600]
+    else:
+        # Title only if no content/summary
+        combined_text = (df['title'] + ' ') * 8
     
     # 소규모 데이터(n<15)에서는 min_df 완화
     min_df_word = 1 if n_samples < 15 else 2
