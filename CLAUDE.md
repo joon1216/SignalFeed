@@ -177,7 +177,8 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 | 5.1 | Docker Removal & Restructure | ✅ Complete | Backend/frontend separation |
 | 5.2 | CLAUDE.md Full Rewrite (Pivot) | ✅ Complete | Project pivot to SignalFeed |
 | 5.3 | Data Pipeline Rebuild | ✅ Complete | collector.py + fake_filter.py, 10/10 tests passed |
-| 5.4 | BERT Retraining | ⬜ Planned | Retrain classifier (bullish/bearish/neutral) |
+| 5.4a | Auto Labeling (GPT-4o-mini) | ✅ Complete | auto_labeler.py, 6/6 tests passed |
+| 5.4b | BERT Retraining | ⬜ Planned | Retrain classifier (bullish/bearish/neutral) |
 | 5.5 | Content Generation Pipeline | ⬜ Planned | EXAONE 3.5 + card/shorts generation |
 | 5.6 | Instagram Auto-Upload | ⬜ Planned | Instagram Graph API integration |
 | 5.7 | YouTube Shorts Auto-Upload | ⬜ Planned | YouTube Data API v3 integration |
@@ -598,6 +599,36 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - Test Results: 10/10 passed ✅
   - Updated CLAUDE.md: Phase 5.3 marked as ✅ Complete
 - **Result**: ✅ Success — Data pipeline ready, all tests passed
+
+#### Session 6: Phase 5.4a — Auto Labeling (GPT-4o-mini)
+- **Task**: Implement auto_labeler.py for GPT-4o-mini based signal classification
+- **Actions**:
+  - Installed packages: openai (2.38.0), tiktoken (0.13.0)
+  - Created backend/modules/auto_labeler.py (265 LOC):
+    - AutoLabeler class with GPT-4o-mini integration
+    - Fact-constrained system prompt (STOCKER-style): no predictions, facts only
+    - label_single(): classify as bullish/bearish/neutral with confidence + affected_sectors
+    - label_batch(): batch processing with rate limiting (1s sleep), tqdm progress
+    - validate_labels(): distribution calculation, avg confidence, low confidence flagging (<0.6)
+    - save(): JSONL output to data/2_labeled/labeled.jsonl
+    - run(): full pipeline (load → label → validate → save)
+    - Token optimization: only first 200 chars of summary sent to GPT
+    - Error handling: fallback to neutral on API failure or invalid JSON
+  - Created data/1_collected/sample_news.jsonl (10 articles):
+    - 3 bullish: Fed rate cut, Apple earnings beat, GDP growth
+    - 3 bearish: inflation surge, job cuts, recession warning
+    - 4 neutral: Fed meeting schedule, Tesla deliveries, retail data, SEC review
+  - Created tests/backend/modules/test_auto_labeler.py (6 tests):
+    - test_label_single_valid_response: mock GPT → verify fields added
+    - test_label_single_invalid_json: mock garbage → verify fallback to neutral
+    - test_label_batch_size: verify batch processing
+    - test_validate_labels_distribution: verify distribution calculation
+    - test_validate_labels_low_confidence: verify needs_review flag (<0.6)
+    - test_save_and_load: verify JSONL roundtrip
+  - Test Results: 6/6 passed ✅
+  - Dry run skipped (no OPENAI_API_KEY in .env)
+  - Updated CLAUDE.md: Phase 5.4a marked ✅ Complete
+- **Result**: ✅ Success — Auto labeler ready, all tests passed
 
 ---
 
