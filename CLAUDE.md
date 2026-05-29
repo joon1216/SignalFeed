@@ -62,7 +62,7 @@
 ### Deployment & DevOps
 - **Local execution**: Python 가상환경 직접 실행
 - **Cloud deployment ready**: AWS Lambda / Google Cloud Functions 배포 가능
-- **APScheduler**: 주기적 크롤링 (Phase 5.2)
+- **APScheduler**: 주기적 크롤링 (Phase 6.1)
 
 ### External APIs
 - **Polygon.io**: 뉴스 데이터 API (무료 플랜: 5 req/min)
@@ -76,7 +76,7 @@
 ## 3. File Structure
 
 ```
-issuefit_project/  (legacy name, will rename to signalfeed_project)
+issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 │
 ├── backend/                   # Backend services and pipeline
 │   ├── modules/              # Core functional modules
@@ -91,7 +91,7 @@ issuefit_project/  (legacy name, will rename to signalfeed_project)
 │   │   ├── fake_filter.py   # 5-layer fake news defense — NEW
 │   │   └── summarizer.py    # Legacy summarizer (deprecated)
 │   ├── pipeline.py          # CLI orchestrator: all 7 steps
-│   └── scheduler.py         # APScheduler: periodic crawling (Phase 5.2)
+│   └── scheduler.py         # APScheduler: periodic crawling (Phase 6.1)
 │
 ├── frontend/                  # Frontend application
 │   └── app.py                # Streamlit admin dashboard (content review)
@@ -312,8 +312,8 @@ issuefit_project/  (legacy name, will rename to signalfeed_project)
 - POLYGON_API_KEY, FINNHUB_API_KEY, OPENAI_API_KEY, INSTAGRAM_ACCESS_TOKEN → NEVER commit
 - Use GitHub Secrets for CI/CD, local `.env` for development
 
-**9. Commit Messages (Korean)**
-- Format: `<Component>: <Action> <Details>` (e.g., `collector: Polygon.io API 통합 완료`)
+**9. Commit Messages (Korean/English 모두 허용)**
+- Format: `<Component>: <Action> <Details>` (예: `feat: Polygon.io API 연동 완료`, `fix: 클러스터링 버그 수정`)
 - No emoji in commits
 
 **10. Tag Releases for Model Checkpoints**
@@ -479,7 +479,7 @@ issuefit_project/  (legacy name, will rename to signalfeed_project)
 
 ## Notes
 
-- **GitHub Repository**: https://github.com/joon1216/issuefit_project (Public, will rename to signalfeed_project)
+- **GitHub Repository**: https://github.com/joon1216/issuefit_project (Public, 레포 이름 유지)
 - **Project Pivot (2026-05-29)**: Fully pivoted from IssueFit (political news) to SignalFeed (economic signals)
 - **MVP Target**: Instagram 5-slide cards + YouTube Shorts automation (Phase 5.3-5.7)
 - **Model Retraining**: BERT + TextCNN + Attention classifier (political → signal labels), target F1 ≥ 0.80
@@ -553,6 +553,15 @@ issuefit_project/  (legacy name, will rename to signalfeed_project)
     - Instagram format confirmed: 5-slide fixed format
   - Added Session Log: Phase 5.2 pivot entry
 - **Result**: ✅ Success — CLAUDE.md fully rewritten for SignalFeed project
+
+#### Session 4: CLAUDE.md Minor Fixes
+- **Task**: Fix 3 minor errors in CLAUDE.md
+- **Actions**:
+  - Fixed Rule #9 "Commit Messages": Korean only → Korean/English 모두 허용
+    - Updated format example: `feat: Polygon.io API 연동 완료`, `fix: 클러스터링 버그 수정`
+  - Fixed APScheduler phase number: Phase 5.2 → Phase 6.1 (3 occurrences)
+  - Fixed repo name note: "will rename to signalfeed_project" → "레포 이름 유지" (2 occurrences)
+- **Result**: ✅ Success — CLAUDE.md errors corrected
 
 ---
 
