@@ -130,6 +130,11 @@ class ContentGenerator:
     OLLAMA_BASE_URL = "http://localhost:11434/v1"
     OLLAMA_MODEL = "exaone3.5:7.8b"
 
+    @staticmethod
+    def _get_signal_emoji(signal: str) -> str:
+        """Get signal emoji"""
+        return {"bullish": "🟢", "bearish": "🔴", "neutral": "⚪"}.get(signal, "⚪")
+
     def __init__(self):
         """Initialize ContentGenerator with Ollama availability check"""
         self.use_ollama = self._check_ollama_available()
@@ -250,17 +255,50 @@ class ContentGenerator:
   "cluster_id": "{cluster_id}",
   "signal": "{signal}",
   "slides": [
-    {{"slide_num": 1, "title": "20자 이내", "body": "80자 이내", "signal_emoji": "🟢 또는 🔴 또는 ⚪"}},
-    {{"slide_num": 2, "title": "호재", "body": "팩트만 나열", "sectors": ["섹터1", "섹터2"]}},
-    {{"slide_num": 3, "title": "악재", "body": "팩트만 나열", "sectors": ["섹터1", "섹터2"]}},
-    {{"slide_num": 4, "title": "중립·주의", "body": "팩트만 나열", "caution": "주의사항"}},
-    {{"slide_num": 5, "title": "오늘의 결론", "body": "요약", "cta": "자세한 분석은 프로필 링크"}}
+    {{
+      "slide_num": 1,
+      "title": "20자 이내",
+      "body": "시그널 포함 (🟢 호재 시그널 / 🔴 악재 시그널 / ⚪ 중립 시그널)",
+      "signal_emoji": "{self._get_signal_emoji(signal)}"
+    }},
+    {{
+      "slide_num": 2,
+      "title": "호재",
+      "body": "호재 요인 팩트 (40자 이내)",
+      "sectors": ["섹터1", "섹터2", "섹터3"]
+    }},
+    {{
+      "slide_num": 3,
+      "title": "악재",
+      "body": "악재 요인 팩트 (40자 이내)",
+      "sectors": ["섹터1", "섹터2"]
+    }},
+    {{
+      "slide_num": 4,
+      "title": "중립·주의",
+      "body": "중립 요인 팩트 (40자 이내)",
+      "sectors": ["섹터1"],
+      "caution": "주의사항"
+    }},
+    {{
+      "slide_num": 5,
+      "title": "오늘의 결론",
+      "body": "요약",
+      "cta": "자세한 분석은 프로필 링크"
+    }}
   ],
   "hashtags": ["#경제", "#투자", ...] (10개),
   "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
 }}
 
-주의: 예측 표현(오를 것, 떨어질 것, 기대됩니다) 사용 금지. 팩트만 작성.
+중요 규칙:
+1. slide 1 signal_emoji: bullish="🟢", bearish="🔴", neutral="⚪"
+2. slide 1 body: 반드시 시그널 표기 포함 ("🟢 호재 시그널" 또는 "🔴 악재 시그널" 또는 "⚪ 중립 시그널")
+3. slide 2 sectors: 반드시 2~3개 섹터명 포함 (예: ["성장주", "채권", "부동산"])
+4. slide 3 sectors: 반드시 2~3개 섹터명 포함 (예: ["은행주", "달러"])
+5. slide 4 sectors: 반드시 1~2개 섹터명 포함
+6. sectors가 비어있으면 절대 안 됨 - 반드시 관련 섹터명을 기사에서 추출할 것
+7. 예측 표현(오를 것, 떨어질 것, 기대됩니다) 사용 금지. 팩트만 작성.
 """
 
         try:

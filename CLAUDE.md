@@ -1048,3 +1048,72 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 **Last Updated**: 2026-05-29  
 **Version**: 2.0 (SignalFeed MVP)  
 **Maintainer**: joon1216 (rlawnsdudrlawnsdud1216@gmail.com)
+
+#### Session 18: card_gen.py 레이아웃 전면 개편 + sectors 렌더링 수정
+- **Task**: 카드 레이아웃 완전 재설계 및 EXAONE 프롬프트 개선
+- **Actions**:
+  - **Step 1: content_gen.py 프롬프트 수정**
+    - sectors 필드 강제 생성 규칙 추가:
+      - Slide 2 (호재): 2~3개 섹터명 필수 (예: ["성장주", "채권", "부동산"])
+      - Slide 3 (악재): 2~3개 섹터명 필수 (예: ["은행주", "달러"])
+      - Slide 4 (중립): 1~2개 섹터명 필수
+      - 비어있으면 절대 안 됨 명시
+    - signal_emoji 기준 명확화:
+      - bullish → "🟢", bearish → "🔴", neutral → "⚪"
+    - Slide 1 body에 시그널 한국어 표기 포함 규칙 추가
+    - _get_signal_emoji() helper method 추가
+  - **Step 2: card_gen.py 전면 재작성 (780 LOC)**
+    - **Slide 1 (Cover) 레이아웃**:
+      - y=60: SIGNALFEED 브랜드 (green, 28px)
+      - y=160: live dot + "오늘의 핵심 이슈" (gray, 24px)
+      - y=320: 이슈 제목 (white, 52px bold, center, max 2 lines)
+      - y=600: 시그널 배지 (emoji + text, 36px, center)
+      - y=800: 소스 칩 (Reuters · Bloomberg · FT, gray, 22px, center)
+      - y=900: "슬라이드로 자세히 보기 →" (green, 24px, center)
+      - y=1860: green line accent (bottom)
+    - **Slides 2~3 (Bullish/Bearish) 레이아웃**:
+      - y=60: 라벨 바 (16px wide, 60px tall) + 라벨 텍스트 (호재/악재, 40px)
+      - y=200: 섹터 카드 (각 160px tall, rounded corners, colored bg):
+        - 섹터명 (green/red, 32px bold)
+        - 이유 텍스트 (white, 26px, 2 lines max)
+        - 카드 간격: 20px
+      - y=1600: 팩트 박스 (darker bg, rounded):
+        - "핵심 팩트" 라벨 (gray, 22px)
+        - 팩트 텍스트 (white, 26px)
+    - **Slide 4 (Neutral)**: Slide 2/3과 동일 구조, gray 테마
+    - **Slide 5 (Conclusion) 레이아웃**:
+      - y=60: "오늘의 결론" (white, 44px bold)
+      - y=200: 3개 요약 행 (colored bar + text, 36px)
+        - green bar + bullish 요약
+        - red bar + bearish 요약
+        - gray bar + neutral 요약
+      - y=1550: CTA 박스 (green border, rounded)
+      - y=1800: disclaimer (gray, 20px, center)
+    - **일반 규칙**:
+      - LEFT_MARGIN = 60px, RIGHT_MARGIN = 60px, CONTENT_WIDTH = 960px
+      - Rounded rectangles: radius=20px
+      - 폰트 크기 대폭 확대 (16px~52px → 20px~52px)
+      - Color name 지원 (_hex_to_rgb에 "white", "black" 등 매핑)
+  - **Step 3: EXAONE 재생성 테스트**
+    - Cluster 6: "호조 시그널"
+      - Slide 2 sectors: ["대형 소매", "할인점"]
+      - Slide 3 sectors: ["증권주", "투자상품"]
+    - Cluster 3: "🟢 호재 시그널"
+      - Slide 2 sectors: ["소비재", "서비스"]
+      - Slide 3 sectors: ["에너지", "운송"]
+    - sectors 필드 정상 생성 확인
+  - **Step 4: 카드 이미지 재생성**
+    - 새 레이아웃 적용 완료
+    - Cluster 6: 5장
+    - Cluster 3: 5장
+    - 총 10장 업데이트
+  - **Step 5: 시각적 검증**
+    - Slide 1: 깔끔한 커버, 시그널 배지 중앙 정렬
+    - Slide 2/3: 섹터 카드 렌더링 정상, 색상 구분 명확
+    - Slide 5: 3줄 요약 + CTA 박스 정상
+- **성과**:
+  - ✅ sectors 렌더링 완전 수정 (빈 필드 없음)
+  - ✅ 레이아웃 가독성 대폭 향상 (여백 60px, 폰트 크기 증가)
+  - ✅ 시그널 색상 구분 명확화 (green/red/gray 테마)
+  - ✅ 브랜딩 강화 (SIGNALFEED 로고, live dot, CTA)
+- **Result**: ✅ Success — 카드 레이아웃 전면 개편 완료, 프로덕션 ready
