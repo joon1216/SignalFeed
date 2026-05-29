@@ -45,17 +45,32 @@ class CardGenerator:
         Args:
             font_path: Path to Korean font file
         """
-        self.font_path = font_path
+        # Font loading priority list (try in order)
+        font_candidates = [
+            font_path,  # User-provided path
+            os.path.expanduser("~/Library/Fonts/NanumGothic-Bold.ttf"),
+            os.path.expanduser("~/Library/Fonts/NanumGothic-Regular.ttf"),
+            "/System/Library/Fonts/AppleSDGothicNeo.ttc"
+        ]
 
-        # Try to load custom font, fallback to default
-        try:
-            self.font_large = ImageFont.truetype(font_path, 40)
-            self.font_medium = ImageFont.truetype(font_path, 28)
-            self.font_small = ImageFont.truetype(font_path, 20)
-            self.font_tiny = ImageFont.truetype(font_path, 16)
-            logger.info(f"Loaded font: {font_path}")
-        except Exception as e:
-            logger.warning(f"Failed to load custom font: {e}. Using default font.")
+        loaded_font = None
+        for candidate in font_candidates:
+            if os.path.exists(candidate):
+                try:
+                    self.font_large = ImageFont.truetype(candidate, 40)
+                    self.font_medium = ImageFont.truetype(candidate, 28)
+                    self.font_small = ImageFont.truetype(candidate, 20)
+                    self.font_tiny = ImageFont.truetype(candidate, 16)
+                    logger.info(f"Loaded font: {candidate}")
+                    loaded_font = candidate
+                    break
+                except Exception as e:
+                    logger.debug(f"Failed to load {candidate}: {e}")
+                    continue
+
+        # Fallback to default if all candidates fail
+        if not loaded_font:
+            logger.warning(f"All font candidates failed. Using default font.")
             self.font_large = ImageFont.load_default()
             self.font_medium = ImageFont.load_default()
             self.font_small = ImageFont.load_default()

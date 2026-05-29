@@ -971,6 +971,34 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ⚠️ EXAONE API key 없어 템플릿 모드 사용 (한국어 품질 저하)
 - **Result**: ✅ Success — 전체 파이프라인 Step 4-6 정상 작동, 10장 카드 이미지 생성 완료
 
+#### Session 16: 한글 폰트 수정 및 카드 재생성
+- **Task**: NanumGothic-Bold 폰트 적용 및 카드 이미지 재생성
+- **Actions**:
+  - **Step 1: 시스템 폰트 검색**
+    - ~/Library/Fonts에서 NanumGothic 폰트 발견:
+      - NanumGothic-Bold.ttf
+      - NanumGothic-Regular.ttf
+      - NanumGothic-ExtraBold.ttf
+  - **Step 2: card_gen.py 폰트 로딩 로직 개선**
+    - 기존: 단일 경로 시도 → 실패 시 default font
+    - 변경: 우선순위 리스트로 폰트 후보 순차 시도
+    - 폰트 후보 우선순위:
+      1. assets/fonts/NanumGothicBold.ttf (사용자 제공)
+      2. ~/Library/Fonts/NanumGothic-Bold.ttf (시스템 설치)
+      3. ~/Library/Fonts/NanumGothic-Regular.ttf (시스템 설치)
+      4. /System/Library/Fonts/AppleSDGothicNeo.ttc (macOS 기본)
+      5. ImageFont.load_default() (최후 fallback)
+    - os.path.expanduser() 사용으로 ~ 경로 지원
+  - **Step 3: 카드 이미지 재생성**
+    - NanumGothic-Bold.ttf 로드 성공
+    - Cluster 6: 5장 재생성
+    - Cluster 3: 5장 재생성
+    - 총 10장 카드 업데이트
+  - **Step 4: 한글 렌더링 검증**
+    - slide_1.png 파일 미리보기로 확인
+    - 한글 텍스트 정상 출력 확인
+- **Result**: ✅ Success — 한글 폰트 정상 적용, 카드 이미지 재생성 완료
+
 ---
 
 **Last Updated**: 2026-05-29  
