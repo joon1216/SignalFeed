@@ -1,6 +1,6 @@
 """
 SignalFeed Content Generator
-EXAONE 3.5 기반 Instagram 5-slide + YouTube Shorts 스크립트 생성
+EXAONE 3.5 7.8B (Ollama) 기반 Instagram 5-slide + YouTube Shorts 스크립트 생성
 """
 
 import os
@@ -10,6 +10,7 @@ import requests
 from typing import List, Dict, Optional
 from collections import defaultdict
 from tqdm import tqdm
+from openai import OpenAI
 
 # Configure logging
 logging.basicConfig(
@@ -20,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class TemplateFallback:
-    """EXAONE API 없을 때 템플릿 기반 폴백"""
+    """EXAONE/Ollama 없을 때 템플릿 기반 폴백"""
 
     SIGNAL_EMOJI = {
         "bullish": "🟢",
@@ -112,66 +113,186 @@ AI 분석 결과, {signal.upper()} 시그널로 분류되었습니다.
 
 
 class ContentGenerator:
-    """EXAONE 3.5 기반 콘텐츠 생성기"""
+    """EXAONE 3.5 7.8B (Ollama) 기반 콘텐츠 생성기"""
 
-    SYSTEM_PROMPT = """You are a Korean financial news content writer for SignalFeed.
-Your job is to explain global economic news to Korean MZ generation investors (20-35).
-STRICT RULES:
+    SYSTEM_PROMPT = """당신은 SignalFeed의 한국어 경제 뉴스 콘텐츠 작성자입니다.
+한국 MZ세대 투자자(20-35세)를 위해 글로벌 경제 뉴스를 쉽고 직관적으로 설명합니다.
 
-1. Write ONLY in Korean
-2. NEVER predict stock prices or future market direction
-3. NEVER recommend buy/sell/hold
-4. ONLY use facts from the provided news data
-5. Keep language simple and clear (high school level)
-6. Always end with: "모든 투자 판단은 본인 책임입니다"
+절대 규칙:
+1. 투자 권유, 매수/매도 추천 절대 금지
+2. 주가 예측 표현 절대 금지 ("오를 것", "떨어질 것", "기대됩니다" 등)
+3. 제공된 팩트 데이터만 사용, 추측 금지
+4. 반드시 JSON 형식으로만 출력
+5. 모든 내용은 한국어로 작성
+6. 마지막에 항상 면책조항 포함: "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
 """
 
-    BANNED_WORDS = ["예상", "전망", "오를", "떨어질", "추천", "매수", "매도"]
+    OLLAMA_BASE_URL = "http://localhost:11434/v1"
+    OLLAMA_MODEL = "exaone3.5:7.8b"
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self):
+        """Initialize ContentGenerator with Ollama availability check"""
+        self.use_ollama = self._check_ollama_available()
+
+        if self.use_ollama:
+            self.client = OpenAI(
+                base_url=self.OLLAMA_BASE_URL,
+                api_key="ollama"  # Ollama doesn't require real API key
+            )
+            logger.info(f"EXAONE 3.5 7.8B via Ollama: Available")
+        else:
+            logger.warning("Ollama not available. Using template fallback mode.")
+
+    def _check_ollama_available(self) -> bool:
         """
-        Initialize ContentGenerator
+        Check if Ollama is running and model is available
+
+        Returns:
+            True if Ollama is available, False otherwise
+        """
+        try:
+            response = requests.get("http://localhost:11434/api/tags", timeout=2)
+            if response.status_code == 200:
+                models = response.json().get("models", [])
+                model_names = [m.get("name") for m in models]
+                if self.OLLAMA_MODEL in model_names:
+                    return True
+                else:
+                    logger.warning(f"Model {self.OLLAMA_MODEL} not found in Ollama. Available: {model_names}")
+                    return False
+            else:
+                return False
+        except Exception as e:
+            logger.debug(f"Ollama availability check failed: {e}")
+            return False
+
+    def _unload_model(self):
+        """Unload EXAONE model from VRAM after generation"""
+        try:
+            response = requests.post(
+                "http://localhost:11434/api/generate",
+                json={"model": self.OLLAMA_MODEL, "keep_alive": 0},
+                timeout=5
+            )
+            if response.status_code == 200:
+                logger.info("EXAONE model unloaded from VRAM")
+        except Exception as e:
+            logger.debug(f"Model unload failed (non-critical): {e}")
+
+    def _call_exaone(self, user_prompt: str, response_format: str = "json") -> str:
+        """
+        Call EXAONE 3.5 via Ollama
 
         Args:
-            api_key: EXAONE API key (if None, uses template fallback)
-        """
-        self.api_key = api_key
-        self.use_llm = api_key is not None
-
-        if not self.use_llm:
-            logger.warning("EXAONE API key not provided. Using template fallback mode.")
-
-    def _call_exaone(self, prompt: str) -> str:
-        """
-        Call EXAONE 3.5 API
-
-        Args:
-            prompt: User prompt
+            user_prompt: User prompt
+            response_format: Expected format ("json" or "text")
 
         Returns:
             Generated text
         """
-        # NOTE: EXAONE API endpoint is placeholder - LG AI API details not public yet
-        # Using template fallback for now
-        logger.warning("EXAONE API not yet available. Using template fallback.")
-        return ""
+        try:
+            response = self.client.chat.completions.create(
+                model=self.OLLAMA_MODEL,
+                messages=[
+                    {"role": "system", "content": self.SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.7,
+                max_tokens=2000
+            )
+
+            generated = response.choices[0].message.content
+            return generated
+
+        except Exception as e:
+            logger.error(f"EXAONE generation failed: {e}")
+            return ""
 
     def generate_instagram_script(self, cluster: Dict) -> Dict:
         """
         Generate Instagram 5-slide script
 
         Args:
-            cluster: Cluster dict with cluster_label, signal, affected_sectors, articles
+            cluster: Cluster dict with cluster_id, signal, affected_sectors, articles
 
         Returns:
             Instagram script dict with slides, hashtags, disclaimer
         """
-        # Use template fallback (EXAONE API not public yet)
-        return TemplateFallback.generate_instagram_script(cluster)
+        if not self.use_ollama:
+            return TemplateFallback.generate_instagram_script(cluster)
+
+        # Build prompt with article data
+        cluster_id = cluster.get("cluster_id", "unknown")
+        signal = cluster.get("signal", "neutral")
+        affected_sectors = cluster.get("affected_sectors", [])
+        articles = cluster.get("articles", [])[:3]  # Max 3 articles
+
+        # Extract article summaries
+        article_texts = []
+        for i, article in enumerate(articles, 1):
+            title = article.get("title", "")
+            summary = article.get("summary", "")[:200]  # First 200 chars
+            source = article.get("source", "")
+            article_texts.append(f"기사 {i} ({source}):\n제목: {title}\n요약: {summary}")
+
+        articles_str = "\n\n".join(article_texts)
+
+        user_prompt = f"""다음 경제 뉴스 기사들을 분석하여 Instagram 5-slide 카드 뉴스 스크립트를 JSON 형식으로 생성하세요.
+
+이슈 시그널: {signal}
+관련 섹터: {', '.join(affected_sectors) if affected_sectors else '없음'}
+
+기사 데이터:
+{articles_str}
+
+출력 형식 (JSON):
+{{
+  "cluster_id": "{cluster_id}",
+  "signal": "{signal}",
+  "slides": [
+    {{"slide_num": 1, "title": "20자 이내", "body": "80자 이내", "signal_emoji": "🟢 또는 🔴 또는 ⚪"}},
+    {{"slide_num": 2, "title": "호재", "body": "팩트만 나열", "sectors": ["섹터1", "섹터2"]}},
+    {{"slide_num": 3, "title": "악재", "body": "팩트만 나열", "sectors": ["섹터1", "섹터2"]}},
+    {{"slide_num": 4, "title": "중립·주의", "body": "팩트만 나열", "caution": "주의사항"}},
+    {{"slide_num": 5, "title": "오늘의 결론", "body": "요약", "cta": "자세한 분석은 프로필 링크"}}
+  ],
+  "hashtags": ["#경제", "#투자", ...] (10개),
+  "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
+}}
+
+주의: 예측 표현(오를 것, 떨어질 것, 기대됩니다) 사용 금지. 팩트만 작성.
+"""
+
+        try:
+            response = self._call_exaone(user_prompt)
+
+            # Parse JSON response
+            # Try to extract JSON from markdown code blocks if present
+            if "```json" in response:
+                json_start = response.find("```json") + 7
+                json_end = response.find("```", json_start)
+                response = response[json_start:json_end].strip()
+            elif "```" in response:
+                json_start = response.find("```") + 3
+                json_end = response.find("```", json_start)
+                response = response[json_start:json_end].strip()
+
+            result = json.loads(response)
+
+            # Validate required fields
+            if "slides" in result and len(result["slides"]) == 5:
+                logger.info(f"Generated Instagram script for cluster {cluster_id}")
+                return result
+            else:
+                raise ValueError("Invalid response format")
+
+        except Exception as e:
+            logger.error(f"EXAONE Instagram generation failed: {e}. Using fallback.")
+            return TemplateFallback.generate_instagram_script(cluster)
 
     def generate_shorts_script(self, cluster: Dict) -> Dict:
         """
-        Generate YouTube Shorts script
+        Generate YouTube Shorts 60sec narration script
 
         Args:
             cluster: Cluster dict
@@ -179,8 +300,77 @@ STRICT RULES:
         Returns:
             Shorts script dict with narration, duration, title, description, tags
         """
-        # Use template fallback (EXAONE API not public yet)
-        return TemplateFallback.generate_shorts_script(cluster)
+        if not self.use_ollama:
+            return TemplateFallback.generate_shorts_script(cluster)
+
+        cluster_id = cluster.get("cluster_id", "unknown")
+        signal = cluster.get("signal", "neutral")
+        cluster_label = cluster.get("cluster_label", "경제 뉴스")
+        affected_sectors = cluster.get("affected_sectors", [])
+        articles = cluster.get("articles", [])[:3]
+
+        # Extract article summaries
+        article_texts = []
+        for i, article in enumerate(articles, 1):
+            title = article.get("title", "")
+            summary = article.get("summary", "")[:200]
+            article_texts.append(f"기사 {i}: {title}\n{summary}")
+
+        articles_str = "\n\n".join(article_texts)
+
+        user_prompt = f"""다음 경제 뉴스 기사들을 분석하여 YouTube Shorts 60초 나레이션 스크립트를 JSON 형식으로 생성하세요.
+
+이슈: {cluster_label}
+시그널: {signal}
+관련 섹터: {', '.join(affected_sectors) if affected_sectors else '없음'}
+
+기사 데이터:
+{articles_str}
+
+출력 형식 (JSON):
+{{
+  "cluster_id": "{cluster_id}",
+  "narration": "약 150 단어의 한국어 나레이션 (60초 분량)",
+  "duration_estimate": 60,
+  "title": "60자 이내",
+  "description": "설명",
+  "tags": ["경제", "투자", ...]
+}}
+
+나레이션 구조:
+1. 인사 (안녕하세요 시그널피드입니다)
+2. 핵심 이슈 설명 (팩트만)
+3. 시그널 분석 결과
+4. 면책조항 (본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다)
+5. 구독 요청
+
+주의: 예측 표현 사용 금지. 팩트만 작성.
+"""
+
+        try:
+            response = self._call_exaone(user_prompt)
+
+            # Parse JSON
+            if "```json" in response:
+                json_start = response.find("```json") + 7
+                json_end = response.find("```", json_start)
+                response = response[json_start:json_end].strip()
+            elif "```" in response:
+                json_start = response.find("```") + 3
+                json_end = response.find("```", json_start)
+                response = response[json_start:json_end].strip()
+
+            result = json.loads(response)
+
+            if "narration" in result:
+                logger.info(f"Generated Shorts script for cluster {cluster_id}")
+                return result
+            else:
+                raise ValueError("Invalid response format")
+
+        except Exception as e:
+            logger.error(f"EXAONE Shorts generation failed: {e}. Using fallback.")
+            return TemplateFallback.generate_shorts_script(cluster)
 
     def generate_all(self, clusters: List[Dict]) -> List[Dict]:
         """
@@ -221,6 +411,10 @@ STRICT RULES:
                 logger.error(f"Error generating script for cluster {cluster.get('cluster_id')}: {e}")
                 continue
 
+        # Unload model from VRAM after all generations
+        if self.use_ollama:
+            self._unload_model()
+
         logger.info(f"Generated {len(scripts)} scripts")
         return scripts
 
@@ -249,53 +443,50 @@ STRICT RULES:
         Returns:
             Generated scripts
         """
+        import jsonlines
+
         logger.info("=" * 70)
-        logger.info("SignalFeed Content Generator Started")
+        logger.info("SignalFeed Content Generation Started")
         logger.info("=" * 70)
 
         # Load classified articles
-        logger.info(f"Loading classified articles from {input_path}...")
         articles = []
-        with open(input_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    articles.append(json.loads(line))
+        with jsonlines.open(input_path) as reader:
+            for obj in reader:
+                articles.append(obj)
 
         logger.info(f"Loaded {len(articles)} articles")
 
         # Group by cluster_id
-        clusters_dict = defaultdict(lambda: {
-            "cluster_id": -1,
-            "cluster_label": "",
-            "signal": "neutral",
-            "affected_sectors": [],
-            "articles": []
-        })
-
+        clusters = defaultdict(list)
         for article in articles:
             cluster_id = article.get("cluster_id", -1)
-            if cluster_id >= 0:
-                clusters_dict[cluster_id]["cluster_id"] = cluster_id
-                clusters_dict[cluster_id]["cluster_label"] = article.get("cluster_label", "")
-                clusters_dict[cluster_id]["signal"] = article.get("signal", "neutral")
+            if cluster_id >= 0:  # Skip noise
+                clusters[cluster_id].append(article)
 
-                # Aggregate affected_sectors
-                sectors = article.get("affected_sectors", [])
-                for sector in sectors:
-                    if sector not in clusters_dict[cluster_id]["affected_sectors"]:
-                        clusters_dict[cluster_id]["affected_sectors"].append(sector)
+        logger.info(f"Found {len(clusters)} clusters")
 
-                clusters_dict[cluster_id]["articles"].append(article)
+        # Prepare cluster data
+        cluster_list = []
+        for cluster_id, cluster_articles in clusters.items():
+            # Get dominant signal and affected sectors from first article
+            first_article = cluster_articles[0]
 
-        clusters = list(clusters_dict.values())
-        logger.info(f"Grouped into {len(clusters)} clusters")
+            cluster_data = {
+                "cluster_id": cluster_id,
+                "cluster_label": first_article.get("cluster_label", ""),
+                "signal": first_article.get("signal", "neutral"),
+                "affected_sectors": first_article.get("affected_sectors", []),
+                "articles": cluster_articles
+            }
+
+            cluster_list.append(cluster_data)
 
         # Generate scripts
-        scripts = self.generate_all(clusters)
+        scripts = self.generate_all(cluster_list)
 
         # Save
-        output_path = "data/5_generated/scripts.json"
-        self.save(scripts, output_path)
+        self.save(scripts)
 
         logger.info("=" * 70)
         logger.info(f"Content Generation Complete: {len(scripts)} scripts")
@@ -306,17 +497,10 @@ STRICT RULES:
 
 if __name__ == "__main__":
     # Test run
-    from dotenv import load_dotenv
-    load_dotenv()
+    generator = ContentGenerator()
 
-    api_key = os.getenv("EXAONE_API_KEY")
-
-    generator = ContentGenerator(api_key=api_key)
-
-    # Use sample data if exists
-    sample_path = "data/4_classified/sample_classified.jsonl"
-    if os.path.exists(sample_path):
-        scripts = generator.run(sample_path)
-        logger.info(f"Generated {len(scripts)} sample scripts")
+    if os.path.exists("data/4_classified/classified.jsonl"):
+        scripts = generator.run()
+        logger.info(f"Generated {len(scripts)} scripts")
     else:
-        logger.warning(f"Sample data not found at {sample_path}")
+        logger.warning("No classified data found. Run classifier first.")

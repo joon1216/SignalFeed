@@ -47,7 +47,7 @@
 - **scikit-learn**: TF-IDF 벡터화
 - **UMAP**: 차원 축소 (클러스터링)
 - **HDBSCAN**: 밀도 기반 클러스터링
-- **EXAONE 3.5 (LG AI)**: 한국어 특화 무료 LLM (콘텐츠 생성)
+- **EXAONE 3.5 7.8B (Ollama)**: 한국어 특화 LLM (콘텐츠 생성) — Confirmed working via Ollama local
 
 ### Data Collection
 - **Polygon.io API**: 미국 주식 뉴스 (Reuters/Bloomberg/AP 등)
@@ -998,6 +998,50 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
     - slide_1.png 파일 미리보기로 확인
     - 한글 텍스트 정상 출력 확인
 - **Result**: ✅ Success — 한글 폰트 정상 적용, 카드 이미지 재생성 완료
+
+#### Session 17: EXAONE 3.5 7.8B Ollama 연동 완료
+- **Task**: content_gen.py에 EXAONE 3.5 7.8B (Ollama) 통합
+- **Actions**:
+  - **Step 1: content_gen.py 전면 재작성**
+    - OpenAI SDK 통합 (base_url="http://localhost:11434/v1")
+    - Ollama 가용성 자동 체크 (/api/tags 엔드포인트)
+    - 모델: exaone3.5:7.8b
+    - TemplateFallback 유지 (Ollama 불가용 시)
+  - **Step 2: System Prompt 설계**
+    - 절대 규칙 6개 (투자 권유 금지, 예측 금지, 팩트만 사용, JSON 출력, 한국어, 면책조항)
+    - 한국 MZ세대 투자자 타겟 (20-35세)
+    - 고등학교 수준 언어로 간결하게 설명
+  - **Step 3: Instagram 스크립트 생성**
+    - 기사 데이터 최대 3개, 각 요약 200자 제한
+    - JSON 출력 스키마 정의 (5 slides, hashtags, disclaimer)
+    - 마크다운 코드블럭 파싱 지원 (```json 제거)
+    - 실패 시 자동 fallback
+  - **Step 4: YouTube Shorts 스크립트 생성**
+    - 60초 나레이션 (약 150 단어 한국어)
+    - 5단계 구조 (인사 → 이슈 → 시그널 → 면책 → 구독)
+    - JSON 출력 파싱
+  - **Step 5: VRAM 관리**
+    - 생성 완료 후 자동 모델 언로드 (/api/generate keep_alive=0)
+    - MoviePy 렌더링 전 메모리 확보
+  - **Step 6: 실제 데이터 테스트**
+    - Test cluster: Fed 금리 인상 (bearish)
+    - EXAONE 응답: "🔄 금리 상승", "Fed 금리 인상, 경제 전망은?"
+    - 생성 시간: Instagram ~27초, Shorts ~19초
+  - **Step 7: 실전 클러스터 재생성**
+    - Cluster 6: "Costco 실적" (~26초)
+    - Cluster 3: "미국 인플레이션 상승세 강화" (~28초)
+    - 총 2개 클러스터, 10장 카드 이미지 업데이트
+  - **Step 8: 카드 검증**
+    - 한글 렌더링 정상 (NanumGothic-Bold)
+    - EXAONE 생성 콘텐츠 품질 확인 (팩트 중심, 예측 없음)
+- **성능**:
+  - EXAONE 3.5 7.8B 생성 속도: ~20-30초/클러스터
+  - 템플릿 대비 콘텐츠 품질 대폭 향상
+  - 한국어 자연스러움, 팩트 중심 서술, 예측 표현 없음
+- **Issues 해결**:
+  - ✅ EXAONE API key 문제 → Ollama 로컬 모델로 해결
+  - ✅ 템플릿 모드 품질 저하 → EXAONE 연동으로 완전 해결
+- **Result**: ✅ Success — EXAONE 3.5 연동 완료, 카드 품질 대폭 향상
 
 ---
 
