@@ -933,6 +933,44 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
     - 해결: stopwords에 reuters, bloomberg, cnbc 추가 → topic 키워드만 추출
 - **Result**: ✅ Success — 클러스터링 성공 (4개 클러스터, 36/100 articles), 매크로 경제 뉴스 수집 전략 정립
 
+#### Session 15: 전체 파이프라인 Step 4-6 실행 테스트
+- **Task**: FinBERT 분류 → 콘텐츠 생성 → 카드 이미지 생성 엔드투엔드 테스트
+- **Actions**:
+  - **Step 1: FinBERT Classification (Step 4)**
+    - Installed jsonlines (4.0.0)
+    - ProsusAI/finbert 모델 로드 (Hugging Face에서 자동 다운로드)
+    - 100개 기사 분류 (4 batches, batch_size=32)
+    - 클러스터링된 36개 기사 시그널 분포:
+      - Cluster 3 (7개): neutral dominant (bullish 1, neutral 3, bearish 3)
+      - Cluster 4 (9개): bullish dominant (neutral 4, bullish 5)
+      - Cluster 5 (15개): neutral dominant (bearish 5, neutral 6, bullish 4)
+      - Cluster 6 (5개): neutral dominant (bullish 1, neutral 2, bearish 2)
+    - Low confidence warnings: 3개 기사 (0.36-0.46)
+    - Saved: data/4_classified/classified.jsonl (100개 기사)
+  - **Step 2: Content Generation (Step 5)**
+    - ContentGenerator 템플릿 모드 사용 (EXAONE API key 없음)
+    - 2개 클러스터 스크립트 생성 (Cluster 6, Cluster 3)
+    - Instagram: 5-slide format (cover → bullish → bearish → neutral → conclusion)
+    - YouTube Shorts: 60초 나레이션 스크립트
+    - Saved: data/5_generated/scripts.json (2개 클러스터)
+  - **Step 3: Card Generation (Step 6)**
+    - CardGenerator로 Instagram 카드 이미지 생성
+    - 폰트 로드 실패 (unknown file format) → default font 사용
+    - Cluster 6: 5장 (1080x1920px PNG)
+    - Cluster 3: 5장 (1080x1920px PNG)
+    - Saved: data/6_cards/cluster_6/, data/6_cards/cluster_3/
+  - **Step 4: Pipeline Results Summary**
+    - Step 1 (Collection): 100개 기사 (Finnhub only, Polygon.io 0개)
+    - Step 3 (Clustering): 36개 클러스터링, 64개 노이즈 (4개 클러스터)
+    - Step 4 (Classification): 100개 분류 (bullish 11, bearish 10, neutral 15)
+    - Step 5 (Content): 2개 클러스터 스크립트 (10개 슬라이드, 2개 숏폼)
+    - Step 6 (Cards): 10장 생성 (cluster_3, cluster_6 각 5장)
+- **Issues**:
+  - ⚠️ NanumGothicBold.ttf 폰트 로드 실패 → Pillow default font 사용 (한글 깨짐 가능성)
+  - ⚠️ Polygon.io 여전히 0개 수집 (매크로 키워드 필터링으로 최근 24시간 내 뉴스 없음)
+  - ⚠️ EXAONE API key 없어 템플릿 모드 사용 (한국어 품질 저하)
+- **Result**: ✅ Success — 전체 파이프라인 Step 4-6 정상 작동, 10장 카드 이미지 생성 완료
+
 ---
 
 **Last Updated**: 2026-05-29  

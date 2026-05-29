@@ -1,27 +1,21 @@
 [
   {
-    "cluster_id": 0,
-    "cluster_label": "Fed Rate Cut",
-    "signal": "bullish",
+    "cluster_id": "6",
     "instagram": {
-      "cluster_id": "0",
+      "cluster_id": "6",
       "signal": "bullish",
       "slides": [
         {
           "slide_num": 1,
-          "title": "Fed Rate Cut",
-          "body": "BULLISH 시그널 발생\n\n관련 섹터: Technology, Real Estate, Consumer Discretionary",
+          "title": "Our cyber stocks are",
+          "body": "BULLISH 시그널 발생\n\n관련 섹터: 전체 시장",
           "signal_emoji": "🟢"
         },
         {
           "slide_num": 2,
           "title": "호재 요인",
           "body": "• 경제 성장 지표 개선\n• 기업 실적 증가\n• 정책 지원 확대",
-          "sectors": [
-            "Technology",
-            "Real Estate",
-            "Consumer Discretionary"
-          ]
+          "sectors": []
         },
         {
           "slide_num": 3,
@@ -38,7 +32,7 @@
         {
           "slide_num": 5,
           "title": "요약",
-          "body": "Fed Rate Cut\n\nBULLISH 시그널\n\n모든 투자 판단은 본인 책임입니다.",
+          "body": "Our cyber stocks are falling on a rival's earnings...\n\nBULLISH 시그널\n\n모든 투자 판단은 본인 책임입니다.",
           "cta": "자세한 분석은 프로필 링크"
         }
       ],
@@ -57,11 +51,11 @@
       "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
     },
     "shorts": {
-      "cluster_id": "0",
-      "narration": "안녕하세요 시그널피드입니다. 오늘의 핵심 이슈입니다.\n\nFed Rate Cut이슈가 발생했습니다. 이는 Technology, Real Estate에 영향을 미칠 것으로 보입니다.\n\nAI 분석 결과, BULLISH 시그널로 분류되었습니다.\n\n단, 이는 AI 분석이며 투자 권유가 아닙니다.\n\n자세한 분석은 프로필 링크에서 확인하세요. 구독과 좋아요 부탁드립니다.",
+      "cluster_id": "6",
+      "narration": "안녕하세요 시그널피드입니다. 오늘의 핵심 이슈입니다.\n\nOur cyber stocks are falling on a rival's earnings...이슈가 발생했습니다. 이는 전체 시장에 영향을 미칠 것으로 보입니다.\n\nAI 분석 결과, BULLISH 시그널로 분류되었습니다.\n\n단, 이는 AI 분석이며 투자 권유가 아닙니다.\n\n자세한 분석은 프로필 링크에서 확인하세요. 구독과 좋아요 부탁드립니다.",
       "duration_estimate": 60,
-      "title": "Fed Rate Cut - BULLISH 시그널",
-      "description": "Fed Rate Cut\n\nBULLISH 시그널 분석\n\n본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다.\n\n#경제 #투자 #주식 #시그널피드",
+      "title": "Our cyber stocks are falling on a rival's earnings - BULLISH 시그널",
+      "description": "Our cyber stocks are falling on a rival's earnings...\n\nBULLISH 시그널 분석\n\n본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다.\n\n#경제 #투자 #주식 #시그널피드",
       "tags": [
         "경제",
         "투자",
@@ -75,93 +69,16 @@
     }
   },
   {
-    "cluster_id": 1,
-    "cluster_label": "Inflation Spike",
-    "signal": "bearish",
+    "cluster_id": "3",
     "instagram": {
-      "cluster_id": "1",
-      "signal": "bearish",
+      "cluster_id": "3",
+      "signal": "bullish",
       "slides": [
         {
           "slide_num": 1,
-          "title": "Inflation Spike",
-          "body": "BEARISH 시그널 발생\n\n관련 섹터: Consumer Staples, Energy, Technology",
-          "signal_emoji": "🔴"
-        },
-        {
-          "slide_num": 2,
-          "title": "호재 요인",
-          "body": "• 경제 성장 지표 개선\n• 기업 실적 증가\n• 정책 지원 확대",
-          "sectors": []
-        },
-        {
-          "slide_num": 3,
-          "title": "악재 요인",
-          "body": "• 인플레이션 우려\n• 금리 인상 압력\n• 글로벌 불확실성",
-          "sectors": [
-            "Consumer Staples",
-            "Energy",
-            "Technology"
-          ]
-        },
-        {
-          "slide_num": 4,
-          "title": "중립 요인",
-          "body": "• 시장 관망세 지속\n• 혼조세 나타남\n• 변동성 확대 가능",
-          "caution": "AI 분석 결과이며, 실제 시장 상황과 다를 수 있습니다."
-        },
-        {
-          "slide_num": 5,
-          "title": "요약",
-          "body": "Inflation Spike\n\nBEARISH 시그널\n\n모든 투자 판단은 본인 책임입니다.",
-          "cta": "자세한 분석은 프로필 링크"
-        }
-      ],
-      "hashtags": [
-        "#경제",
-        "#투자",
-        "#주식",
-        "#ETF",
-        "#시그널피드",
-        "#뉴스",
-        "#금융",
-        "#재테크",
-        "#자산관리",
-        "#투자정보"
-      ],
-      "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
-    },
-    "shorts": {
-      "cluster_id": "1",
-      "narration": "안녕하세요 시그널피드입니다. 오늘의 핵심 이슈입니다.\n\nInflation Spike이슈가 발생했습니다. 이는 Consumer Staples, Energy에 영향을 미칠 것으로 보입니다.\n\nAI 분석 결과, BEARISH 시그널로 분류되었습니다.\n\n단, 이는 AI 분석이며 투자 권유가 아닙니다.\n\n자세한 분석은 프로필 링크에서 확인하세요. 구독과 좋아요 부탁드립니다.",
-      "duration_estimate": 60,
-      "title": "Inflation Spike - BEARISH 시그널",
-      "description": "Inflation Spike\n\nBEARISH 시그널 분석\n\n본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다.\n\n#경제 #투자 #주식 #시그널피드",
-      "tags": [
-        "경제",
-        "투자",
-        "주식",
-        "ETF",
-        "뉴스",
-        "금융",
-        "재테크",
-        "시그널피드"
-      ]
-    }
-  },
-  {
-    "cluster_id": 2,
-    "cluster_label": "Fed Meeting Announcement",
-    "signal": "neutral",
-    "instagram": {
-      "cluster_id": "2",
-      "signal": "neutral",
-      "slides": [
-        {
-          "slide_num": 1,
-          "title": "Fed Meeting Announce",
-          "body": "NEUTRAL 시그널 발생\n\n관련 섹터: Automotive",
-          "signal_emoji": "⚪"
+          "title": "Key US inflation mea",
+          "body": "BULLISH 시그널 발생\n\n관련 섹터: 전체 시장",
+          "signal_emoji": "🟢"
         },
         {
           "slide_num": 2,
@@ -184,7 +101,7 @@
         {
           "slide_num": 5,
           "title": "요약",
-          "body": "Fed Meeting Announcement\n\nNEUTRAL 시그널\n\n모든 투자 판단은 본인 책임입니다.",
+          "body": "Key US inflation measure posts largest annual incr...\n\nBULLISH 시그널\n\n모든 투자 판단은 본인 책임입니다.",
           "cta": "자세한 분석은 프로필 링크"
         }
       ],
@@ -203,11 +120,11 @@
       "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
     },
     "shorts": {
-      "cluster_id": "2",
-      "narration": "안녕하세요 시그널피드입니다. 오늘의 핵심 이슈입니다.\n\nFed Meeting Announcement이슈가 발생했습니다. 이는 Automotive에 영향을 미칠 것으로 보입니다.\n\nAI 분석 결과, NEUTRAL 시그널로 분류되었습니다.\n\n단, 이는 AI 분석이며 투자 권유가 아닙니다.\n\n자세한 분석은 프로필 링크에서 확인하세요. 구독과 좋아요 부탁드립니다.",
+      "cluster_id": "3",
+      "narration": "안녕하세요 시그널피드입니다. 오늘의 핵심 이슈입니다.\n\nKey US inflation measure posts largest annual incr...이슈가 발생했습니다. 이는 전체 시장에 영향을 미칠 것으로 보입니다.\n\nAI 분석 결과, BULLISH 시그널로 분류되었습니다.\n\n단, 이는 AI 분석이며 투자 권유가 아닙니다.\n\n자세한 분석은 프로필 링크에서 확인하세요. 구독과 좋아요 부탁드립니다.",
       "duration_estimate": 60,
-      "title": "Fed Meeting Announcement - NEUTRAL 시그널",
-      "description": "Fed Meeting Announcement\n\nNEUTRAL 시그널 분석\n\n본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다.\n\n#경제 #투자 #주식 #시그널피드",
+      "title": "Key US inflation measure posts largest annual incr - BULLISH 시그널",
+      "description": "Key US inflation measure posts largest annual incr...\n\nBULLISH 시그널 분석\n\n본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다.\n\n#경제 #투자 #주식 #시그널피드",
       "tags": [
         "경제",
         "투자",
