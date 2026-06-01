@@ -65,9 +65,9 @@ class HTMLCardGenerator:
                 slide_htmls.append(self._generate_slide1_html(slide_data, image_path, i))
             elif slide_type == "context":
                 slide_htmls.append(self._generate_slide2_html(slide_data, i))
-            elif slide_type == "bullish":
+            elif slide_type in ("bullish", "beneficiary"):
                 slide_htmls.append(self._generate_slide3_html(slide_data, i))
-            elif slide_type == "bearish":
+            elif slide_type in ("bearish", "victim"):
                 slide_htmls.append(self._generate_slide4_html(slide_data, i))
             elif slide_type == "conclusion":
                 slide_htmls.append(self._generate_slide5_html(slide_data, i))
