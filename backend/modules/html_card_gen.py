@@ -6,7 +6,6 @@ HTML + Playwright 방식으로 Instagram 카드 생성 (Hallmark + Taste Skill �
 import os
 import json
 import logging
-import subprocess
 from typing import List, Dict
 from pathlib import Path
 
@@ -400,7 +399,7 @@ class HTMLCardGenerator:
 
     def screenshot_slides(self, html_path: str, cluster_id: str) -> List[str]:
         """
-        Screenshot each slide using Playwright
+        Screenshot each slide using Playwright with font loading wait
 
         Args:
             html_path: Path to HTML file
@@ -409,54 +408,42 @@ class HTMLCardGenerator:
         Returns:
             List of PNG file paths
         """
+        from playwright.sync_api import sync_playwright
+
         output_dir = f"data/6_cards/cluster_{cluster_id}"
         os.makedirs(output_dir, exist_ok=True)
 
-        paths = []
-
-        for i in range(1, 6):
-            output_path = f"{output_dir}/slide_{i}.png"
-            selector = f"#slide-{i}"
-
-            # Playwright screenshot command
-            cmd = [
-                "python", "-m", "playwright._impl._driver",
-                "screenshot",
-                f"file://{os.path.abspath(html_path)}",
-                output_path,
-                "--selector", selector,
-                "--timeout", "30000"
-            ]
-
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-                if result.returncode == 0:
-                    logger.info(f"✅ Screenshot saved: {output_path}")
-                    paths.append(output_path)
-                else:
-                    logger.error(f"Playwright screenshot failed for slide {i}: {result.stderr}")
-                    # Fallback: use Python Playwright API
-                    self._screenshot_with_api(html_path, selector, output_path)
-                    paths.append(output_path)
-            except Exception as e:
-                logger.error(f"Failed to screenshot slide {i}: {e}")
-                # Try Python API fallback
-                self._screenshot_with_api(html_path, selector, output_path)
-                paths.append(output_path)
-
-        return paths
-
-    def _screenshot_with_api(self, html_path: str, selector: str, output_path: str):
-        """Fallback screenshot using Playwright Python API"""
-        from playwright.sync_api import sync_playwright
+        html_url = f"file://{os.path.abspath(html_path)}"
+        output_paths = []
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={'width': self.WIDTH, 'height': self.HEIGHT})
-            page.goto(f'file://{os.path.abspath(html_path)}', timeout=30000, wait_until='networkidle')
-            page.locator(selector).screenshot(path=output_path, timeout=10000)
+            page = browser.new_page(viewport={"width": 1080, "height": 1080})
+
+            # Load page and wait for network idle
+            page.goto(html_url, wait_until="networkidle", timeout=30000)
+
+            # Wait for fonts to load
+            page.evaluate("() => document.fonts.ready")
+
+            # Additional wait to ensure rendering complete
+            page.wait_for_timeout(2000)
+
+            for i in range(1, 6):
+                selector = f"#slide-{i}"
+                element = page.query_selector(selector)
+                if element:
+                    output_path = f"{output_dir}/slide_{i}.png"
+                    element.screenshot(path=output_path)
+                    output_paths.append(output_path)
+                    logger.info(f"✅ Screenshot saved: {output_path}")
+                else:
+                    logger.warning(f"⚠️ Slide {i} not found: {selector}")
+
             browser.close()
-            logger.info(f"✅ Screenshot saved (API fallback): {output_path}")
+
+        return output_paths
+
 
     def run(self, scripts_path: str = "data/3_generated/scripts.json") -> Dict:
         """
