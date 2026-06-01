@@ -481,9 +481,203 @@ class CardGenerator:
 
         return image
 
+    def generate_slide5_conclusion_new(self, slide_data: Dict) -> Image.Image:
+        """
+        SLIDE 5: Conclusion with watch_point (new structure)
+        """
+        image = Image.new("RGB", (self.WIDTH, self.HEIGHT), self.COLORS["bg_dark"])
+        draw = ImageDraw.Draw(image)
+
+        # Top-left: SIGNALFEED micro brand
+        draw.text(
+            (self.LEFT_MARGIN, 50),
+            "SIGNALFEED",
+            font=self.font_tiny,
+            fill=self.COLORS["bullish"]
+        )
+
+        # "오늘의 결론" heading
+        title = slide_data.get("title", "오늘의 결론")
+        draw.text(
+            (self.LEFT_MARGIN, 120),
+            title,
+            font=self.font_xlarge,
+            fill=self.COLORS["text_white"]
+        )
+
+        # Summary rows with colored dots
+        summaries = slide_data.get("summaries", [])
+        y_summary = 230
+
+        for summary in summaries:
+            signal = summary.get("signal", "neutral")
+            text = summary.get("text", "")
+            dot_color = self.COLORS.get(signal, self.COLORS["neutral"])
+
+            # Colored dot
+            dot_radius = 5
+            draw.ellipse(
+                [(self.LEFT_MARGIN, y_summary + 10), (self.LEFT_MARGIN + dot_radius * 2, y_summary + 10 + dot_radius * 2)],
+                fill=dot_color
+            )
+
+            # Summary text
+            self._draw_text_wrapped(
+                draw, text,
+                (self.LEFT_MARGIN + 30, y_summary),
+                self.font_msmall,
+                self.COLORS["text_white"],
+                self.CONTENT_WIDTH - 30,
+                max_lines=2
+            )
+
+            y_summary += 80
+
+        # Watch point (new)
+        watch_point = slide_data.get("watch_point", "")
+        if watch_point:
+            y_watch = 550
+
+            # Green box background
+            draw.rounded_rectangle(
+                [(self.LEFT_MARGIN, y_watch), (self.WIDTH - self.RIGHT_MARGIN, y_watch + 100)],
+                radius=10,
+                fill=self.COLORS["bg_card"]
+            )
+
+            # "주목 포인트" label
+            draw.text(
+                (self.LEFT_MARGIN + 20, y_watch + 15),
+                "주목 포인트",
+                font=self.font_xxsmall,
+                fill=self.COLORS["bullish"]
+            )
+
+            # Watch point text
+            self._draw_text_wrapped(
+                draw, watch_point,
+                (self.LEFT_MARGIN + 20, y_watch + 50),
+                self.font_small,
+                self.COLORS["text_white"],
+                self.CONTENT_WIDTH - 40,
+                max_lines=2
+            )
+
+        # CTA block
+        y_cta = 700
+
+        # Separator line
+        draw.rectangle(
+            [(0, y_cta), (self.WIDTH, y_cta + 1)],
+            fill=self.COLORS["separator"]
+        )
+
+        # Main CTA
+        cta_main = slide_data.get("cta", "더 궁금하다면 댓글에 '분석' 남겨주세요")
+        draw.text(
+            (self.LEFT_MARGIN, y_cta + 40),
+            cta_main,
+            font=self.font_msmall,
+            fill=self.COLORS["text_white"]
+        )
+
+        # Sub CTA
+        cta_sub = slide_data.get("cta_sub", "→ 상세 리포트 DM으로 드립니다")
+        draw.text(
+            (self.LEFT_MARGIN, y_cta + 100),
+            cta_sub,
+            font=self.font_small,
+            fill=self.COLORS["bullish"]
+        )
+
+        # Disclaimer
+        disclaimer = "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
+        bbox = draw.textbbox((0, 0), disclaimer, font=self.font_micro)
+        disclaimer_width = bbox[2] - bbox[0]
+        disclaimer_x = (self.WIDTH - disclaimer_width) // 2
+
+        draw.text(
+            (disclaimer_x, 980),
+            disclaimer,
+            font=self.font_micro,
+            fill=self.COLORS["text_dark_gray"]
+        )
+
+        return image
+
+    def generate_slide2_context(self, slide_data: Dict) -> Image.Image:
+        """
+        SLIDE 2: Context (무슨 일이?)
+        3 fact bullets
+        """
+        image = Image.new("RGB", (self.WIDTH, self.HEIGHT), self.COLORS["bg_dark"])
+        draw = ImageDraw.Draw(image)
+
+        # Top-left: SIGNALFEED micro brand
+        draw.text(
+            (self.LEFT_MARGIN, 50),
+            "SIGNALFEED",
+            font=self.font_tiny,
+            fill=self.COLORS["bullish"]
+        )
+
+        # Slide number indicator top-right
+        draw.text(
+            (self.WIDTH - self.RIGHT_MARGIN - 50, 50),
+            "2/5",
+            font=self.font_micro,
+            fill=self.COLORS["text_gray"]
+        )
+
+        # Title
+        title = slide_data.get("title", "무슨 일이?")
+        draw.text(
+            (self.LEFT_MARGIN, 120),
+            title,
+            font=self.font_msmall,
+            fill=self.COLORS["text_gray"]
+        )
+
+        # Facts as bullet points
+        facts = slide_data.get("facts", [])
+        y_facts = 200
+
+        for fact in facts:
+            # Dash prefix
+            draw.text(
+                (self.LEFT_MARGIN, y_facts),
+                "—",
+                font=self.font_small,
+                fill=self.COLORS["text_white"]
+            )
+
+            # Fact text
+            self._draw_text_wrapped(
+                draw, fact,
+                (self.LEFT_MARGIN + 30, y_facts),
+                self.font_small,
+                self.COLORS["text_white"],
+                self.CONTENT_WIDTH - 30,
+                max_lines=2
+            )
+
+            y_facts += 120
+
+        # Source attribution at bottom
+        source = slide_data.get("source", "")
+        if source:
+            draw.text(
+                (self.LEFT_MARGIN, 950),
+                f"출처: {source}",
+                font=self.font_micro,
+                fill=self.COLORS["text_gray"]
+            )
+
+        return image
+
     def generate_all_slides(self, script: Dict) -> List[Image.Image]:
         """
-        Generate all 5 slides for Instagram carousel
+        Generate all 5 slides for Instagram carousel (new structure)
 
         Args:
             script: Instagram script from content_gen.py
@@ -493,62 +687,43 @@ class CardGenerator:
         """
         logger.info(f"Generating slides for cluster {script.get('cluster_id', 'unknown')}")
 
-        # Fetch background image for slide 1
-        cluster_data = {
-            "cluster_label": script.get("title", ""),
-            "articles": []  # Not needed for image fetch
-        }
-        keywords = self.image_fetcher.extract_keywords_from_cluster(cluster_data)
-        background = self.image_fetcher.fetch_with_fallback(keywords)
+        # Fetch background image for slide 1 using pexels_keyword
+        pexels_keyword = script.get("pexels_keyword", "financial district skyscraper aerial")
+        background = self.image_fetcher.fetch(pexels_keyword)
+        if not background:
+            background = self.image_fetcher._create_fallback_background()
 
-        slides = []
+        slides_data = script.get("slides", [])
+        generated_slides = []
 
-        # Slide 1: Cover
-        slides.append(self.generate_slide1_cover(script, background))
+        for slide_data in slides_data:
+            slide_type = slide_data.get("type")
 
-        # Slides 2-4: Sector cards
-        sector_slides = [
-            {
-                "slide_num": 2,
-                "label": "호재",
-                "signal": "bullish",
-                "sectors_key": "slide2",
-                "fact_key": "slide2_fact"
-            },
-            {
-                "slide_num": 3,
-                "label": "악재",
-                "signal": "bearish",
-                "sectors_key": "slide3",
-                "fact_key": "slide3_fact"
-            },
-            {
-                "slide_num": 4,
-                "label": "중립·주의",
-                "signal": "neutral",
-                "sectors_key": "slide4",
-                "fact_key": "slide4_fact"
-            }
-        ]
+            if slide_type == "cover":
+                generated_slides.append(self.generate_slide1_cover(script, background))
 
-        for config in sector_slides:
-            slide_data = script.get(config["sectors_key"], {})
-            sectors = slide_data.get("sectors", [])
-            fact = script.get(config["fact_key"], "")
+            elif slide_type == "context":
+                generated_slides.append(self.generate_slide2_context(slide_data))
 
-            slides.append(self.generate_slide_sector(
-                config["slide_num"],
-                config["label"],
-                config["signal"],
-                sectors,
-                fact
-            ))
+            elif slide_type == "bullish":
+                sectors = slide_data.get("sectors", [])
+                fact = slide_data.get("fact", "")
+                generated_slides.append(self.generate_slide_sector(
+                    3, "호재", "bullish", sectors, fact
+                ))
 
-        # Slide 5: Conclusion
-        slides.append(self.generate_slide5_conclusion(script))
+            elif slide_type == "bearish":
+                sectors = slide_data.get("sectors", [])
+                fact = slide_data.get("fact", "")
+                generated_slides.append(self.generate_slide_sector(
+                    4, "악재", "bearish", sectors, fact
+                ))
 
-        logger.info(f"✅ Generated {len(slides)} slides")
-        return slides
+            elif slide_type == "conclusion":
+                generated_slides.append(self.generate_slide5_conclusion_new(slide_data))
+
+        logger.info(f"✅ Generated {len(generated_slides)} slides")
+        return generated_slides
 
     def save_slides(self, slides: List[Image.Image], cluster_id: str) -> List[str]:
         """

@@ -1176,3 +1176,67 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ hook_title 필드로 커버 슬라이드 훅 강화
   - ✅ 10장 카드 생성 완료 (Pexels 실제 이미지 적용)
 - **Result**: ✅ Success — Pexels 배경 이미지 연동, 1080x1080px 새 레이아웃 완료
+
+#### Session 20: 스토리라인 재설계 + Pexels 키워드 개선 + 콘텐츠 품질 향상
+- **Task**: 5장 스토리 구조 재설계, Pexels 검색 키워드 고도화, 순한국어 훅 강제
+- **Actions**:
+  - **Step 1: image_fetcher.py Pexels 키워드 매핑 개선** (60+ 키워드):
+    - 기존: 단순 매핑 ("inflation" → "money inflation economy graph")
+    - 변경: 구체적이고 시각적인 키워드 매핑
+      - "inflation" → "dollar bills money close up"
+      - "federal reserve" → "federal reserve bank building"
+      - "nvidia" → "computer chip semiconductor close"
+      - "stock market" → "stock market trading screen"
+      - "recession" → "empty office business decline"
+    - extract_keywords_from_cluster 개선:
+      - 우선순위 1: KEYWORD_MAPPING 정확 매칭
+      - 우선순위 2: 부분 매칭 (단어 포함)
+      - 최대 3개 키워드 반환 (fallback 시도 증가)
+  - **Step 2: content_gen.py 스토리라인 완전 재설계**:
+    - **NEW STRUCTURE**:
+      - Slide 1 (표지): 독자 호기심 자극 짧은 질문 (순한국어)
+      - Slide 2 (맥락): 무슨 일? — 핵심 팩트 3가지 (구체적 수치 포함)
+      - Slide 3 (호재): 어디가 오르나? — 수혜 섹터 + 구체적 이유
+      - Slide 4 (악재): 어디가 내리나? — 타격 섹터 + 구체적 이유
+      - Slide 5 (결론): 나는 뭘 봐야 해? — 핵심 요약 3줄 + 주목 포인트
+    - SYSTEM_PROMPT 재작성:
+      - "5장의 카드뉴스가 하나의 완결된 스토리를 형성"
+      - "독자가 1→2→3→4→5장을 보면서 자연스럽게 이해하고 행동"
+      - 절대 규칙 강화:
+        - 훅 타이틀은 **반드시 순한국어만** (영어 단어 절대 금지)
+        - 팩트는 **구체적 수치 포함** ("3.2% 상승", "0.25%p 인하")
+        - 예측/권유 표현 절대 금지
+        - 각 슬라이드는 이전과 자연스럽게 연결
+    - JSON Schema 전면 재설계:
+      - pexels_keyword 필드 추가 (구체적 영어 키워드)
+      - slides 배열 구조로 변경 (type: cover/context/bullish/bearish/conclusion)
+      - slide 2: facts 배열 (3개, 수치 포함)
+      - slide 5: summaries 배열 + watch_point 필드
+  - **Step 3: card_gen.py 새 슬라이드 생성기 추가**:
+    - generate_slide2_context(): 새 슬라이드 (무슨 일이?)
+      - 3 fact bullets with dash prefix
+      - 각 fact 28px white, line spacing 1.6
+      - Source attribution at bottom
+    - generate_slide5_conclusion_new(): 주목 포인트 추가
+      - watch_point 녹색 박스 렌더링
+      - "주목 포인트" 라벨 + 텍스트
+    - generate_all_slides() 완전 재작성:
+      - slides 배열 순회하며 type별 분기
+      - pexels_keyword 직접 사용 (image_fetcher.fetch)
+  - **Step 4: 전체 파이프라인 실행**:
+    - EXAONE 성공적으로 새 구조 생성:
+      - Cluster 6: hook "Costco, 괜찮아요! 핵심 지표는 여전히 믿을 만해요", pexels "retail success"
+      - Cluster 3: hook "미국 인플레이션 지수, 3년 만에 최고치!", pexels "inflation rise federal reserve"
+    - Pexels 이미지 fetch 성공:
+      - Cluster 6: retail success (Farhad Ibrahimzade)
+      - Cluster 3: inflation rise federal reserve (Lukasz Radziejewski)
+    - 총 10장 카드 생성 완료
+- **성과**:
+  - ✅ 스토리라인 완전 재설계 (표지→맥락→호재→악재→결론)
+  - ✅ Pexels 키워드 60+ 개로 확장, 구체적 시각적 키워드 매핑
+  - ✅ 순한국어 훅 강제 (영어 단어 제거)
+  - ✅ 팩트 구체적 수치 포함 ("205억 달러", "3.2% 상승")
+  - ✅ slide 2 새 맥락 슬라이드 추가 (facts 3개)
+  - ✅ slide 5 주목 포인트 섹션 추가
+  - ✅ EXAONE 정상 작동 (새 JSON 스키마 파싱 성공)
+- **Result**: ✅ Success — 스토리라인 재설계, Pexels 키워드 개선, 콘텐츠 품질 향상

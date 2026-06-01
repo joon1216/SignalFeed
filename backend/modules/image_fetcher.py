@@ -18,56 +18,90 @@ class ImageFetcher:
 
     PEXELS_API_URL = "https://api.pexels.com/v1/search"
 
-    # 경제 뉴스 키워드 → Pexels 검색어 매핑
+    # 경제 뉴스 키워드 → Pexels 검색어 매핑 (더 구체적이고 시각적인 키워드)
     KEYWORD_MAPPING = {
-        # 금리/통화정책
-        "federal reserve": "federal reserve building washington",
-        "interest rate": "federal reserve building",
-        "fed": "federal reserve building washington",
-        "fomc": "federal reserve meeting",
+        # 금리/연준
+        "federal reserve": "federal reserve bank building",
+        "interest rate": "federal reserve washington",
+        "rate hike": "central bank money policy",
+        "FOMC": "federal reserve building exterior",
+        "fed": "federal reserve washington",
+        "central bank": "federal reserve building",
 
-        # 인플레이션/물가
-        "inflation": "money inflation economy graph",
-        "cpi": "consumer price inflation chart",
-        "price": "inflation economy finance",
+        # 인플레이션
+        "inflation": "dollar bills money close up",
+        "CPI": "shopping cart grocery prices",
+        "price increase": "supermarket price tag",
+        "consumer price": "grocery store shopping",
 
-        # 기술주
-        "nvidia": "semiconductor chip technology nvidia",
-        "apple": "apple technology innovation",
-        "microsoft": "microsoft technology cloud",
-        "tesla": "tesla electric vehicle innovation",
-        "semiconductor": "semiconductor chip technology",
-        "chip": "microchip semiconductor technology",
+        # 주식/증시
+        "stock market": "stock market trading screen",
+        "nasdaq": "stock exchange trading floor",
+        "S&P": "wall street bull statue",
+        "dow jones": "new york stock exchange nyse",
+        "earnings": "financial report business meeting",
+        "stock": "stock market digital screen",
+        "market": "trading floor wall street",
 
-        # 에너지
-        "oil": "oil energy industry petroleum",
-        "energy": "renewable energy industry",
-        "opec": "oil petroleum industry",
+        # 빅테크
+        "nvidia": "computer chip semiconductor close",
+        "apple": "apple logo technology",
+        "tesla": "electric vehicle charging",
+        "microsoft": "technology office modern",
+        "google": "technology data center",
+        "amazon": "warehouse logistics delivery",
+        "meta": "social media smartphone screen",
+        "semiconductor": "microchip technology close",
+        "chip": "computer chip circuit board",
+        "AI": "artificial intelligence technology",
+
+        # 에너지/원자재
+        "oil": "oil refinery petroleum industry",
+        "energy": "oil pipeline energy infrastructure",
+        "gold": "gold bars precious metal",
+        "commodity": "raw materials industrial",
+        "petroleum": "oil drilling platform",
+        "natural gas": "gas pipeline infrastructure",
 
         # 경제지표
-        "recession": "economy business finance downturn",
-        "gdp": "economy growth business finance",
-        "employment": "job employment business office",
-        "unemployment": "unemployment job search economy",
+        "GDP": "city skyline economic growth",
+        "unemployment": "office workers business district",
+        "recession": "empty office business decline",
+        "economic growth": "skyscrapers city prosperity",
+        "employment": "business district office workers",
+        "jobs": "corporate office workplace",
 
-        # 주식시장
-        "stock": "stock market trading finance",
-        "s&p 500": "stock market wall street",
-        "nasdaq": "technology stock market trading",
-        "dow jones": "stock market wall street nyse",
+        # 지정학
+        "war": "military conflict geopolitics",
+        "trade war": "shipping container port cargo",
+        "china": "shanghai skyline financial district",
+        "europe": "european central bank frankfurt",
+        "russia": "moscow city skyscraper",
+        "ukraine": "industrial factory production",
 
-        # 무역/관세
-        "tariff": "international trade cargo port",
-        "trade war": "international trade shipping",
-        "export": "cargo ship international trade",
+        # 한국
+        "kospi": "seoul skyline yeouido finance",
+        "korea": "seoul city financial district",
+        "samsung": "technology electronics innovation",
+
+        # 무역
+        "tariff": "cargo port shipping containers",
+        "export": "shipping containers international trade",
+        "trade": "container ship cargo port",
 
         # 금융
-        "dollar": "us dollar currency finance",
-        "treasury": "us treasury bonds finance",
-        "bond": "bonds finance investment",
+        "dollar": "us dollar bills currency",
+        "treasury": "us treasury building washington",
+        "bond": "financial bonds investment",
+        "currency": "money exchange foreign currency",
 
-        # Default
-        "default": "global economy finance business"
+        # 부동산
+        "real estate": "modern apartment building",
+        "housing": "residential housing development",
+        "mortgage": "house keys home loan",
+
+        # 기본
+        "default": "financial district skyscraper aerial"
     }
 
     def __init__(self, api_key: Optional[str] = None):
@@ -195,43 +229,65 @@ class ImageFetcher:
 
     def extract_keywords_from_cluster(self, cluster_data: dict) -> List[str]:
         """
-        클러스터 데이터에서 Pexels 검색 키워드 추출
+        클러스터 데이터에서 Pexels 검색 키워드 추출 (개선된 엔티티 추출)
 
         Args:
             cluster_data: 클러스터 데이터 (cluster_label, articles)
 
         Returns:
-            검색 키워드 리스트 (우선순위 순)
+            검색 키워드 리스트 (우선순위 순, 최대 3개)
         """
         keywords = []
+        text_to_analyze = []
 
-        # 1. cluster_label에서 추출
+        # 1. cluster_label 추가
         cluster_label = cluster_data.get("cluster_label", "")
         if cluster_label and cluster_label != "노이즈":
-            keywords.append(cluster_label)
+            text_to_analyze.append(cluster_label.lower())
 
-        # 2. article titles에서 추출 (첫 3개)
+        # 2. article titles 추가 (첫 3개)
         articles = cluster_data.get("articles", [])
         for article in articles[:3]:
             title = article.get("title", "")
             if title:
-                # Extract potential keywords (capitalized words, economics terms)
-                words = title.split()
-                for word in words:
-                    if word.lower() in self.KEYWORD_MAPPING:
-                        keywords.append(word.lower())
+                text_to_analyze.append(title.lower())
+
+        # 3. 모든 텍스트에서 매핑된 키워드 추출
+        combined_text = " ".join(text_to_analyze)
+
+        # 우선순위 1: KEYWORD_MAPPING에 정확히 있는 키워드
+        for key in self.KEYWORD_MAPPING.keys():
+            if key in combined_text and key != "default":
+                keywords.append(key)
+                if len(keywords) >= 3:
+                    break
+
+        # 우선순위 2: 부분 매칭 (예: "Federal" → "federal reserve")
+        if len(keywords) < 3:
+            words = combined_text.split()
+            for word in words:
+                for key in self.KEYWORD_MAPPING.keys():
+                    if word in key or key in word:
+                        if key not in keywords and key != "default":
+                            keywords.append(key)
+                            if len(keywords) >= 3:
+                                break
+                if len(keywords) >= 3:
+                    break
 
         # 3. Default fallback
         if not keywords:
             keywords.append("default")
 
-        # Deduplicate while preserving order
+        # Deduplicate while preserving order, return max 3
         seen = set()
         unique_keywords = []
         for k in keywords:
             if k not in seen:
                 seen.add(k)
                 unique_keywords.append(k)
+            if len(unique_keywords) >= 3:
+                break
 
         return unique_keywords
 

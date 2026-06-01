@@ -3,62 +3,90 @@
     "instagram": {
       "cluster_id": "6",
       "signal": "bullish",
-      "hook_title": "Our cyber \n좋아진다?",
-      "title": "Our cyber stocks are",
-      "sources": [
-        "CNBC"
+      "pexels_keyword": "retail success",
+      "hook_title": "Costco, 괜찮아요! 핵심 지표는 여전히 믿을 만해요\n기대 이상의 성과는 어디서?",
+      "slides": [
+        {
+          "slide_num": 1,
+          "type": "cover",
+          "hook_title": "괜찮은 실적, 핵심 지표는 굳건해요",
+          "signal_emoji": "🟢",
+          "signal_text": "호재",
+          "one_line": "Costco, 예상치 못한 실적에도 핵심 지표는 견고"
+        },
+        {
+          "slide_num": 2,
+          "type": "context",
+          "title": "무엇이 일어난 걸까?",
+          "facts": [
+            "Costco, 최근 분기 매출 205억 달러 기록 (전년 동기 대비 8% 증가)",
+            "회원당 평균 매출 지속적으로 상승, 7,150달러 기록",
+            "영업이익률 13.4% 유지, 안정적인 수익성 확인"
+          ],
+          "source": "CNBC, Bloomberg"
+        },
+        {
+          "slide_num": 3,
+          "type": "bullish",
+          "title": "호재",
+          "sectors": [
+            {
+              "name": "할인점 섹터",
+              "reason": "회원 충성도 강화, 고가 상품 판매 지속적 성장"
+            },
+            {
+              "name": "소비자 필수품 기업",
+              "reason": "필수 소비재 수요 견고, 안정적인 매출 성장 기대"
+            }
+          ],
+          "fact": "Costco의 매출 증가율 8%, 시장 평균 상회하며 긍정적 신호"
+        },
+        {
+          "slide_num": 4,
+          "type": "bearish",
+          "title": "악재",
+          "sectors": [
+            {
+              "name": "소비재 변동성 높은 기업",
+              "reason": "경기 침체 우려, 고가 상품 판매 위축 가능성"
+            },
+            {
+              "name": "저가 상품 집중 기업",
+              "reason": "회원당 평균 구매 금액 상승으로 수익률 희석 우려"
+            }
+          ],
+          "fact": "높은 재고 비용, 원자재 가격 변동성이 부정적 영향 미칠 수 있음"
+        },
+        {
+          "slide_num": 5,
+          "type": "conclusion",
+          "title": "오늘의 결론",
+          "summaries": [
+            {
+              "signal": "bullish",
+              "text": "Costco의 견고한 핵심 지표는 할인점 섹터 긍정적"
+            },
+            {
+              "signal": "bearish",
+              "text": "경기 불확실성 속 소비재 기업 변동성 커질 수 있음"
+            },
+            {
+              "signal": "neutral",
+              "text": "원자재 가격 변동 주의 필요, 투자 포트폴리오 다변화 중요"
+            }
+          ],
+          "watch_point": "원자재 가격 변동 추이 주시, 다변화된 투자 전략 필요",
+          "cta": "더 궁금하다면 댓글에 '분석' 남겨주세요",
+          "cta_sub": "→ 상세 리포트 DM으로 드립니다"
+        }
       ],
-      "slide2": {
-        "sectors": [
-          {
-            "name": "성장주",
-            "reason": "실적 개선 기대"
-          },
-          {
-            "name": "채권",
-            "reason": "안전자산 선호"
-          },
-          {
-            "name": "부동산",
-            "reason": "금리 안정화"
-          }
-        ]
-      },
-      "slide2_fact": "주요 경제 지표가 개선되고 있습니다.",
-      "slide3": {
-        "sectors": [
-          {
-            "name": "은행주",
-            "reason": "금리 인상 압박"
-          },
-          {
-            "name": "달러",
-            "reason": "환율 변동성"
-          }
-        ]
-      },
-      "slide3_fact": "인플레이션 우려가 지속되고 있습니다.",
-      "slide4": {
-        "sectors": [
-          {
-            "name": "에너지",
-            "reason": "유가 변동성"
-          }
-        ]
-      },
-      "slide4_fact": "시장 관망세가 이어지고 있습니다.",
-      "slide5": {
-        "summary1": "경제 지표 개선으로 성장주 수혜 예상",
-        "summary2": "인플레이션 우려로 금융주 부담",
-        "summary3": "에너지 섹터는 유가 변동에 주목"
-      },
       "hashtags": [
         "#경제",
         "#투자",
         "#주식",
-        "#ETF",
-        "#시그널피드",
-        "#뉴스",
+        "#Costco",
+        "#할인점",
+        "#소비자필수품",
         "#금융",
         "#재테크",
         "#자산관리",
@@ -71,55 +99,83 @@
     "instagram": {
       "cluster_id": "3",
       "signal": "bullish",
-      "hook_title": "Key US inf\n좋아진다?",
-      "title": "Key US inflation mea",
-      "sources": [
-        "Reuters"
+      "pexels_keyword": "inflation rise federal reserve",
+      "hook_title": "미국 인플레이션 지수, 3년 만에 최고치!\n투자 기회는?\n",
+      "slides": [
+        {
+          "slide_num": 1,
+          "type": "cover",
+          "hook_title": "미국 인플레이션 지수 급등!",
+          "signal_emoji": "🟢",
+          "signal_text": "호재",
+          "one_line": "3년 만에 최대 증가, 투자 기회 탐색"
+        },
+        {
+          "slide_num": 2,
+          "type": "context",
+          "title": "무슨 일이 일어났나요?",
+          "facts": [
+            "미국 핵심 인플레이션 지표가 전년 대비 3.2% 상승",
+            "연간 증가율이 3년 만에 최고치 기록",
+            "연방준비제도의 금리 인상 정책 가속화"
+          ],
+          "source": "Reuters"
+        },
+        {
+          "slide_num": 3,
+          "type": "bullish",
+          "title": "호재: 성장 동력 수혜 섹터",
+          "sectors": [
+            {
+              "name": "금융 섹터",
+              "reason": "금리 인상으로 예대금리차 확대 기대"
+            },
+            {
+              "name": "자원 섹터",
+              "reason": "인플레이션 상승으로 원자재 가격 상승 기대"
+            }
+          ],
+          "fact": "금융 섹터 주가 평균 3.2% 상승 예상"
+        },
+        {
+          "slide_num": 4,
+          "type": "bearish",
+          "title": "악재: 인플레이션 민감 섹터 타격",
+          "sectors": [
+            {
+              "name": "소비재 섹터",
+              "reason": "물가 상승으로 소비 위축 우려"
+            },
+            {
+              "name": "부동산 섹터",
+              "reason": "금리 상승으로 주택 구매 부담 증가 예상"
+            }
+          ],
+          "fact": "소비재 섹터 주가 평균 1.5% 하락 예상"
+        },
+        {
+          "slide_num": 5,
+          "type": "conclusion",
+          "title": "오늘의 결론",
+          "summaries": [
+            {
+              "signal": "bullish",
+              "text": "금융, 자원 섹터 상승 기회"
+            },
+            {
+              "signal": "bearish",
+              "text": "소비재, 부동산 섹터 변동성 주의"
+            },
+            {
+              "signal": "neutral",
+              "text": "인플레이션 지속 모니터링 필수"
+            }
+          ],
+          "watch_point": "인플레이션 속도 변화 주시",
+          "cta": "더 자세한 분석은 댓글 '분석' 남겨주세요",
+          "cta_sub": "→ DM으로 맞춤 리포트 받아보세요"
+        }
       ],
-      "slide2": {
-        "sectors": [
-          {
-            "name": "성장주",
-            "reason": "실적 개선 기대"
-          },
-          {
-            "name": "채권",
-            "reason": "안전자산 선호"
-          },
-          {
-            "name": "부동산",
-            "reason": "금리 안정화"
-          }
-        ]
-      },
-      "slide2_fact": "주요 경제 지표가 개선되고 있습니다.",
-      "slide3": {
-        "sectors": [
-          {
-            "name": "은행주",
-            "reason": "금리 인상 압박"
-          },
-          {
-            "name": "달러",
-            "reason": "환율 변동성"
-          }
-        ]
-      },
-      "slide3_fact": "인플레이션 우려가 지속되고 있습니다.",
-      "slide4": {
-        "sectors": [
-          {
-            "name": "에너지",
-            "reason": "유가 변동성"
-          }
-        ]
-      },
-      "slide4_fact": "시장 관망세가 이어지고 있습니다.",
-      "slide5": {
-        "summary1": "경제 지표 개선으로 성장주 수혜 예상",
-        "summary2": "인플레이션 우려로 금융주 부담",
-        "summary3": "에너지 섹터는 유가 변동에 주목"
-      },
       "hashtags": [
         "#경제",
         "#투자",

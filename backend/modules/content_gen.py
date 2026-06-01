@@ -31,7 +31,7 @@ class TemplateFallback:
 
     @staticmethod
     def generate_instagram_script(cluster: Dict) -> Dict:
-        """템플릿 기반 Instagram 스크립트 생성"""
+        """템플릿 기반 Instagram 스크립트 생성 (새 구조)"""
         signal = cluster.get("signal", "neutral")
         cluster_label = cluster.get("cluster_label", "경제 뉴스")
         affected_sectors = cluster.get("affected_sectors", [])
@@ -39,49 +39,79 @@ class TemplateFallback:
 
         # Extract sources
         sources = list(set([a.get("source", "") for a in articles[:3] if a.get("source")]))[:3]
-        if not sources:
-            sources = ["Reuters", "Bloomberg", "FT"]
+        source_text = ", ".join(sources) if sources else "Reuters, Bloomberg"
 
-        # Hook title for cover
+        # Hook title for cover (순한국어)
         hook_map = {
-            "bullish": f"{cluster_label[:10]}\n좋아진다?",
-            "bearish": f"{cluster_label[:10]}\n악화됐다!",
-            "neutral": f"{cluster_label[:10]}\n어떻게 될까?"
+            "bullish": f"경제\n좋아진다?",
+            "bearish": f"위기\n온다?",
+            "neutral": f"시장\n어디로?"
         }
-        hook_title = hook_map.get(signal, cluster_label[:15])
+        hook_title = hook_map.get(signal, "경제 뉴스")
+
+        # Signal text
+        signal_text_map = {"bullish": "호재", "bearish": "악재", "neutral": "중립"}
+        signal_text = signal_text_map.get(signal, "중립")
 
         return {
             "cluster_id": str(cluster.get("cluster_id", -1)),
             "signal": signal,
+            "pexels_keyword": "financial district skyscraper aerial",
             "hook_title": hook_title,
-            "title": cluster_label[:20],
-            "sources": sources,
-            "slide2": {
-                "sectors": [
-                    {"name": "성장주", "reason": "실적 개선 기대"},
-                    {"name": "채권", "reason": "안전자산 선호"},
-                    {"name": "부동산", "reason": "금리 안정화"}
-                ]
-            },
-            "slide2_fact": "주요 경제 지표가 개선되고 있습니다.",
-            "slide3": {
-                "sectors": [
-                    {"name": "은행주", "reason": "금리 인상 압박"},
-                    {"name": "달러", "reason": "환율 변동성"}
-                ]
-            },
-            "slide3_fact": "인플레이션 우려가 지속되고 있습니다.",
-            "slide4": {
-                "sectors": [
-                    {"name": "에너지", "reason": "유가 변동성"}
-                ]
-            },
-            "slide4_fact": "시장 관망세가 이어지고 있습니다.",
-            "slide5": {
-                "summary1": "경제 지표 개선으로 성장주 수혜 예상",
-                "summary2": "인플레이션 우려로 금융주 부담",
-                "summary3": "에너지 섹터는 유가 변동에 주목"
-            },
+            "slides": [
+                {
+                    "slide_num": 1,
+                    "type": "cover",
+                    "hook_title": hook_title,
+                    "signal_emoji": TemplateFallback.SIGNAL_EMOJI[signal],
+                    "signal_text": signal_text,
+                    "one_line": cluster_label[:20]
+                },
+                {
+                    "slide_num": 2,
+                    "type": "context",
+                    "title": "무슨 일이?",
+                    "facts": [
+                        "주요 경제 지표 발표",
+                        "시장 반응 나타남",
+                        "분석가들 주목"
+                    ],
+                    "source": source_text
+                },
+                {
+                    "slide_num": 3,
+                    "type": "bullish",
+                    "title": "호재",
+                    "sectors": [
+                        {"name": "성장주", "reason": "실적 개선으로 수혜"},
+                        {"name": "채권", "reason": "안전자산 선호 증가"}
+                    ],
+                    "fact": "경제 지표 개선으로 투자 심리 회복"
+                },
+                {
+                    "slide_num": 4,
+                    "type": "bearish",
+                    "title": "악재",
+                    "sectors": [
+                        {"name": "금융주", "reason": "금리 인상 부담"},
+                        {"name": "원자재", "reason": "수요 둔화 우려"}
+                    ],
+                    "fact": "인플레이션 압력으로 통화 긴축 지속"
+                },
+                {
+                    "slide_num": 5,
+                    "type": "conclusion",
+                    "title": "오늘의 결론",
+                    "summaries": [
+                        {"signal": "bullish", "text": "성장주 중심으로 수혜 전망"},
+                        {"signal": "bearish", "text": "금융주는 금리 인상 부담"},
+                        {"signal": "neutral", "text": "시장 변동성 주의 필요"}
+                    ],
+                    "watch_point": "경제 지표와 중앙은행 발언 주목",
+                    "cta": "더 궁금하다면 댓글에 '분석' 남겨주세요",
+                    "cta_sub": "→ 상세 리포트 DM으로 드립니다"
+                }
+            ],
             "hashtags": ["#경제", "#투자", "#주식", "#ETF", "#시그널피드", "#뉴스", "#금융", "#재테크", "#자산관리", "#투자정보"],
             "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
         }
@@ -116,16 +146,24 @@ AI 분석 결과, {signal.upper()} 시그널로 분류되었습니다.
 class ContentGenerator:
     """EXAONE 3.5 7.8B (Ollama) 기반 콘텐츠 생성기"""
 
-    SYSTEM_PROMPT = """당신은 SignalFeed의 한국어 경제 뉴스 콘텐츠 작성자입니다.
-한국 MZ세대 투자자(20-35세)를 위해 글로벌 경제 뉴스를 쉽고 직관적으로 설명합니다.
+    SYSTEM_PROMPT = """당신은 SignalFeed의 한국어 경제 뉴스 카드뉴스 작성자입니다.
+5장의 카드뉴스가 하나의 완결된 스토리를 형성해야 합니다.
+독자가 1→2→3→4→5장을 보면서 자연스럽게 이해하고 행동할 수 있어야 합니다.
+
+스토리 구조:
+1장 (표지): 독자의 호기심을 자극하는 짧고 강렬한 질문 (순한국어만 사용)
+2장 (맥락): 무슨 일이 있었는지 핵심 팩트 3가지 (구체적 수치 포함)
+3장 (호재): 이 이슈로 수혜받는 섹터와 구체적 이유
+4장 (악재): 이 이슈로 타격받는 섹터와 구체적 이유
+5장 (결론): 핵심 요약 3줄 + 투자자가 주목할 포인트
 
 절대 규칙:
-1. 투자 권유, 매수/매도 추천 절대 금지
-2. 주가 예측 표현 절대 금지 ("오를 것", "떨어질 것", "기대됩니다" 등)
-3. 제공된 팩트 데이터만 사용, 추측 금지
-4. 반드시 JSON 형식으로만 출력
-5. 모든 내용은 한국어로 작성
-6. 마지막에 항상 면책조항 포함: "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
+1. 훅 타이틀은 반드시 순한국어만 사용 (영어 단어 절대 금지)
+2. 팩트는 구체적 수치 포함 (예: "3.2% 상승", "0.25%p 인하")
+3. 예측/권유 표현 절대 금지 ("오를 것", "떨어질 것", "기대됩니다", "추천" 등)
+4. 각 슬라이드는 이전 슬라이드와 자연스럽게 연결되어야 함
+5. 반드시 JSON 형식으로만 출력
+6. 모든 내용은 한국어로 작성
 """
 
     OLLAMA_BASE_URL = "http://localhost:11434/v1"
@@ -255,47 +293,73 @@ class ContentGenerator:
 {{
   "cluster_id": "{cluster_id}",
   "signal": "{signal}",
-  "hook_title": "궁금증/놀라움 유발 짧은 문구 (15자 이내, 2줄 max, \\n으로 줄바꿈)",
-  "title": "이슈 제목 20자 이내",
-  "sources": ["Reuters", "Bloomberg", "FT"],
-  "slide2": {{
-    "sectors": [
-      {{"name": "섹터1", "reason": "이유 (30자 이내)"}},
-      {{"name": "섹터2", "reason": "이유"}},
-      {{"name": "섹터3", "reason": "이유"}}
-    ]
-  }},
-  "slide2_fact": "핵심 팩트 (60자 이내)",
-  "slide3": {{
-    "sectors": [
-      {{"name": "섹터1", "reason": "이유"}},
-      {{"name": "섹터2", "reason": "이유"}}
-    ]
-  }},
-  "slide3_fact": "핵심 팩트",
-  "slide4": {{
-    "sectors": [
-      {{"name": "섹터1", "reason": "이유"}}
-    ]
-  }},
-  "slide4_fact": "AI 코멘트",
-  "slide5": {{
-    "summary1": "호재 요약 (40자)",
-    "summary2": "악재 요약 (40자)",
-    "summary3": "중립 요약 (40자)"
-  }},
-  "hashtags": ["#경제", "#투자", ...] (10개),
+  "pexels_keyword": "Pexels 검색용 영어 키워드 (구체적으로, 예: 'federal reserve building', 'dollar bills money close up')",
+  "hook_title": "순한국어 훅 질문 (15자 이내, 2줄, \\n으로 구분)",
+  "slides": [
+    {{
+      "slide_num": 1,
+      "type": "cover",
+      "hook_title": "훅 질문 (순한국어)",
+      "signal_emoji": "{self._get_signal_emoji(signal)}",
+      "signal_text": "호재|악재|중립",
+      "one_line": "한 줄 요약 (20자 이내)"
+    }},
+    {{
+      "slide_num": 2,
+      "type": "context",
+      "title": "무슨 일이?",
+      "facts": [
+        "핵심 팩트 1 (구체적 수치 포함)",
+        "핵심 팩트 2",
+        "핵심 팩트 3"
+      ],
+      "source": "Reuters, Bloomberg 등"
+    }},
+    {{
+      "slide_num": 3,
+      "type": "bullish",
+      "title": "호재",
+      "sectors": [
+        {{"name": "섹터명", "reason": "수혜 이유 (구체적으로, 40자 이내)"}},
+        {{"name": "섹터명", "reason": "이유"}}
+      ],
+      "fact": "호재 관련 핵심 팩트 (수치 포함)"
+    }},
+    {{
+      "slide_num": 4,
+      "type": "bearish",
+      "title": "악재",
+      "sectors": [
+        {{"name": "섹터명", "reason": "타격 이유 (구체적으로)"}},
+        {{"name": "섹터명", "reason": "이유"}}
+      ],
+      "fact": "악재 관련 핵심 팩트"
+    }},
+    {{
+      "slide_num": 5,
+      "type": "conclusion",
+      "title": "오늘의 결론",
+      "summaries": [
+        {{"signal": "bullish", "text": "호재 요약 (40자)"}},
+        {{"signal": "bearish", "text": "악재 요약 (40자)"}},
+        {{"signal": "neutral", "text": "주의 포인트 (40자)"}}
+      ],
+      "watch_point": "투자자가 주목할 포인트 (50자 이내)",
+      "cta": "더 궁금하다면 댓글에 '분석' 남겨주세요",
+      "cta_sub": "→ 상세 리포트 DM으로 드립니다"
+    }}
+  ],
+  "hashtags": ["#경제", "#투자", "#주식", "#ETF", "#시그널피드", "#뉴스", "#금융", "#재테크", "#자산관리", "#투자정보"],
   "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
 }}
 
 중요 규칙:
-1. hook_title: 궁금증/놀라움 유발 짧은 문구 (예: "연준, 또\\n금리 올린다?", "엔비디아\\n또 터졌다!", "인플레이션\\n잡혔나?")
-2. hook_title은 15자 이내, 2줄 max, \\n으로 줄바꿈
-3. slide2 sectors: 반드시 2~3개 섹터명 포함 (예: [{{"name": "성장주", "reason": "실적 개선"}}, ...])
-4. slide3 sectors: 반드시 2~3개 섹터명 포함
-5. slide4 sectors: 반드시 1~2개 섹터명 포함
-6. sectors가 비어있으면 절대 안 됨 - 반드시 관련 섹터명을 기사에서 추출할 것
-7. 예측 표현(오를 것, 떨어질 것, 기대됩니다) 사용 금지. 팩트만 작성.
+1. pexels_keyword: 이슈와 가장 관련된 구체적인 영어 키워드 (예: "inflation" → "dollar bills money close up")
+2. hook_title: 반드시 순한국어만 사용 (영어 단어 절대 금지)
+3. facts: 반드시 구체적 수치 포함 (예: "3.2% 상승", "0.25%p 인하", "1조 달러")
+4. sectors: 각 슬라이드마다 2~3개 섹터명 필수, reason은 구체적으로 (40자 이내)
+5. 예측 표현 절대 금지 ("오를 것", "떨어질 것", "기대됩니다", "예상됩니다")
+6. 각 슬라이드는 스토리로 자연스럽게 연결되어야 함
 """
 
         try:
