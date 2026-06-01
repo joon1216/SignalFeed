@@ -1366,3 +1366,38 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ 표지 훅 순한국어 강제 (영어 단어 제거, 이슈 자체 집중)
   - ⚠️ Clustering noise 64% (매크로 뉴스 다양성 높음, 추가 튜닝 필요)
 - **Result**: ✅ Success — FinBERT 제거, EXAONE CoT 추론 통합, RSS 매크로 수집 완료, 4-step pipeline 정상 작동
+
+#### Session 23: 1080x1350 비율 전환 + 폰트 개선 + EXAONE 내부 메모 제거
+- **Task**: Instagram 4:5 ratio 적용, 폰트 spacing 개선, 레이아웃 최적화, EXAONE 내부 메모 금지
+- **Actions**:
+  - **Step 1: html_card_gen.py 1080x1350 비율 전환**
+    - Canvas: 1080x1080 → 1080x1350 (270px 추가 세로 공간)
+    - Viewport: {"width": 1080, "height": 1350}
+    - Font smoothing 추가: -webkit-font-smoothing, text-rendering
+  - **Step 2: Cover slide (Slide 1) 레이아웃 재설계**
+    - Hook title: bottom-pinned → y=750px (더 드라마틱한 배치)
+    - Signal badge: y=1040px
+    - Source line: y=1095px
+    - One-line summary 위치 조정
+    - 추가된 270px로 더 넉넉한 공간감
+  - **Step 3: Slides 2-4 수직 레이아웃 재설계**
+    - Slide 2 (Context): 첫 fact y=180px, 220px 간격, 절대 위치 배치
+    - Slides 3-4 (Sectors): 첫 sector y=180px, 220px 간격, fact box y=1150px
+    - Body text letter-spacing: -0.01em
+    - Sector name letter-spacing: -0.02em
+  - **Step 4: content_gen.py EXAONE 프롬프트 강화**
+    - 절대 규칙 #6 추가: 내부 메모/예시 표기 절대 금지
+    - 금지 표현: "(예시 필요)", "(구체적인 예시 필요)", "예상치 명시 필요", "기사 참고"
+    - 모든 텍스트는 최종 사용자가 읽는 완성된 콘텐츠로만 작성
+  - **Step 5: 전체 파이프라인 재실행**
+    - Step 3 (Content): 5개 스크립트 생성 (cluster 0, 2, 3, 4, 6)
+    - Step 4 (Cards): 25장 생성 (5 clusters × 5 slides, 1080x1350px)
+    - EXAONE fallback 1개 (cluster 0, JSON parse error)
+- **성과**:
+  - ✅ 1080x1350 비율 전환 완료 (Instagram 4:5 최적화)
+  - ✅ Hook title 드라마틱 배치 (y=750px, 더 넉넉한 공간감)
+  - ✅ Vertical spacing 최적화 (180px→220px 간격)
+  - ✅ Letter-spacing 개선 (hook: -0.03em, body: -0.01em, sector: -0.02em)
+  - ✅ EXAONE 내부 메모 제거 규칙 추가
+  - ✅ 25장 카드 생성 완료 (새 비율 적용)
+- **Result**: ✅ Success — 1080x1350 비율, 폰트 개선, 레이아웃 최적화 완료

@@ -4,10 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SignalFeed Cards - Cluster 0</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+    
+    @font-face {
+        font-family: 'Noto Serif KR';
+        font-weight: 900;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSerifKR-Black.otf');
+    }
+    @font-face {
+        font-family: 'Noto Serif KR';
+        font-weight: 700;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSerifKR-Bold.otf');
+    }
+    @font-face {
+        font-family: 'Noto Sans KR';
+        font-weight: 400;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSansKR-Regular.otf');
+    }
+    @font-face {
+        font-family: 'Noto Sans KR';
+        font-weight: 500;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSansKR-Medium.otf');
+    }
+    @font-face {
+        font-family: 'Noto Sans KR';
+        font-weight: 700;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSansKR-Bold.otf');
+    }
+    
     * {
       margin: 0;
       padding: 0;
@@ -18,11 +42,13 @@
       font-family: 'Noto Sans KR', -apple-system, sans-serif;
       background: #000;
       color: #FAFAFA;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }
 
     .card {
       width: 1080px;
-      height: 1080px;
+      height: 1350px;
       position: relative;
       overflow: hidden;
       margin-bottom: 20px;
@@ -66,7 +92,7 @@
 
 <div class="card" id="slide-1" style="background: #000;">
   <!-- Full bleed background image -->
-  <div style="position: absolute; inset: 0; background-image: url('data/temp/cover_0.jpg'); background-size: cover; background-position: center;"></div>
+  <div style="position: absolute; inset: 0; background-image: url('file:///Users/joon/Documents/GitHub/issuefit_project/data/temp/cover_0.jpg'); background-size: cover; background-position: center;"></div>
 
   <!-- Gradient overlay -->
   <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%);"></div>
@@ -74,73 +100,166 @@
   <!-- Content -->
   <div class="micro-brand">SIGNALFEED</div>
 
-  <!-- Bottom area -->
-  <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 60px 60px 80px;">
-    <!-- Hook title -->
-    <h1 class="serif" style="font-size: 80px; font-weight: 900; line-height: 1.15; letter-spacing: -0.02em; color: white; margin-bottom: 32px; max-width: 900px;">
-      달러 가치 하락의 시작
+  <!-- Hook title (y=750px, more dramatic positioning) -->
+  <div style="position: absolute; top: 750px; left: 60px; right: 60px;">
+    <h1 class="hook-title serif" style="font-size: 80px; font-weight: 900; line-height: 1.15; letter-spacing: -0.03em; color: white; max-width: 900px;">
+      시장<br>어디로?
     </h1>
+  </div>
 
-    <!-- One-line summary -->
-    <p style="font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 16px;">
-      이란 휴전 협정으로 달러 가치 하락 시작
+  <!-- One-line summary -->
+  <div style="position: absolute; top: 1040px; left: 60px; right: 60px;">
+    <p class="body-text" style="font-size: 18px; letter-spacing: -0.01em; line-height: 1.5; color: rgba(255,255,255,0.7);">
+      Traders' hopes fade 
     </p>
+  </div>
 
-    <!-- Sources -->
+  <!-- Sources -->
+  <div style="position: absolute; top: 1095px; left: 60px;">
     <p style="font-size: 14px; color: rgba(255,255,255,0.5);">
       Reuters · Bloomberg
     </p>
   </div>
 
   <!-- Bottom green line -->
-  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #00C853;"></div>
+  <div style="position: absolute; bottom: 100px; left: 60px; right: 60px; height: 3px; background: #00C853;"></div>
 
   <!-- Hashtag badges -->
-  <div style="position: absolute; bottom: 90px; right: 60px; display: flex; gap: 8px;">
+  <div style="position: absolute; bottom: 40px; right: 60px; display: flex; gap: 8px;">
     <span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 12px; font-size: 12px;">#경제</span>
     <span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 12px; font-size: 12px;">#투자</span>
   </div>
 </div>
 
-<div class="card" id="slide-2" style="background: #111111; padding: 80px 60px 60px;">
+<div class="card" id="slide-2" style="background: #111111;">
   <div class="micro-brand">SIGNALFEED</div>
   <div class="slide-counter">2/5</div>
 
   <!-- Title -->
-  <h2 class="serif" style="font-size: 36px; font-weight: 700; color: #888888; margin-bottom: 80px; font-style: italic;">
-    무슨 일이?
-  </h2>
+  <div style="position: absolute; top: 80px; left: 60px;">
+    <h2 class="serif" style="font-size: 36px; font-weight: 700; color: #888888; font-style: italic;">
+      무슨 일이?
+    </h2>
+  </div>
 
   <!-- Facts -->
-  <div>
-    
-    <div style="display: flex; gap: 24px; margin-bottom: 80px;">
+  
+    <div style="position: absolute; top: 180px; left: 60px; right: 60px; display: flex; gap: 24px;">
       <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p style="font-size: 26px; line-height: 1.6; color: white; max-width: 880px;">
-        달러 인덱스(DXY)가 이번 주 0.6% 하락 예상 중
+      <p class="body-text" style="font-size: 26px; line-height: 1.6; letter-spacing: -0.01em; color: white; max-width: 880px;">
+        주요 경제 지표 발표
       </p>
     </div>
 
-    <div style="display: flex; gap: 24px; margin-bottom: 80px;">
+    <div style="position: absolute; top: 400px; left: 60px; right: 60px; display: flex; gap: 24px;">
       <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p style="font-size: 26px; line-height: 1.6; color: white; max-width: 880px;">
-        이란과 서방 국가 간 휴전 협정 체결로 국제 긴장 완화
+      <p class="body-text" style="font-size: 26px; line-height: 1.6; letter-spacing: -0.01em; color: white; max-width: 880px;">
+        시장 반응 나타남
       </p>
     </div>
 
-    <div style="display: flex; gap: 24px; margin-bottom: 80px;">
+    <div style="position: absolute; top: 620px; left: 60px; right: 60px; display: flex; gap: 24px;">
       <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p style="font-size: 26px; line-height: 1.6; color: white; max-width: 880px;">
-        $1 대비 유로화 환율 1.02 상승 (달러 약세 반영)
+      <p class="body-text" style="font-size: 26px; line-height: 1.6; letter-spacing: -0.01em; color: white; max-width: 880px;">
+        분석가들 주목
       </p>
     </div>
 
-  </div>
 
   <!-- Source -->
   <p style="position: absolute; bottom: 60px; left: 60px; font-size: 14px; color: #888888;">
-    출처: Reuters, Bloomberg 등
+    출처: Reuters
   </p>
+</div>
+
+<div class="card" id="slide-3" style="background: #111111;">
+  <div class="micro-brand">SIGNALFEED</div>
+  <div class="slide-counter">3/5</div>
+
+  <!-- Label with vertical bar -->
+  <div style="position: absolute; top: 80px; left: 60px; display: flex; align-items: center; gap: 20px;">
+    <div style="width: 4px; height: 60px; background: #00C853;"></div>
+    <h2 class="sans" style="font-size: 40px; font-weight: 700; color: #00C853;">
+      수혜주는?
+    </h2>
+  </div>
+
+  <!-- Sectors -->
+  
+    <div style="position: absolute; top: 180px; left: 60px; right: 60px;">
+      <h3 class="sector-name serif" style="font-size: 56px; font-weight: 700; color: #00C853; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+        성장주
+      </h3>
+      <p class="body-text" style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5; letter-spacing: -0.01em;">
+        실적 개선으로 수혜
+      </p>
+      
+    </div>
+
+    <div style="position: absolute; top: 400px; left: 60px; right: 60px;">
+      <h3 class="sector-name serif" style="font-size: 56px; font-weight: 700; color: #00C853; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+        채권
+      </h3>
+      <p class="body-text" style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5; letter-spacing: -0.01em;">
+        안전자산 선호 증가
+      </p>
+      
+    </div>
+
+
+  <!-- FACT box at bottom -->
+  <div style="position: absolute; top: 1150px; left: 60px; right: 60px;">
+    <div style="width: 100%; height: 1px; background: #1E1E1E; margin-bottom: 40px;"></div>
+    <p style="font-size: 12px; letter-spacing: 1px; color: #444; margin-bottom: 16px; font-weight: 700;">FACT /</p>
+    <p class="body-text" style="font-size: 20px; line-height: 1.6; letter-spacing: -0.01em; color: #888888; max-width: 880px;">
+      경제 지표 개선으로 투자 심리 회복
+    </p>
+  </div>
+</div>
+
+<div class="card" id="slide-4" style="background: #111111;">
+  <div class="micro-brand">SIGNALFEED</div>
+  <div class="slide-counter">4/5</div>
+
+  <!-- Label with vertical bar -->
+  <div style="position: absolute; top: 80px; left: 60px; display: flex; align-items: center; gap: 20px;">
+    <div style="width: 4px; height: 60px; background: #FF3D3D;"></div>
+    <h2 class="sans" style="font-size: 40px; font-weight: 700; color: #FF3D3D;">
+      주의할 섹터는?
+    </h2>
+  </div>
+
+  <!-- Sectors -->
+  
+    <div style="position: absolute; top: 180px; left: 60px; right: 60px;">
+      <h3 class="sector-name serif" style="font-size: 56px; font-weight: 700; color: #FF3D3D; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+        금융주
+      </h3>
+      <p class="body-text" style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5; letter-spacing: -0.01em;">
+        금리 인상 부담
+      </p>
+      
+    </div>
+
+    <div style="position: absolute; top: 400px; left: 60px; right: 60px;">
+      <h3 class="sector-name serif" style="font-size: 56px; font-weight: 700; color: #FF3D3D; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+        원자재
+      </h3>
+      <p class="body-text" style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5; letter-spacing: -0.01em;">
+        수요 둔화 우려
+      </p>
+      
+    </div>
+
+
+  <!-- FACT box at bottom -->
+  <div style="position: absolute; top: 1150px; left: 60px; right: 60px;">
+    <div style="width: 100%; height: 1px; background: #1E1E1E; margin-bottom: 40px;"></div>
+    <p style="font-size: 12px; letter-spacing: 1px; color: #444; margin-bottom: 16px; font-weight: 700;">FACT /</p>
+    <p class="body-text" style="font-size: 20px; line-height: 1.6; letter-spacing: -0.01em; color: #888888; max-width: 880px;">
+      인플레이션 압력으로 통화 긴축 지속
+    </p>
+  </div>
 </div>
 
 <div class="card" id="slide-5" style="background: #111111; padding: 80px 60px 60px;">
@@ -148,7 +267,7 @@
 
   <!-- Title -->
   <h2 class="serif" style="font-size: 64px; font-weight: 900; color: white; margin-bottom: 60px;">
-    오늘의 핵심
+    오늘의 결론
   </h2>
 
   <!-- Summaries -->
@@ -157,21 +276,21 @@
     <div style="display: flex; gap: 24px; margin-bottom: 70px;">
       <div style="width: 12px; height: 12px; border-radius: 50%; background: #00C853; margin-top: 12px; flex-shrink: 0;"></div>
       <p style="font-size: 32px; line-height: 1.5; color: white; font-weight: 500; max-width: 920px;">
-        반도체와 금융 섹터 수혜 예상, 환율 개선으로 수출 경쟁력 강화
+        성장주 중심으로 수혜 전망
       </p>
     </div>
 
     <div style="display: flex; gap: 24px; margin-bottom: 70px;">
       <div style="width: 12px; height: 12px; border-radius: 50%; background: #FF3D3D; margin-top: 12px; flex-shrink: 0;"></div>
       <p style="font-size: 32px; line-height: 1.5; color: white; font-weight: 500; max-width: 920px;">
-        에너지 섹터는 원자재 가격 하락으로 부정적 영향 예상
+        금융주는 금리 인상 부담
       </p>
     </div>
 
     <div style="display: flex; gap: 24px; margin-bottom: 70px;">
       <div style="width: 12px; height: 12px; border-radius: 50%; background: #888888; margin-top: 12px; flex-shrink: 0;"></div>
       <p style="font-size: 32px; line-height: 1.5; color: white; font-weight: 500; max-width: 920px;">
-        투자자들은 환율 변동에 민감한 섹터 동향 주시 필요
+        시장 변동성 주의 필요
       </p>
     </div>
 
@@ -182,7 +301,7 @@
   <div style="background: #1A1A1A; padding: 24px 32px; border-radius: 12px; margin-bottom: 40px;">
     <p style="font-size: 16px; color: #00C853; font-weight: 700; margin-bottom: 12px;">주목 포인트</p>
     <p style="font-size: 20px; line-height: 1.6; color: white;">
-      반도체, 금융 섹터 동향 주목
+      경제 지표와 중앙은행 발언 주목
     </p>
   </div>
 
@@ -193,10 +312,10 @@
   <!-- CTA -->
   <div style="margin-bottom: 60px;">
     <p style="font-size: 28px; font-weight: 700; color: white; margin-bottom: 12px;">
-      더 궁금하시다면 댓글에 '분석' 남겨주세요
+      더 궁금하다면 댓글에 '분석' 남겨주세요
     </p>
     <p style="font-size: 22px; color: #00C853; font-weight: 500;">
-      → 상세 리포트는 DM으로 받아보세요
+      → 상세 리포트 DM으로 드립니다
     </p>
   </div>
 

@@ -20,9 +20,9 @@ logger = logging.getLogger(__name__)
 class HTMLCardGenerator:
     """HTML + Playwright 기반 Instagram 카드 생성기"""
 
-    # Canvas dimensions
+    # Canvas dimensions (Instagram 4:5 ratio)
     WIDTH = 1080
-    HEIGHT = 1080
+    HEIGHT = 1350
 
     # Color system (signal-based, minimal palette)
     COLORS = {
@@ -121,6 +121,8 @@ class HTMLCardGenerator:
       font-family: 'Noto Sans KR', -apple-system, sans-serif;
       background: #000;
       color: {self.COLORS["text_white"]};
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
     }}
 
     .card {{
@@ -195,29 +197,32 @@ class HTMLCardGenerator:
   <!-- Content -->
   <div class="micro-brand">SIGNALFEED</div>
 
-  <!-- Bottom area -->
-  <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 60px 60px 80px;">
-    <!-- Hook title -->
-    <h1 class="serif" style="font-size: 80px; font-weight: 900; line-height: 1.15; letter-spacing: -0.02em; color: white; margin-bottom: 32px; max-width: 900px;">
+  <!-- Hook title (y=750px, more dramatic positioning) -->
+  <div style="position: absolute; top: 750px; left: 60px; right: 60px;">
+    <h1 class="hook-title serif" style="font-size: 80px; font-weight: 900; line-height: 1.15; letter-spacing: -0.03em; color: white; max-width: 900px;">
       {hook_title.replace(chr(10), '<br>')}
     </h1>
+  </div>
 
-    <!-- One-line summary -->
-    <p style="font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 16px;">
+  <!-- One-line summary -->
+  <div style="position: absolute; top: 1040px; left: 60px; right: 60px;">
+    <p class="body-text" style="font-size: 18px; letter-spacing: -0.01em; line-height: 1.5; color: rgba(255,255,255,0.7);">
       {one_line}
     </p>
+  </div>
 
-    <!-- Sources -->
+  <!-- Sources -->
+  <div style="position: absolute; top: 1095px; left: 60px;">
     <p style="font-size: 14px; color: rgba(255,255,255,0.5);">
       {sources_text}
     </p>
   </div>
 
   <!-- Bottom green line -->
-  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: {self.COLORS["bullish"]};"></div>
+  <div style="position: absolute; bottom: 100px; left: 60px; right: 60px; height: 3px; background: {self.COLORS["bullish"]};"></div>
 
   <!-- Hashtag badges -->
-  <div style="position: absolute; bottom: 90px; right: 60px; display: flex; gap: 8px;">
+  <div style="position: absolute; bottom: 40px; right: 60px; display: flex; gap: 8px;">
     <span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 12px; font-size: 12px;">#경제</span>
     <span style="background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 12px; font-size: 12px;">#투자</span>
   </div>
@@ -231,30 +236,32 @@ class HTMLCardGenerator:
         source = slide_data.get("source", "")
 
         facts_html = ""
+        y_pos = 180
         for fact in facts:
             facts_html += f"""
-    <div style="display: flex; gap: 24px; margin-bottom: 80px;">
+    <div style="position: absolute; top: {y_pos}px; left: 60px; right: 60px; display: flex; gap: 24px;">
       <span style="color: {self.COLORS["bullish"]}; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p style="font-size: 26px; line-height: 1.6; color: white; max-width: 880px;">
+      <p class="body-text" style="font-size: 26px; line-height: 1.6; letter-spacing: -0.01em; color: white; max-width: 880px;">
         {fact}
       </p>
     </div>
 """
+            y_pos += 220
 
         return f"""
-<div class="card" id="slide-{slide_num}" style="background: {self.COLORS["bg_dark"]}; padding: 80px 60px 60px;">
+<div class="card" id="slide-{slide_num}" style="background: {self.COLORS["bg_dark"]};">
   <div class="micro-brand">SIGNALFEED</div>
   <div class="slide-counter">{slide_num}/5</div>
 
   <!-- Title -->
-  <h2 class="serif" style="font-size: 36px; font-weight: 700; color: {self.COLORS["text_gray"]}; margin-bottom: 80px; font-style: italic;">
-    {title}
-  </h2>
+  <div style="position: absolute; top: 80px; left: 60px;">
+    <h2 class="serif" style="font-size: 36px; font-weight: 700; color: {self.COLORS["text_gray"]}; font-style: italic;">
+      {title}
+    </h2>
+  </div>
 
   <!-- Facts -->
-  <div>
-    {facts_html}
-  </div>
+  {facts_html}
 
   <!-- Source -->
   <p style="position: absolute; bottom: 60px; left: 60px; font-size: 14px; color: {self.COLORS["text_gray"]};">
@@ -277,6 +284,7 @@ class HTMLCardGenerator:
         fact = slide_data.get("fact", "")
 
         sectors_html = ""
+        y_pos = 180
         for sector in sectors:
             name = sector.get("name", "")
             reason = sector.get("reason", "")
@@ -284,24 +292,25 @@ class HTMLCardGenerator:
             stocks_text = " · ".join(example_stocks[:2]) if example_stocks else ""
 
             sectors_html += f"""
-    <div style="margin-bottom: 50px;">
-      <h3 class="serif" style="font-size: 56px; font-weight: 700; color: {color}; margin-bottom: 12px; line-height: 1.2;">
+    <div style="position: absolute; top: {y_pos}px; left: 60px; right: 60px;">
+      <h3 class="sector-name serif" style="font-size: 56px; font-weight: 700; color: {color}; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
         {name}
       </h3>
-      <p style="font-size: 22px; color: {self.COLORS["text_gray"]}; padding-left: 24px; line-height: 1.5;">
+      <p class="body-text" style="font-size: 22px; color: {self.COLORS["text_gray"]}; padding-left: 24px; line-height: 1.5; letter-spacing: -0.01em;">
         {reason}
       </p>
       {"<p style='font-size: 14px; color: #555; padding-left: 24px; margin-top: 6px;'>" + stocks_text + "</p>" if stocks_text else ""}
     </div>
 """
+            y_pos += 220
 
         return f"""
-<div class="card" id="slide-{slide_num}" style="background: {self.COLORS["bg_dark"]}; padding: 80px 60px 60px;">
+<div class="card" id="slide-{slide_num}" style="background: {self.COLORS["bg_dark"]};">
   <div class="micro-brand">SIGNALFEED</div>
   <div class="slide-counter">{slide_num}/5</div>
 
   <!-- Label with vertical bar -->
-  <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 80px;">
+  <div style="position: absolute; top: 80px; left: 60px; display: flex; align-items: center; gap: 20px;">
     <div style="width: 4px; height: 60px; background: {color};"></div>
     <h2 class="sans" style="font-size: 40px; font-weight: 700; color: {color};">
       {label}
@@ -309,17 +318,13 @@ class HTMLCardGenerator:
   </div>
 
   <!-- Sectors -->
-  <div style="margin-bottom: 120px;">
-    {sectors_html}
-  </div>
+  {sectors_html}
 
-  <!-- Horizontal rule -->
-  <div style="width: 100%; height: 1px; background: #1E1E1E; margin-bottom: 40px;"></div>
-
-  <!-- FACT -->
-  <div>
+  <!-- FACT box at bottom -->
+  <div style="position: absolute; top: 1150px; left: 60px; right: 60px;">
+    <div style="width: 100%; height: 1px; background: #1E1E1E; margin-bottom: 40px;"></div>
     <p style="font-size: 12px; letter-spacing: 1px; color: #444; margin-bottom: 16px; font-weight: 700;">FACT /</p>
-    <p style="font-size: 20px; line-height: 1.6; color: {self.COLORS["text_gray"]}; max-width: 880px;">
+    <p class="body-text" style="font-size: 20px; line-height: 1.6; letter-spacing: -0.01em; color: {self.COLORS["text_gray"]}; max-width: 880px;">
       {fact}
     </p>
   </div>
@@ -418,7 +423,7 @@ class HTMLCardGenerator:
 
         with sync_playwright() as p:
             browser = p.chromium.launch()
-            page = browser.new_page(viewport={"width": 1080, "height": 1080})
+            page = browser.new_page(viewport={"width": 1080, "height": 1350})
 
             # Load page and wait for network idle
             page.goto(html_url, wait_until="networkidle", timeout=30000)
