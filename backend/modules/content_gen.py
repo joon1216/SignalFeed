@@ -37,50 +37,51 @@ class TemplateFallback:
         affected_sectors = cluster.get("affected_sectors", [])
         articles = cluster.get("articles", [])
 
-        # Slide 1: Cover
-        slide1 = {
-            "slide_num": 1,
-            "title": cluster_label[:20],
-            "body": f"{signal.upper()} 시그널 발생\n\n관련 섹터: {', '.join(affected_sectors[:3]) if affected_sectors else '전체 시장'}",
-            "signal_emoji": TemplateFallback.SIGNAL_EMOJI[signal]
-        }
+        # Extract sources
+        sources = list(set([a.get("source", "") for a in articles[:3] if a.get("source")]))[:3]
+        if not sources:
+            sources = ["Reuters", "Bloomberg", "FT"]
 
-        # Slide 2: Bullish
-        slide2 = {
-            "slide_num": 2,
-            "title": "호재 요인",
-            "body": "• 경제 성장 지표 개선\n• 기업 실적 증가\n• 정책 지원 확대",
-            "sectors": affected_sectors[:3] if signal == "bullish" else []
+        # Hook title for cover
+        hook_map = {
+            "bullish": f"{cluster_label[:10]}\n좋아진다?",
+            "bearish": f"{cluster_label[:10]}\n악화됐다!",
+            "neutral": f"{cluster_label[:10]}\n어떻게 될까?"
         }
-
-        # Slide 3: Bearish
-        slide3 = {
-            "slide_num": 3,
-            "title": "악재 요인",
-            "body": "• 인플레이션 우려\n• 금리 인상 압력\n• 글로벌 불확실성",
-            "sectors": affected_sectors[:3] if signal == "bearish" else []
-        }
-
-        # Slide 4: Neutral/Caution
-        slide4 = {
-            "slide_num": 4,
-            "title": "중립 요인",
-            "body": "• 시장 관망세 지속\n• 혼조세 나타남\n• 변동성 확대 가능",
-            "caution": "AI 분석 결과이며, 실제 시장 상황과 다를 수 있습니다."
-        }
-
-        # Slide 5: Conclusion
-        slide5 = {
-            "slide_num": 5,
-            "title": "요약",
-            "body": f"{cluster_label}\n\n{signal.upper()} 시그널\n\n모든 투자 판단은 본인 책임입니다.",
-            "cta": "자세한 분석은 프로필 링크"
-        }
+        hook_title = hook_map.get(signal, cluster_label[:15])
 
         return {
             "cluster_id": str(cluster.get("cluster_id", -1)),
             "signal": signal,
-            "slides": [slide1, slide2, slide3, slide4, slide5],
+            "hook_title": hook_title,
+            "title": cluster_label[:20],
+            "sources": sources,
+            "slide2": {
+                "sectors": [
+                    {"name": "성장주", "reason": "실적 개선 기대"},
+                    {"name": "채권", "reason": "안전자산 선호"},
+                    {"name": "부동산", "reason": "금리 안정화"}
+                ]
+            },
+            "slide2_fact": "주요 경제 지표가 개선되고 있습니다.",
+            "slide3": {
+                "sectors": [
+                    {"name": "은행주", "reason": "금리 인상 압박"},
+                    {"name": "달러", "reason": "환율 변동성"}
+                ]
+            },
+            "slide3_fact": "인플레이션 우려가 지속되고 있습니다.",
+            "slide4": {
+                "sectors": [
+                    {"name": "에너지", "reason": "유가 변동성"}
+                ]
+            },
+            "slide4_fact": "시장 관망세가 이어지고 있습니다.",
+            "slide5": {
+                "summary1": "경제 지표 개선으로 성장주 수혜 예상",
+                "summary2": "인플레이션 우려로 금융주 부담",
+                "summary3": "에너지 섹터는 유가 변동에 주목"
+            },
             "hashtags": ["#경제", "#투자", "#주식", "#ETF", "#시그널피드", "#뉴스", "#금융", "#재테크", "#자산관리", "#투자정보"],
             "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
         }
@@ -254,49 +255,45 @@ class ContentGenerator:
 {{
   "cluster_id": "{cluster_id}",
   "signal": "{signal}",
-  "slides": [
-    {{
-      "slide_num": 1,
-      "title": "20자 이내",
-      "body": "시그널 포함 (🟢 호재 시그널 / 🔴 악재 시그널 / ⚪ 중립 시그널)",
-      "signal_emoji": "{self._get_signal_emoji(signal)}"
-    }},
-    {{
-      "slide_num": 2,
-      "title": "호재",
-      "body": "호재 요인 팩트 (40자 이내)",
-      "sectors": ["섹터1", "섹터2", "섹터3"]
-    }},
-    {{
-      "slide_num": 3,
-      "title": "악재",
-      "body": "악재 요인 팩트 (40자 이내)",
-      "sectors": ["섹터1", "섹터2"]
-    }},
-    {{
-      "slide_num": 4,
-      "title": "중립·주의",
-      "body": "중립 요인 팩트 (40자 이내)",
-      "sectors": ["섹터1"],
-      "caution": "주의사항"
-    }},
-    {{
-      "slide_num": 5,
-      "title": "오늘의 결론",
-      "body": "요약",
-      "cta": "자세한 분석은 프로필 링크"
-    }}
-  ],
+  "hook_title": "궁금증/놀라움 유발 짧은 문구 (15자 이내, 2줄 max, \\n으로 줄바꿈)",
+  "title": "이슈 제목 20자 이내",
+  "sources": ["Reuters", "Bloomberg", "FT"],
+  "slide2": {{
+    "sectors": [
+      {{"name": "섹터1", "reason": "이유 (30자 이내)"}},
+      {{"name": "섹터2", "reason": "이유"}},
+      {{"name": "섹터3", "reason": "이유"}}
+    ]
+  }},
+  "slide2_fact": "핵심 팩트 (60자 이내)",
+  "slide3": {{
+    "sectors": [
+      {{"name": "섹터1", "reason": "이유"}},
+      {{"name": "섹터2", "reason": "이유"}}
+    ]
+  }},
+  "slide3_fact": "핵심 팩트",
+  "slide4": {{
+    "sectors": [
+      {{"name": "섹터1", "reason": "이유"}}
+    ]
+  }},
+  "slide4_fact": "AI 코멘트",
+  "slide5": {{
+    "summary1": "호재 요약 (40자)",
+    "summary2": "악재 요약 (40자)",
+    "summary3": "중립 요약 (40자)"
+  }},
   "hashtags": ["#경제", "#투자", ...] (10개),
   "disclaimer": "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
 }}
 
 중요 규칙:
-1. slide 1 signal_emoji: bullish="🟢", bearish="🔴", neutral="⚪"
-2. slide 1 body: 반드시 시그널 표기 포함 ("🟢 호재 시그널" 또는 "🔴 악재 시그널" 또는 "⚪ 중립 시그널")
-3. slide 2 sectors: 반드시 2~3개 섹터명 포함 (예: ["성장주", "채권", "부동산"])
-4. slide 3 sectors: 반드시 2~3개 섹터명 포함 (예: ["은행주", "달러"])
-5. slide 4 sectors: 반드시 1~2개 섹터명 포함
+1. hook_title: 궁금증/놀라움 유발 짧은 문구 (예: "연준, 또\\n금리 올린다?", "엔비디아\\n또 터졌다!", "인플레이션\\n잡혔나?")
+2. hook_title은 15자 이내, 2줄 max, \\n으로 줄바꿈
+3. slide2 sectors: 반드시 2~3개 섹터명 포함 (예: [{{"name": "성장주", "reason": "실적 개선"}}, ...])
+4. slide3 sectors: 반드시 2~3개 섹터명 포함
+5. slide4 sectors: 반드시 1~2개 섹터명 포함
 6. sectors가 비어있으면 절대 안 됨 - 반드시 관련 섹터명을 기사에서 추출할 것
 7. 예측 표현(오를 것, 떨어질 것, 기대됩니다) 사용 금지. 팩트만 작성.
 """

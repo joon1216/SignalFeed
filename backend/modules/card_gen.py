@@ -1,15 +1,15 @@
 """
 SignalFeed Instagram Card Generator
-Pillow 기반 1080x1920px 다크모드 카드 이미지 생성 (전면 개편 레이아웃)
+Pillow 기반 1080x1080px 카드 이미지 생성 (Pexels 배경 + 새 레이아웃)
 """
 
 import os
 import sys
 import json
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 # Add project root to path
 current_dir = Path(__file__).parent
@@ -17,7 +17,7 @@ project_root = current_dir.parent.parent
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from assets.colors import COLORS
+from backend.modules.image_fetcher import ImageFetcher
 
 # Configure logging
 logging.basicConfig(
@@ -28,16 +28,30 @@ logger = logging.getLogger(__name__)
 
 
 class CardGenerator:
-    """Instagram 카드 이미지 생성기 (전면 개편 레이아웃)"""
+    """Instagram 카드 이미지 생성기 (1080x1080px, Pexels 배경)"""
 
-    # Canvas dimensions (Instagram Story/Reels ratio)
+    # Canvas dimensions (Instagram square format)
     WIDTH = 1080
-    HEIGHT = 1920
+    HEIGHT = 1080
 
     # Layout constants
     LEFT_MARGIN = 60
     RIGHT_MARGIN = 60
     CONTENT_WIDTH = WIDTH - LEFT_MARGIN - RIGHT_MARGIN  # 960px
+
+    # Signal colors
+    COLORS = {
+        "bg_dark": "#111111",
+        "bg_surface": "#1A1A1A",
+        "bg_card": "#2C2C2C",
+        "bullish": "#00C853",
+        "bearish": "#FF3D3D",
+        "neutral": "#666666",
+        "text_white": "#FAFAFA",
+        "text_gray": "#A0A0A0",
+        "text_dark_gray": "#555555",
+        "separator": "#2C2C2C",
+    }
 
     def __init__(self, font_path: str = "assets/fonts/NanumGothicBold.ttf"):
         """
@@ -58,16 +72,18 @@ class CardGenerator:
         for candidate in font_candidates:
             if os.path.exists(candidate):
                 try:
-                    # Updated font sizes for new layout
-                    self.font_xxlarge = ImageFont.truetype(candidate, 52)
-                    self.font_xlarge = ImageFont.truetype(candidate, 44)
-                    self.font_large = ImageFont.truetype(candidate, 40)
-                    self.font_mlarge = ImageFont.truetype(candidate, 36)
-                    self.font_medium = ImageFont.truetype(candidate, 32)
-                    self.font_msmall = ImageFont.truetype(candidate, 28)
-                    self.font_small = ImageFont.truetype(candidate, 24)
-                    self.font_xsmall = ImageFont.truetype(candidate, 22)
+                    # Font sizes for new layout
+                    self.font_xxlarge = ImageFont.truetype(candidate, 72)
+                    self.font_xlarge = ImageFont.truetype(candidate, 60)
+                    self.font_large = ImageFont.truetype(candidate, 52)
+                    self.font_mlarge = ImageFont.truetype(candidate, 40)
+                    self.font_medium = ImageFont.truetype(candidate, 36)
+                    self.font_msmall = ImageFont.truetype(candidate, 32)
+                    self.font_small = ImageFont.truetype(candidate, 26)
+                    self.font_xsmall = ImageFont.truetype(candidate, 24)
+                    self.font_xxsmall = ImageFont.truetype(candidate, 22)
                     self.font_tiny = ImageFont.truetype(candidate, 20)
+                    self.font_micro = ImageFont.truetype(candidate, 18)
                     logger.info(f"Loaded font: {candidate}")
                     loaded_font = candidate
                     break
@@ -77,64 +93,44 @@ class CardGenerator:
 
         if not loaded_font:
             logger.warning("All font candidates failed. Using default font.")
-            self.font_xxlarge = ImageFont.load_default()
-            self.font_xlarge = ImageFont.load_default()
-            self.font_large = ImageFont.load_default()
-            self.font_mlarge = ImageFont.load_default()
-            self.font_medium = ImageFont.load_default()
-            self.font_msmall = ImageFont.load_default()
-            self.font_small = ImageFont.load_default()
-            self.font_xsmall = ImageFont.load_default()
-            self.font_tiny = ImageFont.load_default()
+            default = ImageFont.load_default()
+            self.font_xxlarge = default
+            self.font_xlarge = default
+            self.font_large = default
+            self.font_mlarge = default
+            self.font_medium = default
+            self.font_msmall = default
+            self.font_small = default
+            self.font_xsmall = default
+            self.font_xxsmall = default
+            self.font_tiny = default
+            self.font_micro = default
+
+        # Initialize ImageFetcher
+        self.image_fetcher = ImageFetcher()
 
     def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
-        """Convert hex color to RGB tuple (supports color names)"""
-        # Convert color names to hex
-        color_names = {
-            "white": "#FFFFFF",
-            "black": "#000000",
-            "red": "#FF0000",
-            "green": "#00FF00",
-            "blue": "#0000FF"
-        }
-
-        if hex_color in color_names:
-            hex_color = color_names[hex_color]
-
+        """Convert hex color to RGB tuple"""
         hex_color = hex_color.lstrip('#')
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
-    def _draw_rounded_rect(self, draw: ImageDraw.ImageDraw, xy: Tuple[int, int, int, int],
-                          radius: int, fill: str, outline: str = None, width: int = 2):
-        """Draw rounded rectangle"""
-        x1, y1, x2, y2 = xy
-        fill_rgb = self._hex_to_rgb(fill) if fill else None
-        outline_rgb = self._hex_to_rgb(outline) if outline else None
-
-        draw.rounded_rectangle(
-            xy=(x1, y1, x2, y2),
-            radius=radius,
-            fill=fill_rgb,
-            outline=outline_rgb,
-            width=width
-        )
-
-    def _draw_text_wrapped(self, draw: ImageDraw.ImageDraw, text: str, xy: Tuple[int, int],
-                          font: ImageFont.FreeTypeFont, fill: str, max_width: int,
-                          align: str = "left", line_spacing: int = 10) -> int:
+    def _draw_text_wrapped(
+        self,
+        draw: ImageDraw.ImageDraw,
+        text: str,
+        xy: Tuple[int, int],
+        font: ImageFont.FreeTypeFont,
+        fill: str,
+        max_width: int,
+        max_lines: int = None,
+        align: str = "left"
+    ) -> int:
         """
         Draw text with word wrapping
 
         Returns:
-            Height of drawn text block
+            Height of drawn text
         """
-        # Convert color name to hex if needed
-        if fill == "white":
-            fill = "#FFFFFF"
-        elif fill == "black":
-            fill = "#000000"
-
-        fill_rgb = self._hex_to_rgb(fill)
         words = text.split()
         lines = []
         current_line = []
@@ -142,7 +138,9 @@ class CardGenerator:
         for word in words:
             test_line = ' '.join(current_line + [word])
             bbox = draw.textbbox((0, 0), test_line, font=font)
-            if bbox[2] - bbox[0] <= max_width:
+            width = bbox[2] - bbox[0]
+
+            if width <= max_width:
                 current_line.append(word)
             else:
                 if current_line:
@@ -152,450 +150,454 @@ class CardGenerator:
         if current_line:
             lines.append(' '.join(current_line))
 
+        # Limit lines
+        if max_lines:
+            lines = lines[:max_lines]
+
+        # Draw lines
         x, y = xy
         total_height = 0
-
         for line in lines:
             bbox = draw.textbbox((0, 0), line, font=font)
-            line_width = bbox[2] - bbox[0]
             line_height = bbox[3] - bbox[1]
 
             if align == "center":
-                draw.text((x + (max_width - line_width) // 2, y), line, font=font, fill=fill_rgb)
-            elif align == "right":
-                draw.text((x + max_width - line_width, y), line, font=font, fill=fill_rgb)
+                line_width = bbox[2] - bbox[0]
+                x_offset = (max_width - line_width) // 2
+                draw.text((x + x_offset, y), line, font=font, fill=fill)
             else:
-                draw.text((x, y), line, font=font, fill=fill_rgb)
+                draw.text((x, y), line, font=font, fill=fill)
 
-            y += line_height + line_spacing
-            total_height += line_height + line_spacing
+            y += line_height + 10
+            total_height += line_height + 10
 
         return total_height
 
-    def generate_slide1_cover(self, script: Dict) -> Image.Image:
+    def generate_slide1_cover(self, script: Dict, background: Image.Image) -> Image.Image:
         """
-        Generate Slide 1 (Cover)
-
-        Layout:
-        - y=60: SIGNALFEED brand (green, 28px)
-        - y=160: live dot + "오늘의 핵심 이슈" (gray, 24px)
-        - y=320: issue title (white, 52px bold, center, max 2 lines)
-        - y=600: signal badge large (emoji + text, 36px, center)
-        - y=800: source chips (Reuters · Bloomberg · FT, gray, 22px, center)
-        - y=900: "슬라이드로 자세히 보기 →" (green, 24px, center)
-        - y=1860: green line accent (bottom)
+        SLIDE 1: Cover with Pexels background
+        Hook-first design like @kiyominosekai
         """
-        img = Image.new('RGB', (self.WIDTH, self.HEIGHT), self._hex_to_rgb(COLORS["bg"]))
-        draw = ImageDraw.Draw(img)
+        # Use provided background or create fallback
+        image = background.copy() if background else Image.new("RGB", (self.WIDTH, self.HEIGHT), self.COLORS["bg_dark"])
+        draw = ImageDraw.Draw(image)
 
-        # y=60: SIGNALFEED brand
-        draw.text((self.LEFT_MARGIN, 60), "SIGNALFEED", font=self.font_msmall, fill=self._hex_to_rgb(COLORS["brand"]))
+        # Dark overlay gradient (top 20% transparent → bottom 80% opaque)
+        overlay = Image.new("RGBA", (self.WIDTH, self.HEIGHT), (0, 0, 0, 0))
+        overlay_draw = ImageDraw.Draw(overlay)
 
-        # y=160: live dot + "오늘의 핵심 이슈"
-        draw.ellipse((self.LEFT_MARGIN, 168, self.LEFT_MARGIN + 12, 180), fill=self._hex_to_rgb(COLORS["brand"]))
-        draw.text((self.LEFT_MARGIN + 24, 160), "오늘의 핵심 이슈", font=self.font_small, fill=self._hex_to_rgb("#888888"))
+        for y in range(self.HEIGHT):
+            alpha = int(min(255, (y / self.HEIGHT) * 255 * 0.75))
+            overlay_draw.rectangle([(0, y), (self.WIDTH, y+1)], fill=(0, 0, 0, alpha))
 
-        # y=320: issue title (center, max 2 lines)
-        title = script["slides"][0]["title"]
+        image = Image.alpha_composite(image.convert("RGBA"), overlay).convert("RGB")
+        draw = ImageDraw.Draw(image)
+
+        # Top-left: SIGNALFEED brand
+        draw.text(
+            (self.LEFT_MARGIN, 50),
+            "SIGNALFEED",
+            font=self.font_xsmall,
+            fill=self.COLORS["text_white"]
+        )
+
+        # Center-bottom: Hook title
+        hook_title = script.get("hook_title", script.get("title", "경제 뉴스"))
+        y_hook = 600
         self._draw_text_wrapped(
-            draw, title, (self.LEFT_MARGIN, 320),
-            self.font_xxlarge, "white", self.CONTENT_WIDTH,
-            align="center", line_spacing=20
+            draw, hook_title,
+            (self.LEFT_MARGIN, y_hook),
+            self.font_xxlarge,
+            self.COLORS["text_white"],
+            self.CONTENT_WIDTH,
+            max_lines=2,
+            align="left"
         )
 
-        # y=600: signal badge (emoji + text, center)
-        signal_emoji = script["slides"][0].get("signal_emoji", "⚪")
-        signal_text = script["slides"][0].get("body", "").split("\n")[0]  # First line
+        # Signal badge below title
+        signal = script.get("signal", "neutral")
+        signal_emoji = {"bullish": "📈", "bearish": "📉", "neutral": "➡️"}[signal]
+        signal_text = {"bullish": "호재", "bearish": "악재", "neutral": "중립"}[signal]
+        signal_color = self.COLORS.get(signal, self.COLORS["neutral"])
+
         badge_text = f"{signal_emoji} {signal_text}"
+        bbox = draw.textbbox((0, 0), badge_text, font=self.font_medium)
+        badge_width = bbox[2] - bbox[0] + 40
+        badge_height = 50
+        badge_x = self.LEFT_MARGIN
+        badge_y = 800
 
-        bbox = draw.textbbox((0, 0), badge_text, font=self.font_mlarge)
-        badge_width = bbox[2] - bbox[0]
-        badge_x = (self.WIDTH - badge_width) // 2
-
-        draw.text((badge_x, 600), badge_text, font=self.font_mlarge, fill=self._hex_to_rgb("white"))
-
-        # y=800: source chips (center)
-        sources = "Reuters · Bloomberg · FT"
-        bbox = draw.textbbox((0, 0), sources, font=self.font_xsmall)
-        sources_width = bbox[2] - bbox[0]
-        sources_x = (self.WIDTH - sources_width) // 2
-
-        draw.text((sources_x, 800), sources, font=self.font_xsmall, fill=self._hex_to_rgb("#888888"))
-
-        # y=900: CTA text (center)
-        cta = "슬라이드로 자세히 보기 →"
-        bbox = draw.textbbox((0, 0), cta, font=self.font_small)
-        cta_width = bbox[2] - bbox[0]
-        cta_x = (self.WIDTH - cta_width) // 2
-
-        draw.text((cta_x, 900), cta, font=self.font_small, fill=self._hex_to_rgb(COLORS["brand"]))
-
-        # y=1860: green line accent
-        draw.rectangle((self.LEFT_MARGIN, 1860, self.WIDTH - self.RIGHT_MARGIN, 1870), fill=self._hex_to_rgb(COLORS["brand"]))
-
-        return img
-
-    def generate_slide2_bullish(self, script: Dict) -> Image.Image:
-        """Generate Slide 2 (Bullish) with new layout"""
-        img = Image.new('RGB', (self.WIDTH, self.HEIGHT), self._hex_to_rgb(COLORS["bg"]))
-        draw = ImageDraw.Draw(img)
-
-        slide_data = script["slides"][1]
-
-        # y=60: label bar + label text
-        bar_color = COLORS["bullish"]
-        draw.rectangle((self.LEFT_MARGIN, 60, self.LEFT_MARGIN + 16, 120), fill=self._hex_to_rgb(bar_color))
-        draw.text((self.LEFT_MARGIN + 36, 65), "호재", font=self.font_large, fill=self._hex_to_rgb("white"))
-
-        # y=200: sector cards
-        sectors = slide_data.get("sectors", [])
-        body = slide_data.get("body", "")
-
-        y_offset = 200
-        for sector in sectors[:3]:  # Max 3 sectors
-            # Sector card (160px tall, rounded corners)
-            card_y1 = y_offset
-            card_y2 = y_offset + 160
-
-            # Dark green background
-            self._draw_rounded_rect(
-                draw,
-                (self.LEFT_MARGIN, card_y1, self.WIDTH - self.RIGHT_MARGIN, card_y2),
-                radius=20,
-                fill="#0D3B2E"  # Dark green
-            )
-
-            # Sector name (green, 32px bold)
-            draw.text((self.LEFT_MARGIN + 30, card_y1 + 30), sector, font=self.font_medium, fill=self._hex_to_rgb(COLORS["bullish"]))
-
-            # Reason text (white, 26px, 2 lines max)
-            reason_y = card_y1 + 80
-            self._draw_text_wrapped(
-                draw, body[:60], (self.LEFT_MARGIN + 30, reason_y),
-                self.font_msmall, "white", self.CONTENT_WIDTH - 60,
-                line_spacing=10
-            )
-
-            y_offset += 180  # 160px card + 20px spacing
-
-        # y=1600: fact box
-        fact_y1 = 1600
-        fact_y2 = 1800
-
-        self._draw_rounded_rect(
-            draw,
-            (self.LEFT_MARGIN, fact_y1, self.WIDTH - self.RIGHT_MARGIN, fact_y2),
-            radius=20,
-            fill="#1A1A1A"  # Darker bg
+        # Draw pill-shaped badge
+        draw.rounded_rectangle(
+            [(badge_x, badge_y), (badge_x + badge_width, badge_y + badge_height)],
+            radius=25,
+            fill=signal_color
+        )
+        draw.text(
+            (badge_x + 20, badge_y + 10),
+            badge_text,
+            font=self.font_medium,
+            fill=self.COLORS["text_white"]
         )
 
-        # "핵심 팩트" label
-        draw.text((self.LEFT_MARGIN + 30, fact_y1 + 20), "핵심 팩트", font=self.font_xsmall, fill=self._hex_to_rgb("#888888"))
+        # Source line
+        sources = script.get("sources", ["Reuters", "Bloomberg", "FT"])
+        source_text = " · ".join(sources[:3])
+        draw.text(
+            (self.LEFT_MARGIN, 900),
+            source_text,
+            font=self.font_micro,
+            fill=self.COLORS["text_gray"]
+        )
+
+        # Bottom green line accent
+        draw.rectangle(
+            [(0, 1060), (self.WIDTH, 1063)],
+            fill=self.COLORS["bullish"]
+        )
+
+        # Hashtag badges bottom-right
+        hashtags = ["#경제", "#투자"]
+        hashtag_x = self.WIDTH - 200
+        hashtag_y = 1000
+
+        for hashtag in hashtags:
+            bbox = draw.textbbox((0, 0), hashtag, font=self.font_tiny)
+            tag_width = bbox[2] - bbox[0] + 20
+            tag_height = 30
+
+            draw.rounded_rectangle(
+                [(hashtag_x, hashtag_y), (hashtag_x + tag_width, hashtag_y + tag_height)],
+                radius=15,
+                fill=self.COLORS["bg_card"]
+            )
+            draw.text(
+                (hashtag_x + 10, hashtag_y + 5),
+                hashtag,
+                font=self.font_tiny,
+                fill=self.COLORS["text_gray"]
+            )
+
+            hashtag_x += tag_width + 10
+
+        return image
+
+    def generate_slide_sector(
+        self,
+        slide_num: int,
+        label: str,
+        signal: str,
+        sectors: List[Dict],
+        fact: str
+    ) -> Image.Image:
+        """
+        SLIDES 2-4: Sector cards (호재/악재/중립)
+        Clean editorial dark bg layout
+        """
+        image = Image.new("RGB", (self.WIDTH, self.HEIGHT), self.COLORS["bg_dark"])
+        draw = ImageDraw.Draw(image)
+
+        signal_color = self.COLORS.get(signal, self.COLORS["neutral"])
+
+        # Top-left: SIGNALFEED micro brand
+        draw.text(
+            (self.LEFT_MARGIN, 50),
+            "SIGNALFEED",
+            font=self.font_tiny,
+            fill=self.COLORS["bullish"]
+        )
+
+        # Slide number indicator top-right
+        draw.text(
+            (self.WIDTH - self.RIGHT_MARGIN - 50, 50),
+            f"{slide_num}/5",
+            font=self.font_micro,
+            fill=self.COLORS["text_gray"]
+        )
+
+        # Section label with vertical bar
+        bar_width = 4
+        bar_height = 60
+        draw.rectangle(
+            [(self.LEFT_MARGIN, 100), (self.LEFT_MARGIN + bar_width, 100 + bar_height)],
+            fill=signal_color
+        )
+        draw.text(
+            (self.LEFT_MARGIN + bar_width + 20, 110),
+            label,
+            font=self.font_mlarge,
+            fill=signal_color
+        )
+
+        # Sector items
+        y_sectors = 200
+        for sector in sectors:
+            sector_name = sector.get("name", "")
+            sector_reason = sector.get("reason", "")
+
+            # Sector name
+            draw.text(
+                (self.LEFT_MARGIN, y_sectors),
+                sector_name,
+                font=self.font_large,
+                fill=signal_color
+            )
+
+            # Reason text (indented)
+            y_sectors += 60
+            self._draw_text_wrapped(
+                draw, sector_reason,
+                (self.LEFT_MARGIN + 20, y_sectors),
+                self.font_small,
+                self.COLORS["text_gray"],
+                self.CONTENT_WIDTH - 20,
+                max_lines=2
+            )
+
+            y_sectors += 100
+
+        # Bottom fact box
+        y_fact = 880
+
+        # Separator line
+        draw.rectangle(
+            [(0, y_fact), (self.WIDTH, y_fact + 1)],
+            fill=self.COLORS["separator"]
+        )
+
+        # FACT label
+        draw.text(
+            (self.LEFT_MARGIN, y_fact + 20),
+            "FACT /",
+            font=self.font_tiny,
+            fill=self.COLORS["text_dark_gray"]
+        )
 
         # Fact text
         self._draw_text_wrapped(
-            draw, body[:100], (self.LEFT_MARGIN + 30, fact_y1 + 60),
-            self.font_msmall, "white", self.CONTENT_WIDTH - 60,
-            line_spacing=10
+            draw, fact,
+            (self.LEFT_MARGIN, y_fact + 50),
+            self.font_xxsmall,
+            self.COLORS["text_gray"],
+            self.CONTENT_WIDTH,
+            max_lines=3
         )
 
-        return img
-
-    def generate_slide3_bearish(self, script: Dict) -> Image.Image:
-        """Generate Slide 3 (Bearish) - same structure as slide 2 but red theme"""
-        img = Image.new('RGB', (self.WIDTH, self.HEIGHT), self._hex_to_rgb(COLORS["bg"]))
-        draw = ImageDraw.Draw(img)
-
-        slide_data = script["slides"][2]
-
-        # y=60: label bar + label text (red)
-        bar_color = COLORS["bearish"]
-        draw.rectangle((self.LEFT_MARGIN, 60, self.LEFT_MARGIN + 16, 120), fill=self._hex_to_rgb(bar_color))
-        draw.text((self.LEFT_MARGIN + 36, 65), "악재", font=self.font_large, fill=self._hex_to_rgb("white"))
-
-        # y=200: sector cards
-        sectors = slide_data.get("sectors", [])
-        body = slide_data.get("body", "")
-
-        y_offset = 200
-        for sector in sectors[:3]:
-            card_y1 = y_offset
-            card_y2 = y_offset + 160
-
-            # Dark red background
-            self._draw_rounded_rect(
-                draw,
-                (self.LEFT_MARGIN, card_y1, self.WIDTH - self.RIGHT_MARGIN, card_y2),
-                radius=20,
-                fill="#3B0D0D"  # Dark red
-            )
-
-            # Sector name (red, 32px bold)
-            draw.text((self.LEFT_MARGIN + 30, card_y1 + 30), sector, font=self.font_medium, fill=self._hex_to_rgb(COLORS["bearish"]))
-
-            # Reason text
-            reason_y = card_y1 + 80
-            self._draw_text_wrapped(
-                draw, body[:60], (self.LEFT_MARGIN + 30, reason_y),
-                self.font_msmall, "white", self.CONTENT_WIDTH - 60,
-                line_spacing=10
-            )
-
-            y_offset += 180
-
-        # y=1600: fact box
-        fact_y1 = 1600
-        fact_y2 = 1800
-
-        self._draw_rounded_rect(
-            draw,
-            (self.LEFT_MARGIN, fact_y1, self.WIDTH - self.RIGHT_MARGIN, fact_y2),
-            radius=20,
-            fill="#1A1A1A"
-        )
-
-        draw.text((self.LEFT_MARGIN + 30, fact_y1 + 20), "핵심 팩트", font=self.font_xsmall, fill=self._hex_to_rgb("#888888"))
-
-        self._draw_text_wrapped(
-            draw, body[:100], (self.LEFT_MARGIN + 30, fact_y1 + 60),
-            self.font_msmall, "white", self.CONTENT_WIDTH - 60,
-            line_spacing=10
-        )
-
-        return img
-
-    def generate_slide4_neutral(self, script: Dict) -> Image.Image:
-        """Generate Slide 4 (Neutral) - same structure as slide 2/3 but gray theme"""
-        img = Image.new('RGB', (self.WIDTH, self.HEIGHT), self._hex_to_rgb(COLORS["bg"]))
-        draw = ImageDraw.Draw(img)
-
-        slide_data = script["slides"][3]
-
-        # y=60: label bar + label text (gray)
-        bar_color = COLORS["neutral"]
-        draw.rectangle((self.LEFT_MARGIN, 60, self.LEFT_MARGIN + 16, 120), fill=self._hex_to_rgb(bar_color))
-        draw.text((self.LEFT_MARGIN + 36, 65), "중립·주의", font=self.font_large, fill=self._hex_to_rgb("white"))
-
-        # y=200: sector cards
-        sectors = slide_data.get("sectors", [])
-        body = slide_data.get("body", "")
-
-        y_offset = 200
-        for sector in sectors[:2]:  # Max 2 for neutral
-            card_y1 = y_offset
-            card_y2 = y_offset + 160
-
-            # Dark gray background
-            self._draw_rounded_rect(
-                draw,
-                (self.LEFT_MARGIN, card_y1, self.WIDTH - self.RIGHT_MARGIN, card_y2),
-                radius=20,
-                fill="#2A2A2A"  # Dark gray
-            )
-
-            # Sector name (gray, 32px bold)
-            draw.text((self.LEFT_MARGIN + 30, card_y1 + 30), sector, font=self.font_medium, fill=self._hex_to_rgb(COLORS["neutral"]))
-
-            # Reason text
-            reason_y = card_y1 + 80
-            self._draw_text_wrapped(
-                draw, body[:60], (self.LEFT_MARGIN + 30, reason_y),
-                self.font_msmall, "white", self.CONTENT_WIDTH - 60,
-                line_spacing=10
-            )
-
-            y_offset += 180
-
-        # y=1600: fact box
-        fact_y1 = 1600
-        fact_y2 = 1800
-
-        self._draw_rounded_rect(
-            draw,
-            (self.LEFT_MARGIN, fact_y1, self.WIDTH - self.RIGHT_MARGIN, fact_y2),
-            radius=20,
-            fill="#1A1A1A"
-        )
-
-        draw.text((self.LEFT_MARGIN + 30, fact_y1 + 20), "핵심 팩트", font=self.font_xsmall, fill=self._hex_to_rgb("#888888"))
-
-        caution = slide_data.get("caution", body[:100])
-        self._draw_text_wrapped(
-            draw, caution, (self.LEFT_MARGIN + 30, fact_y1 + 60),
-            self.font_msmall, "white", self.CONTENT_WIDTH - 60,
-            line_spacing=10
-        )
-
-        return img
+        return image
 
     def generate_slide5_conclusion(self, script: Dict) -> Image.Image:
         """
-        Generate Slide 5 (Conclusion)
-
-        Layout:
-        - y=60: "오늘의 결론" (white, 44px bold)
-        - y=200: 3 summary rows (colored bar + text, 36px)
-        - y=1550: CTA box (green border, rounded)
-        - y=1800: disclaimer (gray, 20px, center)
+        SLIDE 5: Conclusion with CTA
         """
-        img = Image.new('RGB', (self.WIDTH, self.HEIGHT), self._hex_to_rgb(COLORS["bg"]))
-        draw = ImageDraw.Draw(img)
+        image = Image.new("RGB", (self.WIDTH, self.HEIGHT), self.COLORS["bg_dark"])
+        draw = ImageDraw.Draw(image)
 
-        slide_data = script["slides"][4]
-
-        # y=60: Title
-        draw.text((self.LEFT_MARGIN, 60), "오늘의 결론", font=self.font_xlarge, fill=self._hex_to_rgb("white"))
-
-        # y=200: 3 summary rows
-        body_lines = slide_data.get("body", "").split("\n")
-
-        # Green bar row
-        y_offset = 200
-        draw.rectangle((self.LEFT_MARGIN, y_offset, self.LEFT_MARGIN + 10, y_offset + 50), fill=self._hex_to_rgb(COLORS["bullish"]))
-        summary_text = body_lines[0] if len(body_lines) > 0 else "호재 요약"
-        draw.text((self.LEFT_MARGIN + 30, y_offset + 10), summary_text[:40], font=self.font_mlarge, fill=self._hex_to_rgb("white"))
-
-        # Red bar row
-        y_offset += 100
-        draw.rectangle((self.LEFT_MARGIN, y_offset, self.LEFT_MARGIN + 10, y_offset + 50), fill=self._hex_to_rgb(COLORS["bearish"]))
-        summary_text = body_lines[1] if len(body_lines) > 1 else "악재 요약"
-        draw.text((self.LEFT_MARGIN + 30, y_offset + 10), summary_text[:40], font=self.font_mlarge, fill=self._hex_to_rgb("white"))
-
-        # Gray bar row
-        y_offset += 100
-        draw.rectangle((self.LEFT_MARGIN, y_offset, self.LEFT_MARGIN + 10, y_offset + 50), fill=self._hex_to_rgb(COLORS["neutral"]))
-        summary_text = body_lines[2] if len(body_lines) > 2 else "중립 요약"
-        draw.text((self.LEFT_MARGIN + 30, y_offset + 10), summary_text[:40], font=self.font_mlarge, fill=self._hex_to_rgb("white"))
-
-        # y=1550: CTA box
-        cta_y1 = 1550
-        cta_y2 = 1650
-
-        self._draw_rounded_rect(
-            draw,
-            (self.LEFT_MARGIN, cta_y1, self.WIDTH - self.RIGHT_MARGIN, cta_y2),
-            radius=20,
-            fill=None,
-            outline=COLORS["brand"],
-            width=3
+        # Top-left: SIGNALFEED micro brand
+        draw.text(
+            (self.LEFT_MARGIN, 50),
+            "SIGNALFEED",
+            font=self.font_tiny,
+            fill=self.COLORS["bullish"]
         )
 
-        cta_text = slide_data.get("cta", "자세한 분석은 프로필 링크")
-        bbox = draw.textbbox((0, 0), cta_text, font=self.font_medium)
-        cta_width = bbox[2] - bbox[0]
-        cta_x = (self.WIDTH - cta_width) // 2
+        # "오늘의 결론" heading
+        draw.text(
+            (self.LEFT_MARGIN, 120),
+            "오늘의 결론",
+            font=self.font_xlarge,
+            fill=self.COLORS["text_white"]
+        )
 
-        draw.text((cta_x, cta_y1 + 35), cta_text, font=self.font_medium, fill=self._hex_to_rgb(COLORS["brand"]))
+        # Summary rows with colored dots
+        summaries = [
+            {"color": self.COLORS["bullish"], "text": script.get("slide5", {}).get("summary1", "")},
+            {"color": self.COLORS["bearish"], "text": script.get("slide5", {}).get("summary2", "")},
+            {"color": self.COLORS["neutral"], "text": script.get("slide5", {}).get("summary3", "")}
+        ]
 
-        # y=1800: disclaimer
-        disclaimer = script.get("disclaimer", "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다")
-        bbox = draw.textbbox((0, 0), disclaimer, font=self.font_tiny)
+        y_summary = 230
+        for summary in summaries:
+            if not summary["text"]:
+                continue
+
+            # Colored dot
+            dot_radius = 5
+            draw.ellipse(
+                [(self.LEFT_MARGIN, y_summary + 10), (self.LEFT_MARGIN + dot_radius * 2, y_summary + 10 + dot_radius * 2)],
+                fill=summary["color"]
+            )
+
+            # Summary text
+            self._draw_text_wrapped(
+                draw, summary["text"],
+                (self.LEFT_MARGIN + 30, y_summary),
+                self.font_msmall,
+                self.COLORS["text_white"],
+                self.CONTENT_WIDTH - 30,
+                max_lines=2
+            )
+
+            y_summary += 80
+
+        # CTA block
+        y_cta = 750
+
+        # Separator line
+        draw.rectangle(
+            [(0, y_cta), (self.WIDTH, y_cta + 1)],
+            fill=self.COLORS["separator"]
+        )
+
+        # Main CTA
+        cta_main = "더 궁금하다면 댓글에 '분석' 남겨주세요"
+        draw.text(
+            (self.LEFT_MARGIN, y_cta + 40),
+            cta_main,
+            font=self.font_msmall,
+            fill=self.COLORS["text_white"]
+        )
+
+        # Sub CTA
+        cta_sub = "→ 상세 리포트 DM으로 드립니다"
+        draw.text(
+            (self.LEFT_MARGIN, y_cta + 100),
+            cta_sub,
+            font=self.font_small,
+            fill=self.COLORS["bullish"]
+        )
+
+        # Disclaimer
+        disclaimer = "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다"
+        bbox = draw.textbbox((0, 0), disclaimer, font=self.font_micro)
         disclaimer_width = bbox[2] - bbox[0]
         disclaimer_x = (self.WIDTH - disclaimer_width) // 2
 
-        draw.text((disclaimer_x, 1800), disclaimer, font=self.font_tiny, fill=self._hex_to_rgb("#888888"))
+        draw.text(
+            (disclaimer_x, 980),
+            disclaimer,
+            font=self.font_micro,
+            fill=self.COLORS["text_dark_gray"]
+        )
 
-        return img
+        return image
 
-    def generate_all_slides(self, instagram_script: Dict) -> List[Image.Image]:
+    def generate_all_slides(self, script: Dict) -> List[Image.Image]:
         """
-        Generate all 5 slides
+        Generate all 5 slides for Instagram carousel
 
         Args:
-            instagram_script: Instagram script dict
+            script: Instagram script from content_gen.py
 
         Returns:
-            List of 5 PIL Images
+            List of PIL Image objects (5 slides)
         """
-        logger.info(f"Generating slides for cluster {instagram_script.get('cluster_id')}...")
+        logger.info(f"Generating slides for cluster {script.get('cluster_id', 'unknown')}")
 
-        slides = [
-            self.generate_slide1_cover(instagram_script),
-            self.generate_slide2_bullish(instagram_script),
-            self.generate_slide3_bearish(instagram_script),
-            self.generate_slide4_neutral(instagram_script),
-            self.generate_slide5_conclusion(instagram_script)
+        # Fetch background image for slide 1
+        cluster_data = {
+            "cluster_label": script.get("title", ""),
+            "articles": []  # Not needed for image fetch
+        }
+        keywords = self.image_fetcher.extract_keywords_from_cluster(cluster_data)
+        background = self.image_fetcher.fetch_with_fallback(keywords)
+
+        slides = []
+
+        # Slide 1: Cover
+        slides.append(self.generate_slide1_cover(script, background))
+
+        # Slides 2-4: Sector cards
+        sector_slides = [
+            {
+                "slide_num": 2,
+                "label": "호재",
+                "signal": "bullish",
+                "sectors_key": "slide2",
+                "fact_key": "slide2_fact"
+            },
+            {
+                "slide_num": 3,
+                "label": "악재",
+                "signal": "bearish",
+                "sectors_key": "slide3",
+                "fact_key": "slide3_fact"
+            },
+            {
+                "slide_num": 4,
+                "label": "중립·주의",
+                "signal": "neutral",
+                "sectors_key": "slide4",
+                "fact_key": "slide4_fact"
+            }
         ]
 
-        logger.info(f"Generated {len(slides)} slides")
+        for config in sector_slides:
+            slide_data = script.get(config["sectors_key"], {})
+            sectors = slide_data.get("sectors", [])
+            fact = script.get(config["fact_key"], "")
+
+            slides.append(self.generate_slide_sector(
+                config["slide_num"],
+                config["label"],
+                config["signal"],
+                sectors,
+                fact
+            ))
+
+        # Slide 5: Conclusion
+        slides.append(self.generate_slide5_conclusion(script))
+
+        logger.info(f"✅ Generated {len(slides)} slides")
         return slides
 
-    def save_slides(self, slides: List[Image.Image], cluster_id: str,
-                   output_dir: str = "data/6_cards") -> List[str]:
+    def save_slides(self, slides: List[Image.Image], cluster_id: str) -> List[str]:
         """
-        Save slides as PNG files
+        Save slides to disk
 
         Args:
-            slides: List of PIL Images
-            cluster_id: Cluster ID
-            output_dir: Output directory base path
+            slides: List of PIL Image objects
+            cluster_id: Cluster ID for directory naming
 
         Returns:
-            List of saved file paths
+            List of file paths
         """
-        cluster_dir = os.path.join(output_dir, f"cluster_{cluster_id}")
-        os.makedirs(cluster_dir, exist_ok=True)
+        output_dir = f"data/6_cards/cluster_{cluster_id}"
+        os.makedirs(output_dir, exist_ok=True)
 
         paths = []
-        for i, slide in enumerate(slides, 1):
-            path = os.path.join(cluster_dir, f"slide_{i}.png")
+        for i, slide in enumerate(slides, start=1):
+            path = f"{output_dir}/slide_{i}.png"
             slide.save(path, "PNG")
-            logger.info(f"Saved: {path}")
             paths.append(path)
+            logger.info(f"Saved: {path}")
 
         return paths
 
-    def run(self, scripts_path: str = "data/5_generated/scripts.json") -> List[str]:
+    def run(self, input_path: str = "data/5_generated/scripts.json") -> None:
         """
-        Full pipeline: load scripts → generate slides → save → return paths
+        Full pipeline: load scripts → generate slides → save
 
         Args:
-            scripts_path: Input scripts JSON path
-
-        Returns:
-            List of all saved file paths
+            input_path: Path to scripts.json
         """
-        logger.info("=" * 70)
-        logger.info("SignalFeed Card Generator Started")
-        logger.info("=" * 70)
+        logger.info(f"\n{'='*70}")
+        logger.info("6️⃣ Instagram Card Generation")
+        logger.info(f"{'='*70}")
 
-        # Load scripts
-        with open(scripts_path, 'r', encoding='utf-8') as f:
-            scripts_data = json.load(f)
+        with open(input_path, 'r', encoding='utf-8') as f:
+            scripts = json.load(f)
 
-        logger.info(f"Loaded {len(scripts_data)} scripts")
+        for script_data in scripts:
+            instagram_script = script_data.get("instagram", {})
+            slides = self.generate_all_slides(instagram_script)
+            paths = self.save_slides(slides, instagram_script.get("cluster_id", "unknown"))
+            logger.info(f"✅ Cluster {instagram_script.get('cluster_id')}: {len(paths)}장 생성")
 
-        all_paths = []
-
-        for item in scripts_data:
-            try:
-                instagram_script = item.get("instagram", {})
-                cluster_id = instagram_script.get("cluster_id", "unknown")
-
-                # Generate slides
-                slides = self.generate_all_slides(instagram_script)
-
-                # Save
-                paths = self.save_slides(slides, cluster_id)
-                all_paths.extend(paths)
-
-            except Exception as e:
-                logger.error(f"Error generating cards for cluster {item.get('cluster_id')}: {e}")
-                continue
-
-        logger.info("=" * 70)
-        logger.info(f"Card Generation Complete: {len(all_paths)} cards")
-        logger.info("=" * 70)
-
-        return all_paths
+        logger.info(f"\n{'='*70}")
+        logger.info(f"✅ Card generation complete!")
+        logger.info(f"{'='*70}\n")
 
 
 if __name__ == "__main__":
-    # Test run
     generator = CardGenerator()
-
-    if os.path.exists("data/5_generated/scripts.json"):
-        paths = generator.run()
-        logger.info(f"Generated {len(paths)} cards")
-    else:
-        logger.warning("No scripts found. Run content generator first.")
+    generator.run()

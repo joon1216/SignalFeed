@@ -1117,3 +1117,62 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ 시그널 색상 구분 명확화 (green/red/gray 테마)
   - ✅ 브랜딩 강화 (SIGNALFEED 로고, live dot, CTA)
 - **Result**: ✅ Success — 카드 레이아웃 전면 개편 완료, 프로덕션 ready
+
+#### Session 19: Pexels API 연동 및 카드 디자인 재설계 (1080x1080px)
+- **Task**: Pexels API 배경 이미지 연동, card_gen.py 완전 재작성 (1080x1080px square format)
+- **Actions**:
+  - **Step 1: image_fetcher.py 생성** (200 LOC):
+    - ImageFetcher 클래스: Pexels API 검색 및 이미지 다운로드
+    - fetch(keyword, orientation="square"): 검색 후 1080x1080px 리사이즈
+    - fetch_with_fallback(keywords): 여러 키워드 시도, 실패 시 dark bg 반환
+    - KEYWORD_MAPPING: 경제 키워드 → Pexels 검색어 매핑 (30+ 키워드)
+      - "federal reserve" → "federal reserve building washington"
+      - "inflation" → "money inflation economy graph"
+      - "nvidia" → "semiconductor chip technology nvidia"
+      - "oil" → "oil energy industry petroleum"
+      - default → "global economy finance business"
+    - extract_keywords_from_cluster(): cluster_label, article titles에서 검색어 추출
+  - **Step 2: card_gen.py 전면 재작성** (550 LOC):
+    - Canvas 크기 변경: 1080x1920px → 1080x1080px (Instagram square)
+    - **Slide 1 (Cover)**: Pexels 배경 이미지 + dark overlay gradient
+      - Full bleed 배경 (1080x1080)
+      - Dark gradient overlay (top 20% transparent → bottom 80% opaque 75%)
+      - Hook title (72px, 2 lines max) at y=600
+      - Signal badge (pill shape, colored bg) at y=800
+      - Source line (Reuters · Bloomberg · FT) at y=900
+      - Bottom green line accent (y=1060)
+      - Hashtag badges bottom-right (#경제 #투자)
+    - **Slides 2-4 (호재/악재/중립)**: Dark bg (#111111), NO background image
+      - Top-left: SIGNALFEED micro brand (green, 20px)
+      - Slide number indicator: "2/5" top-right
+      - Section label with vertical bar (4px wide, signal color)
+      - Sector items: name (52px, signal color) + reason (24px, gray, indented)
+      - Bottom fact box: separator line + "FACT /" label + fact text
+    - **Slide 5 (Conclusion)**: Dark bg, CTA focused
+      - "오늘의 결론" heading (60px)
+      - 3 summary rows: colored dot + summary text (32px)
+      - CTA block: separator + main CTA + sub CTA (green)
+      - Disclaimer (18px, gray, center)
+  - **Step 3: content_gen.py 업데이트**:
+    - Instagram script JSON schema 수정:
+      - hook_title 필드 추가: 궁금증/놀라움 유발 짧은 문구 (15자, 2줄, \n 줄바꿈)
+      - 예시: "연준, 또\n금리 올린다?", "엔비디아\n또 터졌다!", "인플레이션\n잡혔나?"
+      - sources 필드 추가: ["Reuters", "Bloomberg", "FT"]
+      - slide2/slide3/slide4 sectors 형식: [{"name": "섹터", "reason": "이유"}, ...]
+      - slide5 summary1/summary2/summary3 필드 추가
+    - TemplateFallback hook_title 생성 로직 추가
+  - **Step 4: 전체 파이프라인 재실행**:
+    - Content generation: EXAONE fallback → template mode (JSON parsing 실패)
+    - Card generation: Pexels API 성공
+      - Cluster 6: stock market trading finance → Yan Krukau 이미지
+      - Cluster 3: money inflation economy graph → Pixabay 이미지
+    - 총 10장 카드 생성 (cluster_3, cluster_6 각 5장)
+  - **Step 5: .env.example 업데이트**:
+    - PEXELS_API_KEY 추가 (https://www.pexels.com/api/, 무료 200 req/hour)
+- **성과**:
+  - ✅ Pexels API 연동 완료 (경제 키워드 자동 매핑)
+  - ✅ 1080x1080px square format 적용 (Instagram 최적화)
+  - ✅ Slide 1 배경 이미지 + dark overlay (시각적 임팩트 향상)
+  - ✅ hook_title 필드로 커버 슬라이드 훅 강화
+  - ✅ 10장 카드 생성 완료 (Pexels 실제 이미지 적용)
+- **Result**: ✅ Success — Pexels 배경 이미지 연동, 1080x1080px 새 레이아웃 완료
