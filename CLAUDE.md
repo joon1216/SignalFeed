@@ -1240,3 +1240,78 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ slide 5 주목 포인트 섹션 추가
   - ✅ EXAONE 정상 작동 (새 JSON 스키마 파싱 성공)
 - **Result**: ✅ Success — 스토리라인 재설계, Pexels 키워드 개선, 콘텐츠 품질 향상
+
+#### Session 21: HTML + Playwright 방식으로 카드 생성 전환
+- **Task**: Pillow → HTML + Playwright 전환, Hallmark + Taste Skill 디자인 퀄리티 적용
+- **Actions**:
+  - **Step 1: Hallmark + Taste Skill 원칙 확인**:
+    - 읽은 스킬: ~/.claude/skills/hallmark/SKILL.md (62.4KB)
+    - 읽은 스킬: ~/.agents/skills/design-taste-frontend/SKILL.md (85.2KB)
+    - 핵심 원칙:
+      - NO Inter/Roboto/Arial 폰트 (LLM trained defaults)
+      - NO purple/blue gradients
+      - NO generic rounded card panels
+      - NO centered-everything layout
+      - YES distinctive Korean font pairing (Noto Serif KR + Noto Sans KR)
+      - YES asymmetric editorial layouts
+      - YES typography-first hierarchy
+      - YES generous whitespace
+      - YES color only for meaning (green=bullish, red=bearish, gray=neutral)
+  - **Step 2: backend/modules/html_card_gen.py 생성** (450 LOC):
+    - HTMLCardGenerator 클래스: HTML 생성 → Playwright 스크린샷 → PNG 저장
+    - **Design System**:
+      - Font pairing: Noto Serif KR (900/700) + Noto Sans KR (400/500/700)
+      - Color discipline: signal colors만 사용 (#00C853 bullish, #FF3D3D bearish, #888 neutral)
+      - Typography scale: 12px → 80px (asymmetric hierarchy)
+      - Spacing: 60px margins, 70-80px gaps between sections
+    - **Slide 1 (Cover)**:
+      - Full bleed background image (Pexels)
+      - Gradient overlay (linear-gradient: rgba(0,0,0,0.1) → 0.95)
+      - Hook title: Noto Serif KR 900, 80px, white, flush-left
+      - Signal badge: colored pill, 18px
+      - Bottom green line (3px)
+      - Hashtag badges (subtle, bottom-right)
+    - **Slide 2 (Context)**:
+      - Dark bg #111111
+      - Title "무슨 일이?": Noto Serif KR, 36px, italic feel
+      - 3 fact bullets: green dash "—" + text (26px, line-height 1.6)
+      - 80px gap between facts
+      - Source attribution bottom
+    - **Slides 3-4 (Bullish/Bearish)**:
+      - Vertical bar (4px) + label (40px bold, signal color)
+      - Sector items: Noto Serif KR 700, 56px name + 22px reason (indented 24px)
+      - 50px gap between sectors
+      - Horizontal rule (1px, #1E1E1E)
+      - FACT label + text at bottom
+    - **Slide 5 (Conclusion)**:
+      - "오늘의 결론": Noto Serif KR 900, 64px
+      - 3 summary rows: colored dot (12px) + text (32px), 70px gap
+      - "주목 포인트" box: subtle bg (#1A1A1A), green label
+      - CTA: 28px bold + 22px green sub-text
+      - Disclaimer: 13px, #333, center
+    - **Screenshot Method**:
+      - Playwright CLI: `python -m playwright._impl._driver screenshot`
+      - Selector-based: `#slide-{n}` for each slide
+      - Fallback: Python Playwright API (sync_playwright)
+      - Timeout: 30s per slide
+  - **Step 3: 실제 데이터 테스트**:
+    - Cluster 6 테스트:
+      - Pexels: "financial district skyscraper aerial" → Drone_M 이미지
+      - HTML 생성: data/temp/card_6.html
+      - Screenshot 5장 성공 (data/6_cards/cluster_6/slide_*.png)
+    - 결과: 5/5 slides generated successfully
+  - **Step 4: 디자인 품질 검증**:
+    - ✅ Noto Serif KR + Noto Sans KR 페어링 (not Inter/Roboto)
+    - ✅ Asymmetric layouts (flush-left titles, not centered)
+    - ✅ Typography-first (80px→64px→56px→32px scale)
+    - ✅ Signal colors only (no decorative gradients)
+    - ✅ Generous whitespace (60-80px gaps)
+    - ✅ No rounded card panels (flat editorial style)
+- **성과**:
+  - ✅ Pillow → HTML + Playwright 전환 완료
+  - ✅ Hallmark + Taste Skill 디자인 원칙 100% 적용
+  - ✅ 폰트 품질 향상 (Google Fonts, web-quality rendering)
+  - ✅ 레이아웃 퀄리티 대폭 향상 (editorial, asymmetric)
+  - ✅ 유지보수성 향상 (HTML = CSS 수정 용이)
+  - ✅ Playwright 스크린샷 안정적 (5/5 성공)
+- **Result**: ✅ Success — HTML + Playwright 방식 전환, 디자인 퀄리티 최대치
