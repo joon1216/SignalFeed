@@ -41,6 +41,37 @@ class HTMLCardGenerator:
         """Initialize HTMLCardGenerator"""
         pass
 
+    def _get_font_css(self) -> str:
+        """Get local font CSS"""
+        base = os.path.abspath('assets/fonts/noto')
+        return f"""
+    @font-face {{
+        font-family: 'Noto Serif KR';
+        font-weight: 900;
+        src: url('file://{base}/NotoSerifKR-Black.otf');
+    }}
+    @font-face {{
+        font-family: 'Noto Serif KR';
+        font-weight: 700;
+        src: url('file://{base}/NotoSerifKR-Bold.otf');
+    }}
+    @font-face {{
+        font-family: 'Noto Sans KR';
+        font-weight: 400;
+        src: url('file://{base}/NotoSansKR-Regular.otf');
+    }}
+    @font-face {{
+        font-family: 'Noto Sans KR';
+        font-weight: 500;
+        src: url('file://{base}/NotoSansKR-Medium.otf');
+    }}
+    @font-face {{
+        font-family: 'Noto Sans KR';
+        font-weight: 700;
+        src: url('file://{base}/NotoSansKR-Bold.otf');
+    }}
+    """
+
     def generate_html(self, script: Dict, image_path: str) -> str:
         """
         Generate complete HTML with all 5 slides
@@ -79,10 +110,8 @@ class HTMLCardGenerator:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SignalFeed Cards - Cluster {cluster_id}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+    {self._get_font_css()}
     * {{
       margin: 0;
       padding: 0;
@@ -153,10 +182,13 @@ class HTMLCardGenerator:
 
         sources_text = " · ".join(sources[:3])
 
+        # Use absolute file:// URL for image
+        img_url = f"file://{os.path.abspath(image_path)}"
+
         return f"""
 <div class="card" id="slide-{slide_num}" style="background: #000;">
   <!-- Full bleed background image -->
-  <div style="position: absolute; inset: 0; background-image: url('{image_path}'); background-size: cover; background-position: center;"></div>
+  <div style="position: absolute; inset: 0; background-image: url('{img_url}'); background-size: cover; background-position: center;"></div>
 
   <!-- Gradient overlay -->
   <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%);"></div>
@@ -421,8 +453,8 @@ class HTMLCardGenerator:
         with sync_playwright() as p:
             browser = p.chromium.launch()
             page = browser.new_page(viewport={'width': self.WIDTH, 'height': self.HEIGHT})
-            page.goto(f'file://{os.path.abspath(html_path)}')
-            page.locator(selector).screenshot(path=output_path)
+            page.goto(f'file://{os.path.abspath(html_path)}', timeout=30000, wait_until='networkidle')
+            page.locator(selector).screenshot(path=output_path, timeout=10000)
             browser.close()
             logger.info(f"✅ Screenshot saved (API fallback): {output_path}")
 

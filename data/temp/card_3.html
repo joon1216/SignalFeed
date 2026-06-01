@@ -4,10 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SignalFeed Cards - Cluster 3</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
+    
+    @font-face {
+        font-family: 'Noto Serif KR';
+        font-weight: 900;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSerifKR-Black.otf');
+    }
+    @font-face {
+        font-family: 'Noto Serif KR';
+        font-weight: 700;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSerifKR-Bold.otf');
+    }
+    @font-face {
+        font-family: 'Noto Sans KR';
+        font-weight: 400;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSansKR-Regular.otf');
+    }
+    @font-face {
+        font-family: 'Noto Sans KR';
+        font-weight: 500;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSansKR-Medium.otf');
+    }
+    @font-face {
+        font-family: 'Noto Sans KR';
+        font-weight: 700;
+        src: url('file:///Users/joon/Documents/GitHub/issuefit_project/assets/fonts/noto/NotoSansKR-Bold.otf');
+    }
+    
     * {
       margin: 0;
       padding: 0;
@@ -66,7 +90,7 @@
 
 <div class="card" id="slide-1" style="background: #000;">
   <!-- Full bleed background image -->
-  <div style="position: absolute; inset: 0; background-image: url('data/temp/cover_3.jpg'); background-size: cover; background-position: center;"></div>
+  <div style="position: absolute; inset: 0; background-image: url('file:///Users/joon/Documents/GitHub/issuefit_project/data/temp/cover_3.jpg'); background-size: cover; background-position: center;"></div>
 
   <!-- Gradient overlay -->
   <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.85) 70%, rgba(0,0,0,0.95) 100%);"></div>
@@ -78,12 +102,12 @@
   <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 60px 60px 80px;">
     <!-- Hook title -->
     <h1 class="serif" style="font-size: 80px; font-weight: 900; line-height: 1.15; letter-spacing: -0.02em; color: white; margin-bottom: 32px; max-width: 900px;">
-      시장<br>어디로?
+      중동 긴장, 한국 주식은 어떨까?
     </h1>
 
     <!-- One-line summary -->
     <p style="font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 16px;">
-      Defense spending, Ch
+      이란과의 군사 충돌, 한국 주식 시장에 어떤 영향을 미칠까요?
     </p>
 
     <!-- Sources -->
@@ -108,7 +132,7 @@
 
   <!-- Title -->
   <h2 class="serif" style="font-size: 36px; font-weight: 700; color: #888888; margin-bottom: 80px; font-style: italic;">
-    무슨 일이?
+    무슨 일이 일어났나요?
   </h2>
 
   <!-- Facts -->
@@ -117,21 +141,21 @@
     <div style="display: flex; gap: 24px; margin-bottom: 80px;">
       <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
       <p style="font-size: 26px; line-height: 1.6; color: white; max-width: 880px;">
-        주요 경제 지표 발표
+        미국이 이란의 군사 시설에 공습 실행 (구체적인 장소 및 시간 언급 필요).
       </p>
     </div>
 
     <div style="display: flex; gap: 24px; margin-bottom: 80px;">
       <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
       <p style="font-size: 26px; line-height: 1.6; color: white; max-width: 880px;">
-        시장 반응 나타남
+        이란은 미국 기지에 대한 반격 미사일 공격 실시 (피해 규모 및 지역 명시 필요).
       </p>
     </div>
 
     <div style="display: flex; gap: 24px; margin-bottom: 80px;">
       <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
       <p style="font-size: 26px; line-height: 1.6; color: white; max-width: 880px;">
-        분석가들 주목
+        국제 유가 급등 (예: WTI 선물 가격 상승률 및 예상치 명시).
       </p>
     </div>
 
@@ -139,7 +163,7 @@
 
   <!-- Source -->
   <p style="position: absolute; bottom: 60px; left: 60px; font-size: 14px; color: #888888;">
-    출처: CNBC
+    출처: Reuters, Bloomberg, OPEC
   </p>
 </div>
 
@@ -160,22 +184,22 @@
     
     <div style="margin-bottom: 50px;">
       <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #00C853; margin-bottom: 12px; line-height: 1.2;">
-        성장주
+        방산
       </h3>
       <p style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5;">
-        실적 개선으로 수혜
+        국방 수요 증가 가능성, 국방 예산 증액 기대 (구체적인 예시 필요, 예: 한화에어로스페이스, LIG넥스젠).
       </p>
-      
+      <p style='font-size: 14px; color: #555; padding-left: 24px; margin-top: 6px;'>한화에어로스페이스 · LIG넥스젠</p>
     </div>
 
     <div style="margin-bottom: 50px;">
       <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #00C853; margin-bottom: 12px; line-height: 1.2;">
-        채권
+        에너지
       </h3>
       <p style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5;">
-        안전자산 선호 증가
+        원유 가격 상승으로 에너지 기업 이익 증가 기대 (예시 필요, 예: 석유화학 기업들).
       </p>
-      
+      <p style='font-size: 14px; color: #555; padding-left: 24px; margin-top: 6px;'>SK이노베이션 · LG화학</p>
     </div>
 
   </div>
@@ -187,7 +211,7 @@
   <div>
     <p style="font-size: 12px; letter-spacing: 1px; color: #444; margin-bottom: 16px; font-weight: 700;">FACT /</p>
     <p style="font-size: 20px; line-height: 1.6; color: #888888; max-width: 880px;">
-      경제 지표 개선으로 투자 심리 회복
+      국제 유가 상승률 예상치 (예: 배럴당 10달러 상승).
     </p>
   </div>
 </div>
@@ -209,22 +233,22 @@
     
     <div style="margin-bottom: 50px;">
       <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #FF3D3D; margin-bottom: 12px; line-height: 1.2;">
-        금융주
+        원자재
       </h3>
       <p style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5;">
-        금리 인상 부담
+        원자재 가격 변동성 증가로 투자 심리 악화 가능성 (구체적인 예시 필요, 예: 철광석 기업).
       </p>
-      
+      <p style='font-size: 14px; color: #555; padding-left: 24px; margin-top: 6px;'>포스코 · 한국광산</p>
     </div>
 
     <div style="margin-bottom: 50px;">
       <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #FF3D3D; margin-bottom: 12px; line-height: 1.2;">
-        원자재
+        금융
       </h3>
       <p style="font-size: 22px; color: #888888; padding-left: 24px; line-height: 1.5;">
-        수요 둔화 우려
+        중동 리스크 증폭으로 금융 시장 변동성 증가 우려 (구체적인 예시 필요, 예: 은행).
       </p>
-      
+      <p style='font-size: 14px; color: #555; padding-left: 24px; margin-top: 6px;'>KB금융 · 신한지주</p>
     </div>
 
   </div>
@@ -236,7 +260,7 @@
   <div>
     <p style="font-size: 12px; letter-spacing: 1px; color: #444; margin-bottom: 16px; font-weight: 700;">FACT /</p>
     <p style="font-size: 20px; line-height: 1.6; color: #888888; max-width: 880px;">
-      인플레이션 압력으로 통화 긴축 지속
+      코스피 지수 변동성 증가 폭 예상치 (예: ±2%).
     </p>
   </div>
 </div>
@@ -246,30 +270,30 @@
 
   <!-- Title -->
   <h2 class="serif" style="font-size: 64px; font-weight: 900; color: white; margin-bottom: 60px;">
-    오늘의 결론
+    오늘의 핵심
   </h2>
 
   <!-- Summaries -->
   <div style="margin-bottom: 40px;">
     
     <div style="display: flex; gap: 24px; margin-bottom: 70px;">
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: #00C853; margin-top: 12px; flex-shrink: 0;"></div>
+      <div style="width: 12px; height: 12px; border-radius: 50%; background: #888888; margin-top: 12px; flex-shrink: 0;"></div>
       <p style="font-size: 32px; line-height: 1.5; color: white; font-weight: 500; max-width: 920px;">
-        성장주 중심으로 수혜 전망
+        중동 긴장은 단기적인 시장 변동을 초래할 수 있으나 중장기적인 영향은 불확실.
       </p>
     </div>
 
     <div style="display: flex; gap: 24px; margin-bottom: 70px;">
       <div style="width: 12px; height: 12px; border-radius: 50%; background: #FF3D3D; margin-top: 12px; flex-shrink: 0;"></div>
       <p style="font-size: 32px; line-height: 1.5; color: white; font-weight: 500; max-width: 920px;">
-        금융주는 금리 인상 부담
+        높은 에너지 가격과 시장 변동성은 특정 섹터에 부정적 영향을 미칠 가능성 존재.
       </p>
     </div>
 
     <div style="display: flex; gap: 24px; margin-bottom: 70px;">
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: #888888; margin-top: 12px; flex-shrink: 0;"></div>
+      <div style="width: 12px; height: 12px; border-radius: 50%; background: #00C853; margin-top: 12px; flex-shrink: 0;"></div>
       <p style="font-size: 32px; line-height: 1.5; color: white; font-weight: 500; max-width: 920px;">
-        시장 변동성 주의 필요
+        방산 및 에너지 섹터의 수혜 가능성은 주목할 만함.
       </p>
     </div>
 
@@ -280,7 +304,7 @@
   <div style="background: #1A1A1A; padding: 24px 32px; border-radius: 12px; margin-bottom: 40px;">
     <p style="font-size: 16px; color: #00C853; font-weight: 700; margin-bottom: 12px;">주목 포인트</p>
     <p style="font-size: 20px; line-height: 1.6; color: white;">
-      경제 지표와 중앙은행 발언 주목
+      원자재 가격 동향, 방산 및 에너지 섹터 실적 발표 주시
     </p>
   </div>
 
@@ -291,10 +315,10 @@
   <!-- CTA -->
   <div style="margin-bottom: 60px;">
     <p style="font-size: 28px; font-weight: 700; color: white; margin-bottom: 12px;">
-      더 궁금하다면 댓글에 '분석' 남겨주세요
+      분석에 대한 자세한 내용은 댓글로 '분석'을 남겨주세요
     </p>
     <p style="font-size: 22px; color: #00C853; font-weight: 500;">
-      → 상세 리포트 DM으로 드립니다
+      → 상세 리포트는 DM으로 제공됩니다
     </p>
   </div>
 
