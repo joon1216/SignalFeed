@@ -146,24 +146,34 @@ AI 분석 결과, {signal.upper()} 시그널로 분류되었습니다.
 class ContentGenerator:
     """EXAONE 3.5 7.8B (Ollama) 기반 콘텐츠 생성기"""
 
-    SYSTEM_PROMPT = """당신은 SignalFeed의 한국어 경제 뉴스 카드뉴스 작성자입니다.
-5장의 카드뉴스가 하나의 완결된 스토리를 형성해야 합니다.
-독자가 1→2→3→4→5장을 보면서 자연스럽게 이해하고 행동할 수 있어야 합니다.
+    SYSTEM_PROMPT = """당신은 거시경제와 한국 주식시장을 연결하는 금융 분석가입니다.
 
-스토리 구조:
-1장 (표지): 독자의 호기심을 자극하는 짧고 강렬한 질문 (순한국어만 사용)
-2장 (맥락): 무슨 일이 있었는지 핵심 팩트 3가지 (구체적 수치 포함)
-3장 (호재): 이 이슈로 수혜받는 섹터와 구체적 이유
-4장 (악재): 이 이슈로 타격받는 섹터와 구체적 이유
-5장 (결론): 핵심 요약 3줄 + 투자자가 주목할 포인트
+분석 방법 (반드시 이 순서로 추론):
+
+1단계 - 이슈 파악: 무슨 일이 일어났나? (핵심 팩트 + 수치)
+
+2단계 - 경제 메커니즘: 이 이슈가 어떤 경로로 시장에 영향을 주나?
+예시 경로들:
+- 금리 인상 → 달러 강세 → 수출주 환차익 / 수입 비용 상승
+- 금리 인상 → 채권 수익률↑ → 성장주 밸류에이션 하락
+- 유가 상승 → 에너지 비용↑ → 항공/운송/화학 악재
+- 중국 경기 부양 → 원자재 수요↑ → 철강/화학 호재
+
+3단계 - 한국 주식 영향: 구체적 한국 섹터/종목에 어떤 영향?
+(반도체, 2차전지, 금융주, 방산, 바이오, 유통, 건설 등)
 
 절대 규칙:
-1. 훅 타이틀은 반드시 순한국어만 사용 (영어 단어 절대 금지)
-2. 팩트는 구체적 수치 포함 (예: "3.2% 상승", "0.25%p 인하")
-3. 예측/권유 표현 절대 금지 ("오를 것", "떨어질 것", "기대됩니다", "추천" 등)
-4. 각 슬라이드는 이전 슬라이드와 자연스럽게 연결되어야 함
-5. 반드시 JSON 형식으로만 출력
-6. 모든 내용은 한국어로 작성
+1. 수치 없는 팩트는 팩트가 아님 (반드시 숫자 포함)
+2. 투자 권유/예측 표현 절대 금지
+3. 추론 근거 없는 섹터 나열 금지
+4. 반드시 JSON 형식으로만 출력
+5. 한국어로만 작성
+
+표지 훅 규칙:
+- 호재/악재 표기 없음
+- 이슈 자체에만 집중
+- 궁금증 유발 (예: "파월이 입을 열었다", "이 숫자가 시장을 흔든다")
+- 10자 이내, 강렬하게
 """
 
     OLLAMA_BASE_URL = "http://localhost:11434/v1"
@@ -283,26 +293,23 @@ class ContentGenerator:
 
         user_prompt = f"""다음 경제 뉴스 기사들을 분석하여 Instagram 5-slide 카드 뉴스 스크립트를 JSON 형식으로 생성하세요.
 
-이슈 시그널: {signal}
-관련 섹터: {', '.join(affected_sectors) if affected_sectors else '없음'}
-
 기사 데이터:
 {articles_str}
 
 출력 형식 (JSON):
 {{
   "cluster_id": "{cluster_id}",
-  "signal": "{signal}",
-  "pexels_keyword": "Pexels 검색용 영어 키워드 (구체적으로, 예: 'federal reserve building', 'dollar bills money close up')",
-  "hook_title": "순한국어 훅 질문 (15자 이내, 2줄, \\n으로 구분)",
+  "macro_issue": "이슈 한 줄 요약",
+  "pexels_keyword": "Pexels 검색용 영어 키워드 (구체적으로)",
+  "hook_title": "표지 훅 (10자 이내, 순한국어, 호재/악재 표기 없음)",
+  "reasoning_chain": "CoT 추론 경로 (내부용, 표시 안함) - 1단계 이슈 파악 → 2단계 경제 메커니즘 → 3단계 한국 주식 영향",
   "slides": [
     {{
       "slide_num": 1,
       "type": "cover",
-      "hook_title": "훅 질문 (순한국어)",
-      "signal_emoji": "{self._get_signal_emoji(signal)}",
-      "signal_text": "호재|악재|중립",
-      "one_line": "한 줄 요약 (20자 이내)"
+      "hook_title": "훅 질문 (10자 이내, 순한국어)",
+      "one_line": "한 줄 요약 (25자 이내)",
+      "sources": ["Reuters", "Bloomberg"]
     }},
     {{
       "slide_num": 2,
@@ -310,41 +317,47 @@ class ContentGenerator:
       "title": "무슨 일이?",
       "facts": [
         "핵심 팩트 1 (구체적 수치 포함)",
-        "핵심 팩트 2",
-        "핵심 팩트 3"
+        "핵심 팩트 2 (수치 포함)",
+        "핵심 팩트 3 (수치 포함)"
       ],
       "source": "Reuters, Bloomberg 등"
     }},
     {{
       "slide_num": 3,
-      "type": "bullish",
-      "title": "호재",
+      "type": "beneficiary",
+      "title": "수혜주는?",
       "sectors": [
-        {{"name": "섹터명", "reason": "수혜 이유 (구체적으로, 40자 이내)"}},
-        {{"name": "섹터명", "reason": "이유"}}
+        {{
+          "name": "섹터명 (예: 반도체, 2차전지)",
+          "reason": "추론 근거 포함 이유 (40자 이내)",
+          "example_stocks": ["삼성전자", "SK하이닉스"]
+        }}
       ],
       "fact": "호재 관련 핵심 팩트 (수치 포함)"
     }},
     {{
       "slide_num": 4,
-      "type": "bearish",
-      "title": "악재",
+      "type": "victim",
+      "title": "주의할 섹터는?",
       "sectors": [
-        {{"name": "섹터명", "reason": "타격 이유 (구체적으로)"}},
-        {{"name": "섹터명", "reason": "이유"}}
+        {{
+          "name": "섹터명",
+          "reason": "타격 이유 (구체적으로)",
+          "example_stocks": ["종목1", "종목2"]
+        }}
       ],
       "fact": "악재 관련 핵심 팩트"
     }},
     {{
       "slide_num": 5,
       "type": "conclusion",
-      "title": "오늘의 결론",
+      "title": "오늘의 핵심",
       "summaries": [
-        {{"signal": "bullish", "text": "호재 요약 (40자)"}},
-        {{"signal": "bearish", "text": "악재 요약 (40자)"}},
-        {{"signal": "neutral", "text": "주의 포인트 (40자)"}}
+        {{"signal": "bullish", "text": "수혜 요약"}},
+        {{"signal": "bearish", "text": "악재 요약"}},
+        {{"signal": "neutral", "text": "주의 포인트"}}
       ],
-      "watch_point": "투자자가 주목할 포인트 (50자 이내)",
+      "watch_point": "투자자 주목 포인트 (50자 이내)",
       "cta": "더 궁금하다면 댓글에 '분석' 남겨주세요",
       "cta_sub": "→ 상세 리포트 DM으로 드립니다"
     }}
@@ -354,12 +367,11 @@ class ContentGenerator:
 }}
 
 중요 규칙:
-1. pexels_keyword: 이슈와 가장 관련된 구체적인 영어 키워드 (예: "inflation" → "dollar bills money close up")
-2. hook_title: 반드시 순한국어만 사용 (영어 단어 절대 금지)
-3. facts: 반드시 구체적 수치 포함 (예: "3.2% 상승", "0.25%p 인하", "1조 달러")
-4. sectors: 각 슬라이드마다 2~3개 섹터명 필수, reason은 구체적으로 (40자 이내)
-5. 예측 표현 절대 금지 ("오를 것", "떨어질 것", "기대됩니다", "예상됩니다")
-6. 각 슬라이드는 스토리로 자연스럽게 연결되어야 함
+1. reasoning_chain에 CoT 추론 경로 명시 (1단계 이슈 → 2단계 메커니즘 → 3단계 한국 영향)
+2. hook_title: 호재/악재 표기 없음, 이슈 자체에만 집중, 10자 이내
+3. facts: 반드시 구체적 수치 포함
+4. sectors: 추론 근거 포함, example_stocks 1-2개 명시
+5. 예측 표현 절대 금지
 """
 
         try:
@@ -517,7 +529,7 @@ class ContentGenerator:
         logger.info(f"Generated {len(scripts)} scripts")
         return scripts
 
-    def save(self, scripts: List[Dict], output_path: str = "data/5_generated/scripts.json") -> None:
+    def save(self, scripts: List[Dict], output_path: str = "data/3_generated/scripts.json") -> None:
         """
         Save scripts to JSON
 

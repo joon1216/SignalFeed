@@ -54,28 +54,30 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     df['title'] = df['title'].fillna('').astype(str)
 
     # Use 'summary' field if 'content' doesn't exist (SignalFeed uses summary instead of content)
+    # Increase title weight to 10x for English news (titles more discriminative)
     if 'content' in df.columns:
         df['content'] = df['content'].fillna('').astype(str)
-        combined_text = (df['title'] + ' ') * 8 + df['content'].str[:600]
+        combined_text = (df['title'] + ' ') * 10 + df['content'].str[:600]
     elif 'summary' in df.columns:
         df['summary'] = df['summary'].fillna('').astype(str)
-        combined_text = (df['title'] + ' ') * 8 + df['summary'].str[:600]
+        combined_text = (df['title'] + ' ') * 10 + df['summary'].str[:600]
     else:
         # Title only if no content/summary
-        combined_text = (df['title'] + ' ') * 8
+        combined_text = (df['title'] + ' ') * 10
     
     # 소규모 데이터(n<15)에서는 min_df 완화
     min_df_word = 1 if n_samples < 15 else 2
     min_df_char = 2 if n_samples < 15 else 3
     
-    # TF-IDF 벡터화 (단어 단위, 2-gram까지로 축소해 과도한 유사도 억제)
+    # TF-IDF 벡터화 (단어 단위, English stopwords 추가)
     tfidf_word = TfidfVectorizer(
         analyzer='word',
         ngram_range=(1, 2),
         max_features=5000,
         min_df=min_df_word,
         max_df=0.85,
-        sublinear_tf=True
+        sublinear_tf=True,
+        stop_words='english'  # Add English stopwords
     )
     word_vectors = tfidf_word.fit_transform(combined_text)
     
@@ -159,17 +161,22 @@ def cluster_news_articles(input_jsonl: str, output_jsonl: str):
     clustered_df = df[df['cluster_id'] != -1].copy()
     clustered_clusters = sorted([c for c in clustered_df['cluster_id'].unique()])
     
-    # 일관성 낮은 클러스터를 노이즈로 재분류 (threshold 완화 - 영문 매크로 뉴스는 표현 다양성 높음)
+    # Post-processing: merge clusters with high similarity
+    clustered_df = _merge_similar_clusters(clustered_df, df, threshold=0.85)
+    clustered_clusters = sorted([c for c in clustered_df['cluster_id'].unique() if c != -1])
+
+    # Filter: keep only clusters with 2+ articles from 2+ sources
     low_quality_clusters = []
     for cluster_id in clustered_clusters:
         cluster_data = clustered_df[clustered_df['cluster_id'] == cluster_id]
-        if not _check_cluster_consistency(cluster_data, threshold=0.3):  # 0.4 → 0.3로 완화
+        unique_sources = cluster_data['source'].nunique()
+        if len(cluster_data) < 2 or unique_sources < 2:
             low_quality_clusters.append(cluster_id)
             clustered_df.loc[clustered_df['cluster_id'] == cluster_id, 'cluster_id'] = -1
-            df.loc[df['cluster_id'] == cluster_id, 'cluster_id'] = -1  # 원본 df에도 반영
+            df.loc[df['cluster_id'] == cluster_id, 'cluster_id'] = -1
     
     if low_quality_clusters:
-        print(f"  ⚠️ 일관성 낮은 클러스터 {len(low_quality_clusters)}개를 노이즈로 재분류했습니다.")
+        print(f"  ⚠️ 품질 낮은 클러스터 {len(low_quality_clusters)}개를 노이즈로 재분류했습니다. (단일 소스 또는 1개 기사)")
     
     # 재분류 후 클러스터 목록 업데이트
     clustered_df = clustered_df[clustered_df['cluster_id'] != -1]
@@ -250,26 +257,45 @@ def _get_cluster_keywords(cluster_data, top_n=5, use_content=True):
     return [word for word, count in top_words]
 
 
-def _check_cluster_consistency(cluster_data, threshold=0.7):
-    """클러스터 내 일관성 검사 - 동일 이슈만 묶였는지 확인 (이질 기사 섞임 방지)"""
-    if len(cluster_data) < 2:
-        return True
-    
-    keywords = _get_cluster_keywords(cluster_data, top_n=5, use_content=True)
-    if len(keywords) < 1:
-        return False
-    
-    # 가장 대표적인 키워드(상위 1개)가 threshold 이상 기사에 있어야 같은 이슈
-    top1 = keywords[0]
-    match_count = 0
-    for _, row in cluster_data.iterrows():
-        # Support both 'content' and 'summary' fields
-        content = str(row.get('content', '') or row.get('summary', '') or '')[:800]
-        text = str(row.get('title', '') or '') + ' ' + content
-        if top1 in text:
-            match_count += 1
+def _merge_similar_clusters(clustered_df, df, threshold=0.85):
+    """Merge clusters with cosine similarity > threshold"""
+    from sklearn.metrics.pairwise import cosine_similarity
+    from sklearn.feature_extraction.text import TfidfVectorizer
 
-    ratio = match_count / len(cluster_data)
-    return ratio >= threshold
+    cluster_ids = sorted([c for c in clustered_df['cluster_id'].unique() if c != -1])
+    if len(cluster_ids) < 2:
+        return clustered_df
+
+    # Build cluster centroids
+    cluster_texts = {}
+    for cid in cluster_ids:
+        cluster_articles = clustered_df[clustered_df['cluster_id'] == cid]
+        titles = ' '.join(cluster_articles['title'].fillna('').astype(str))
+        cluster_texts[cid] = titles
+
+    # Compute similarity matrix
+    vectorizer = TfidfVectorizer(stop_words='english')
+    vectors = vectorizer.fit_transform([cluster_texts[cid] for cid in cluster_ids])
+    sim_matrix = cosine_similarity(vectors)
+
+    # Merge similar clusters
+    merged = {}
+    for i, cid1 in enumerate(cluster_ids):
+        if cid1 in merged:
+            continue
+        merged[cid1] = cid1
+        for j, cid2 in enumerate(cluster_ids):
+            if i >= j or cid2 in merged:
+                continue
+            if sim_matrix[i, j] > threshold:
+                merged[cid2] = cid1  # Merge cid2 into cid1
+
+    # Apply merging
+    for old_cid, new_cid in merged.items():
+        if old_cid != new_cid:
+            clustered_df.loc[clustered_df['cluster_id'] == old_cid, 'cluster_id'] = new_cid
+            df.loc[df['cluster_id'] == old_cid, 'cluster_id'] = new_cid
+
+    return clustered_df
 
 

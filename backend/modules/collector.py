@@ -1,6 +1,6 @@
 """
 SignalFeed News Collector
-Polygon.io + Finnhub API로 글로벌 경제 뉴스 수집
+RSS feeds + Finnhub API로 매크로 경제 뉴스 수집
 """
 
 import os
@@ -8,8 +8,9 @@ import time
 import uuid
 import logging
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import requests
+import feedparser
 from difflib import SequenceMatcher
 
 # Configure logging
@@ -21,17 +22,20 @@ logger = logging.getLogger(__name__)
 
 
 class NewsCollector:
-    """글로벌 경제 뉴스 수집기 (Polygon.io + Finnhub)"""
+    """글로벌 경제 뉴스 수집기 (RSS + Finnhub)"""
 
-    # Source whitelists (strict - macro economic news only)
-    POLYGON_WHITELIST = {
-        "Reuters",
-        "Bloomberg",
-        "Financial Times",
-        "The Wall Street Journal",
-        "CNBC",
-        "MarketWatch",
-        "Associated Press"
+    # RSS feeds (macro economic news)
+    MACRO_RSS_FEEDS = [
+        "https://feeds.reuters.com/reuters/businessNews",
+        "https://feeds.reuters.com/reuters/topNews",
+        "https://rss.nytimes.com/services/xml/rss/nyt/Economy.xml",
+        "https://feeds.bloomberg.com/markets/news.rss",
+    ]
+
+    # Source whitelist for RSS filtering
+    RSS_SOURCE_WHITELIST = {
+        "Reuters", "Bloomberg", "New York Times", "Financial Times",
+        "The Wall Street Journal", "CNBC", "MarketWatch", "Associated Press"
     }
 
     FINNHUB_WHITELIST = {
@@ -45,19 +49,21 @@ class NewsCollector:
         "AP News"
     }
 
-    # Macro economic keywords for Polygon.io (instead of tickers)
+    # Macro economic keywords (must contain at least 1)
     MACRO_KEYWORDS = [
-        "federal reserve", "interest rate", "inflation", "GDP", "employment",
-        "S&P 500", "nasdaq", "recession", "economic", "Fed", "FOMC",
-        "treasury", "tariff", "trade war", "oil price", "dollar"
+        "Fed", "Federal Reserve", "FOMC", "Powell", "rate",
+        "inflation", "CPI", "PCE", "GDP", "unemployment", "jobs",
+        "tariff", "trade", "sanctions", "oil", "OPEC",
+        "earnings", "revenue", "guidance", "recession",
+        "yield", "treasury", "dollar", "currency",
+        "China", "Europe", "ECB", "BOJ", "central bank"
     ]
 
-    # Default categories for Finnhub (removed crypto - too specific)
+    # Default categories for Finnhub
     DEFAULT_CATEGORIES = ["general", "forex", "merger"]
 
     def __init__(self):
         """Initialize NewsCollector"""
-        self.polygon_base_url = "https://api.polygon.io/v2/reference/news"
         self.finnhub_base_url = "https://finnhub.io/api/v1/news"
 
     def _retry_request(self, func, max_retries=3, initial_delay=1):
@@ -85,19 +91,17 @@ class NewsCollector:
                 delay *= 2  # Exponential backoff
         return None
 
-    def collect_polygon(
+    def collect_rss(
         self,
-        api_key: str,
         keywords: Optional[List[str]] = None,
-        limit: int = 50
+        hours_ago: int = 24
     ) -> List[Dict]:
         """
-        Polygon.io에서 매크로 경제 뉴스 수집 (키워드 기반)
+        RSS feeds에서 매크로 경제 뉴스 수집
 
         Args:
-            api_key: Polygon.io API key
-            keywords: 검색 키워드 리스트 (기본값: MACRO_KEYWORDS)
-            limit: 최대 기사 수
+            keywords: 필터 키워드 리스트 (기본값: MACRO_KEYWORDS)
+            hours_ago: 수집 시간 범위 (기본값: 24시간)
 
         Returns:
             List of news articles
@@ -107,62 +111,66 @@ class NewsCollector:
 
         all_articles = []
         seen_urls = set()
+        cutoff_time = datetime.utcnow() - timedelta(hours=hours_ago)
 
-        # Get yesterday's date for time filtering
-        from datetime import datetime, timedelta
-        yesterday = (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        logger.info(f"Collecting RSS feeds (last {hours_ago}h)...")
 
-        # Use general news endpoint (no ticker filter for macro news)
-        logger.info(f"Collecting Polygon.io macro economic news (last 24h)...")
+        for feed_url in self.MACRO_RSS_FEEDS:
+            try:
+                logger.info(f"Fetching: {feed_url}")
+                feed = feedparser.parse(feed_url)
 
-        def fetch():
-            params = {
-                "limit": limit,
-                "published_utc.gte": yesterday,
-                "apiKey": api_key
-            }
-            response = requests.get(self.polygon_base_url, params=params, timeout=30)
-            response.raise_for_status()
-            return response.json()
+                for entry in feed.entries:
+                    # Time filter
+                    published = entry.get("published_parsed") or entry.get("updated_parsed")
+                    if published:
+                        pub_time = datetime(*published[:6])
+                        if pub_time < cutoff_time:
+                            continue
 
-        data = self._retry_request(fetch)
+                    # Extract fields
+                    title = entry.get("title", "")
+                    summary = entry.get("summary", "") or entry.get("description", "")
+                    url = entry.get("link", "")
 
-        if data and "results" in data:
-            for article in data["results"]:
-                # Filter by whitelist
-                publisher = article.get("publisher", {}).get("name", "")
-                if publisher not in self.POLYGON_WHITELIST:
-                    continue
+                    if url in seen_urls:
+                        continue
 
-                # Filter by macro keywords in title/description
-                title = article.get("title", "").lower()
-                description = article.get("description", "").lower()
-                text = f"{title} {description}"
+                    # Keyword filter (title + summary)
+                    text = f"{title} {summary}".lower()
+                    has_keyword = any(kw.lower() in text for kw in keywords)
+                    if not has_keyword:
+                        continue
 
-                has_keyword = any(keyword.lower() in text for keyword in keywords)
-                if not has_keyword:
-                    continue
+                    # Deduplicate
+                    seen_urls.add(url)
 
-                # Deduplicate by URL
-                url = article.get("article_url", "")
-                if url in seen_urls:
-                    continue
-                seen_urls.add(url)
+                    # Determine source from feed
+                    source = "Unknown"
+                    if "reuters" in feed_url:
+                        source = "Reuters"
+                    elif "nytimes" in feed_url:
+                        source = "New York Times"
+                    elif "bloomberg" in feed_url:
+                        source = "Bloomberg"
 
-                # Extract fields
-                all_articles.append({
-                    "title": article.get("title", ""),
-                    "description": article.get("description", ""),
-                    "url": url,
-                    "published_at": article.get("published_utc", ""),
-                    "source": publisher,
-                    "tickers": article.get("tickers", []),
-                    "raw_source": "polygon"
-                })
+                    all_articles.append({
+                        "title": title,
+                        "description": summary[:500],  # Truncate long summaries
+                        "url": url,
+                        "published_at": pub_time.isoformat() if published else datetime.utcnow().isoformat(),
+                        "source": source,
+                        "tickers": [],
+                        "raw_source": "rss"
+                    })
 
-            logger.info(f"Collected {len(all_articles)} macro articles from Polygon.io")
+                logger.info(f"Collected {len([a for a in all_articles if feed_url.split('/')[2] in a['url']])} from {feed_url}")
 
-        logger.info(f"Total Polygon.io articles: {len(all_articles)}")
+            except Exception as e:
+                logger.error(f"Failed to fetch RSS feed {feed_url}: {e}")
+                continue
+
+        logger.info(f"Total RSS articles: {len(all_articles)}")
         return all_articles
 
     def collect_finnhub(
@@ -241,20 +249,20 @@ class NewsCollector:
 
     def merge_and_deduplicate(
         self,
-        polygon_news: List[Dict],
+        rss_news: List[Dict],
         finnhub_news: List[Dict]
     ) -> List[Dict]:
         """
         두 소스 병합 및 중복 제거
 
         Args:
-            polygon_news: Polygon.io articles
+            rss_news: RSS articles
             finnhub_news: Finnhub articles
 
         Returns:
             Merged and deduplicated articles with unified schema
         """
-        all_articles = polygon_news + finnhub_news
+        all_articles = rss_news + finnhub_news
         logger.info(f"Total articles before deduplication: {len(all_articles)}")
 
         # Deduplicate by title similarity (>90%)
@@ -311,12 +319,11 @@ class NewsCollector:
 
         logger.info(f"Saved {len(articles)} articles to {output_path}")
 
-    def run(self, polygon_key: str, finnhub_key: str) -> List[Dict]:
+    def run(self, finnhub_key: str) -> List[Dict]:
         """
         전체 파이프라인 실행: collect → merge → deduplicate → save → return
 
         Args:
-            polygon_key: Polygon.io API key
             finnhub_key: Finnhub API key
 
         Returns:
@@ -326,14 +333,14 @@ class NewsCollector:
         logger.info("SignalFeed News Collection Started")
         logger.info("=" * 70)
 
-        # Step 1: Collect from Polygon.io
-        polygon_articles = self.collect_polygon(polygon_key)
+        # Step 1: Collect from RSS feeds
+        rss_articles = self.collect_rss()
 
         # Step 2: Collect from Finnhub
         finnhub_articles = self.collect_finnhub(finnhub_key)
 
         # Step 3: Merge and deduplicate
-        final_articles = self.merge_and_deduplicate(polygon_articles, finnhub_articles)
+        final_articles = self.merge_and_deduplicate(rss_articles, finnhub_articles)
 
         # Step 4: Save
         self.save(final_articles)
@@ -350,12 +357,11 @@ if __name__ == "__main__":
     from dotenv import load_dotenv
     load_dotenv()
 
-    polygon_key = os.getenv("POLYGON_API_KEY")
     finnhub_key = os.getenv("FINNHUB_API_KEY")
 
-    if not polygon_key or not finnhub_key:
-        logger.error("Missing API keys. Please set POLYGON_API_KEY and FINNHUB_API_KEY in .env")
+    if not finnhub_key:
+        logger.error("Missing API key. Please set FINNHUB_API_KEY in .env")
     else:
         collector = NewsCollector()
-        articles = collector.run(polygon_key, finnhub_key)
+        articles = collector.run(finnhub_key)
         logger.info(f"Collected {len(articles)} articles")

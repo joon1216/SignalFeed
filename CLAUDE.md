@@ -7,15 +7,15 @@
 
 ## 1. Project Overview & Goals
 
-**SignalFeed**는 글로벌 경제 뉴스를 자동으로 수집·분석하여 Instagram 카드 뉴스와 YouTube Shorts로 자동 생성·배포하는 AI 콘텐츠 플랫폼입니다.
+**SignalFeed**는 글로벌 매크로 경제 뉴스를 Chain-of-Thought 추론으로 분석하여 한국 주식시장 영향을 자동 생성하는 AI 콘텐츠 플랫폼입니다.
 
 ### Primary Goals
-1. **Global Economic News Collection**: Polygon.io + Finnhub API로 Reuters/Bloomberg/FT 등 신뢰도 높은 영문 소스 수집
-2. **Issue Clustering**: 유사 뉴스를 이슈별로 그룹화 (UMAP + HDBSCAN)
-3. **Signal Classification**: BERT + TextCNN + Attention으로 호재(bullish)/악재(bearish)/중립(neutral) 3-class 분류
-4. **Auto Labeling**: GPT-4o-mini API로 학습 데이터 자동 레이블링
-5. **Content Generation**: EXAONE 3.5 LLM으로 Instagram 5-slide 카드 뉴스 + YouTube Shorts 60초 스크립트 생성
-6. **Auto Distribution**: Instagram API + YouTube API로 자동 업로드 (Phase 5.6-5.7)
+1. **Macro Economic News Collection**: RSS feeds + Finnhub API로 Reuters/Bloomberg/NYT 등 매크로 경제 뉴스만 수집
+2. **Issue Clustering**: 유사 뉴스를 이슈별로 그룹화 (English-optimized UMAP + HDBSCAN)
+3. **EXAONE CoT Reasoning**: 매크로 이슈 → 경제 메커니즘 → 한국 주식 영향 추론
+4. **Content Generation**: EXAONE 3.5 LLM으로 Instagram 5-slide 카드 뉴스 + YouTube Shorts 60초 스크립트 생성
+5. **HTML Card Generation**: Playwright로 고품질 Instagram 카드 이미지 생성 (Hallmark 디자인 원칙 준수)
+6. **Auto Distribution**: Instagram API + YouTube API로 자동 업로드 (Phase 2)
 
 ### Target Users
 - **한국 MZ세대 투자자** (20-35세): 빠른 정보 소비, 시각적 콘텐츠 선호
@@ -50,9 +50,9 @@
 - **EXAONE 3.5 7.8B (Ollama)**: 한국어 특화 LLM (콘텐츠 생성) — Confirmed working via Ollama local
 
 ### Data Collection
-- **Polygon.io API**: 미국 주식 뉴스 (Reuters/Bloomberg/AP 등)
+- **RSS Feeds**: Reuters, Bloomberg, NYT Economy 매크로 경제 뉴스
 - **Finnhub API**: 글로벌 경제 뉴스 (Financial Times/CNBC/MarketWatch 등)
-- **Auto Labeling**: GPT-4o-mini API (bullish/bearish/neutral 레이블 자동 생성)
+- **FeedParser**: RSS 파싱 및 키워드 필터링 (Fed, inflation, GDP, tariff 등)
 
 ### Content Generation
 - **EXAONE 3.5**: 한국어 요약 생성 (무료, LG AI)
@@ -65,11 +65,10 @@
 - **APScheduler**: 주기적 크롤링 (Phase 6.1)
 
 ### External APIs
-- **Polygon.io**: 뉴스 데이터 API (무료 플랜: 5 req/min)
 - **Finnhub**: 글로벌 뉴스 API (무료 플랜: 60 req/min)
-- **OpenAI GPT-4o-mini**: 자동 레이블링 ($0.15/1M tokens)
-- **Instagram Graph API**: 자동 포스팅 (Phase 5.6)
-- **YouTube Data API v3**: Shorts 업로드 (Phase 5.7)
+- **Pexels API**: 배경 이미지 검색 (무료 플랜: 200 req/hour)
+- **Instagram Graph API**: 자동 포스팅 (Phase 2)
+- **YouTube Data API v3**: Shorts 업로드 (Phase 2)
 
 ---
 
@@ -81,17 +80,15 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 ├── backend/                   # Backend services and pipeline
 │   ├── modules/              # Core functional modules
 │   │   ├── __init__.py
-│   │   ├── collector.py     # News collector (Polygon.io + Finnhub) — NEW
-│   │   ├── auto_labeler.py  # GPT-4o-mini auto labeling — NEW
-│   │   ├── clusterer.py     # Issue clustering (TF-IDF + UMAP + HDBSCAN) — REUSE
-│   │   ├── classifier.py    # Signal classifier (BERT + TextCNN + Attention) — RETRAIN
-│   │   ├── content_gen.py   # Content generator (EXAONE 3.5) — NEW
-│   │   ├── card_gen.py      # Instagram card image generator (Pillow) — NEW
+│   │   ├── collector.py     # News collector (RSS + Finnhub) — REFACTORED
+│   │   ├── clusterer.py     # Issue clustering (English-optimized UMAP + HDBSCAN) — REFACTORED
+│   │   ├── content_gen.py   # Content generator (EXAONE CoT reasoning) — REFACTORED
+│   │   ├── html_card_gen.py # HTML + Playwright card generator (Hallmark design) — NEW
+│   │   ├── image_fetcher.py # Pexels API image fetcher — NEW
 │   │   ├── shorts_gen.py    # YouTube Shorts video generator (MoviePy) — NEW
-│   │   ├── fake_filter.py   # 5-layer fake news defense — NEW
-│   │   └── summarizer.py    # Legacy summarizer (deprecated)
-│   ├── pipeline.py          # CLI orchestrator: all 7 steps
-│   └── scheduler.py         # APScheduler: periodic crawling (Phase 6.1)
+│   │   └── fake_filter.py   # 5-layer fake news defense (deprecated)
+│   ├── pipeline.py          # CLI orchestrator: 4 steps (collect → cluster → generate → cards)
+│   └── scheduler.py         # APScheduler: periodic crawling (Phase 2)
 │
 ├── frontend/                  # Frontend application
 │   └── app.py                # Streamlit admin dashboard (content review)
@@ -105,23 +102,19 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 │
 ├── data/                      # Pipeline outputs (created at runtime)
 │   ├── 1_collected/
-│   │   └── news.jsonl        # Raw collected articles (Polygon.io + Finnhub)
-│   ├── 2_labeled/
-│   │   └── labeled.jsonl     # Auto-labeled data (GPT-4o-mini)
-│   ├── 3_clustered/
+│   │   └── news.jsonl        # Raw collected articles (RSS + Finnhub)
+│   ├── 2_clustered/
 │   │   └── clustered.jsonl   # Clustered articles with cluster_id/cluster_label
-│   ├── 4_classified/
-│   │   └── classified.jsonl  # Articles with signal/confidence (bullish/bearish/neutral)
-│   ├── 5_generated/
-│   │   └── scripts.json      # Generated content scripts (Instagram + YouTube)
-│   ├── 6_cards/
+│   ├── 3_generated/
+│   │   └── scripts.json      # EXAONE CoT generated scripts (Instagram + YouTube)
+│   ├── 4_cards/
 │   │   └── cluster_0/        # Instagram card images (5 slides per issue)
 │   │       ├── slide_1.png
 │   │       ├── slide_2.png
 │   │       ├── slide_3.png
 │   │       ├── slide_4.png
 │   │       └── slide_5.png
-│   └── 7_shorts/
+│   ├── 5_shorts/
 │       └── cluster_0.mp4     # YouTube Shorts video (60sec)
 │
 ├── tests/                     # Test suite (TODO: pytest)
@@ -1315,3 +1308,61 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ 유지보수성 향상 (HTML = CSS 수정 용이)
   - ✅ Playwright 스크린샷 안정적 (5/5 성공)
 - **Result**: ✅ Success — HTML + Playwright 방식 전환, 디자인 퀄리티 최대치
+
+#### Session 22: 파이프라인 핵심 재설계 — FinBERT 제거, EXAONE CoT 추론, RSS 수집
+- **Task**: SignalFeed 파이프라인 완전 재설계 (FinBERT → EXAONE CoT, Polygon.io → RSS, 매크로 중심 전환)
+- **Actions**:
+  - **Step 1: collector.py RSS 피드 추가**
+    - Polygon.io 제거 → RSS feeds 추가 (Reuters, Bloomberg, NYT Economy)
+    - MACRO_KEYWORDS 확장 (Fed, inflation, GDP, tariff, employment 등 30개)
+    - collect_rss() 메서드: feedparser로 RSS 파싱 + 24시간 필터 + 키워드 필터
+    - 시간 필터: published_parsed → datetime 변환 → cutoff_time 비교
+  - **Step 2: clusterer.py English 최적화**
+    - TF-IDF stopwords='english' 추가
+    - Title weight 8x → 10x (영문 뉴스는 제목 더 discriminative)
+    - Post-processing: merge_similar_clusters() 추가 (cosine similarity > 0.85)
+    - Filter: 2+ articles from 2+ sources (단일 소스 클러스터 제거)
+  - **Step 3: content_gen.py EXAONE CoT 추론**
+    - SYSTEM_PROMPT 전면 재작성:
+      - 1단계: 이슈 파악 (팩트 + 수치)
+      - 2단계: 경제 메커니즘 (금리 → 달러 → 수출주 등 인과 경로)
+      - 3단계: 한국 주식 영향 (섹터별 + 구체적 종목)
+    - JSON schema 변경:
+      - hook_title: 호재/악재 표기 없음, 이슈 자체에만 집중 (10자 이내)
+      - reasoning_chain 필드 추가 (CoT 추론 경로 내부용)
+      - slide 3/4: beneficiary/victim (수혜주는?/주의할 섹터는?)
+      - sectors: example_stocks 필드 추가 (1-2개 종목명)
+  - **Step 4: html_card_gen.py 스키마 업데이트**
+    - Slide 1: 시그널 배지 제거 (호재/악재 표기 없음)
+    - Slide 3 title: "호재" → "수혜주는?"
+    - Slide 4 title: "악재" → "주의할 섹터는?"
+    - Sectors: example_stocks 렌더링 (14px, #555, 삼성전자 · SK하이닉스)
+  - **Step 5: pipeline.py 전면 재작성**
+    - FinBERT classifier 제거 (Step 4 삭제)
+    - Auto labeler 제거 (Step 2 삭제)
+    - 4-step pipeline: collect → cluster → generate → cards
+    - Polygon.io API key 제거 → Finnhub만 사용
+    - 디렉토리: data/1_collected, 2_clustered, 3_generated, 4_cards
+- **결과**:
+  - **Step 1 (Collection)**: 100개 RSS/Finnhub 기사 수집 성공
+  - **Step 2 (Clustering)**: 5개 클러스터 형성 (36/100 clustered, 64% noise)
+  - **Step 3 (Content Generation)**: EXAONE CoT 5개 스크립트 생성 (7분 20초 소요)
+    - 성공: cluster 2, 4, 0 (CoT reasoning chains 포함)
+    - 실패: cluster 3, 6 (JSON parse error, fallback 사용)
+  - **Step 4 (Cards)**: 4개 클러스터 × 5장 = 20장 카드 생성 성공 (Playwright HTML)
+  - Sample hook titles:
+    - "AI가 원유 대체? 시장 격변 시작"
+    - "중동 긴장 고조: 한국 주식 시장에 무슨 영향?"
+    - "이란 휴전, 달러 가치 하락 시작"
+- **기술적 성과**:
+  - ✅ RSS feeds 통합 (Polygon.io 의존성 제거)
+  - ✅ Clusterer English 최적화 (stopwords, title weight, source filter)
+  - ✅ EXAONE CoT reasoning 성공 (매크로 → 메커니즘 → 한국 영향)
+  - ✅ HTML 카드 생성 pipeline 완성 (Pexels 배경 + Hallmark design)
+  - ⚠️ EXAONE JSON 파싱 실패 2/5 (escape character, control character → fallback)
+- **비즈니스 성과**:
+  - ✅ 매크로 경제 뉴스 중심 수집 성공 (Iran deal, AI investment 등)
+  - ✅ 한국 주식시장 연결 추론 성공 (반도체, 2차전지, 방산 등)
+  - ✅ 표지 훅 순한국어 강제 (영어 단어 제거, 이슈 자체 집중)
+  - ⚠️ Clustering noise 64% (매크로 뉴스 다양성 높음, 추가 튜닝 필요)
+- **Result**: ✅ Success — FinBERT 제거, EXAONE CoT 추론 통합, RSS 매크로 수집 완료, 4-step pipeline 정상 작동

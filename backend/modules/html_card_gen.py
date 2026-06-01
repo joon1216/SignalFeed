@@ -146,18 +146,12 @@ class HTMLCardGenerator:
         return html
 
     def _generate_slide1_html(self, slide_data: Dict, image_path: str, slide_num: int) -> str:
-        """Slide 1: Cover with full bleed image"""
+        """Slide 1: Cover with full bleed image (NO signal badge)"""
         hook_title = slide_data.get("hook_title", "")
-        signal_emoji = slide_data.get("signal_emoji", "⚪")
-        signal_text = slide_data.get("signal_text", "중립")
         one_line = slide_data.get("one_line", "")
+        sources = slide_data.get("sources", ["Reuters", "Bloomberg"])
 
-        # Determine signal color
-        signal_color = self.COLORS["neutral"]
-        if "호재" in signal_text:
-            signal_color = self.COLORS["bullish"]
-        elif "악재" in signal_text:
-            signal_color = self.COLORS["bearish"]
+        sources_text = " · ".join(sources[:3])
 
         return f"""
 <div class="card" id="slide-{slide_num}" style="background: #000;">
@@ -177,11 +171,6 @@ class HTMLCardGenerator:
       {hook_title.replace(chr(10), '<br>')}
     </h1>
 
-    <!-- Signal badge -->
-    <div style="display: inline-block; background: {signal_color}; color: white; padding: 12px 24px; border-radius: 24px; font-size: 18px; font-weight: 700; margin-bottom: 20px;">
-      {signal_emoji} {signal_text}
-    </div>
-
     <!-- One-line summary -->
     <p style="font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 16px;">
       {one_line}
@@ -189,7 +178,7 @@ class HTMLCardGenerator:
 
     <!-- Sources -->
     <p style="font-size: 14px; color: rgba(255,255,255,0.5);">
-      Reuters · Bloomberg · Financial Times
+      {sources_text}
     </p>
   </div>
 
@@ -244,15 +233,15 @@ class HTMLCardGenerator:
 """
 
     def _generate_slide3_html(self, slide_data: Dict, slide_num: int) -> str:
-        """Slide 3: Bullish"""
-        return self._generate_sector_slide_html(slide_data, slide_num, "호재", self.COLORS["bullish"])
+        """Slide 3: Beneficiary (수혜주는?)"""
+        return self._generate_sector_slide_html(slide_data, slide_num, "수혜주는?", self.COLORS["bullish"])
 
     def _generate_slide4_html(self, slide_data: Dict, slide_num: int) -> str:
-        """Slide 4: Bearish"""
-        return self._generate_sector_slide_html(slide_data, slide_num, "악재", self.COLORS["bearish"])
+        """Slide 4: Victim (주의할 섹터는?)"""
+        return self._generate_sector_slide_html(slide_data, slide_num, "주의할 섹터는?", self.COLORS["bearish"])
 
     def _generate_sector_slide_html(self, slide_data: Dict, slide_num: int, label: str, color: str) -> str:
-        """Generate sector slide (bullish/bearish)"""
+        """Generate sector slide (beneficiary/victim)"""
         sectors = slide_data.get("sectors", [])
         fact = slide_data.get("fact", "")
 
@@ -260,6 +249,9 @@ class HTMLCardGenerator:
         for sector in sectors:
             name = sector.get("name", "")
             reason = sector.get("reason", "")
+            example_stocks = sector.get("example_stocks", [])
+            stocks_text = " · ".join(example_stocks[:2]) if example_stocks else ""
+
             sectors_html += f"""
     <div style="margin-bottom: 50px;">
       <h3 class="serif" style="font-size: 56px; font-weight: 700; color: {color}; margin-bottom: 12px; line-height: 1.2;">
@@ -268,6 +260,7 @@ class HTMLCardGenerator:
       <p style="font-size: 22px; color: {self.COLORS["text_gray"]}; padding-left: 24px; line-height: 1.5;">
         {reason}
       </p>
+      {"<p style='font-size: 14px; color: #555; padding-left: 24px; margin-top: 6px;'>" + stocks_text + "</p>" if stocks_text else ""}
     </div>
 """
 
@@ -433,7 +426,7 @@ class HTMLCardGenerator:
             browser.close()
             logger.info(f"✅ Screenshot saved (API fallback): {output_path}")
 
-    def run(self, scripts_path: str = "data/5_generated/scripts.json") -> Dict:
+    def run(self, scripts_path: str = "data/3_generated/scripts.json") -> Dict:
         """
         Full pipeline: load scripts → generate HTML → screenshot → return paths
 
