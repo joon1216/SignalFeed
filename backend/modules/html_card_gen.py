@@ -71,6 +71,7 @@ class HTMLCardGenerator:
     def generate_cover_html(self, script: dict, pexels_image_path: str) -> str:
         """
         Generate Slide 1 (Cover) HTML with fixed template
+        Design: 55% image top + 45% dark text bottom
 
         Args:
             script: Script dict with hook_title, one_line, sources
@@ -89,6 +90,27 @@ class HTMLCardGenerator:
         # Format sources
         sources_str = " · ".join(sources[:3])
 
+        # Convert image to base64 data URI (fix Playwright file:// access issue)
+        import os
+        import base64
+
+        image_html = ""
+        if os.path.exists(pexels_image_path):
+            try:
+                with open(pexels_image_path, "rb") as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode()
+                    # Detect image format
+                    ext = os.path.splitext(pexels_image_path)[1].lower()
+                    mime_type = "image/jpeg" if ext in [".jpg", ".jpeg"] else "image/png"
+                    image_html = f'<img src="data:{mime_type};base64,{img_data}" class="absolute inset-0 w-full h-full object-cover" style="object-position: center;"/>'
+            except Exception as e:
+                logger.warning(f"Failed to encode image: {e}")
+                image_html = ""
+
+        # Fallback: no image, just dark background
+        if not image_html:
+            logger.info("No image available, using dark background only")
+
         html = f"""<!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -101,26 +123,32 @@ class HTMLCardGenerator:
   </style>
 </head>
 <body>
-<div id="slide-1" class="relative w-[1080px] h-[1350px] overflow-hidden">
-  <!-- 배경 이미지 -->
-  <img src="file://{pexels_image_path}" class="absolute inset-0 w-full h-full object-cover"/>
-  <!-- 다크 그라데이션 오버레이 -->
-  <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.95) 100%);"></div>
-  <!-- 콘텐츠 -->
-  <div class="absolute inset-0 flex flex-col justify-end p-16 pb-20 word-keep">
-    <!-- 브랜드 -->
-    <div class="absolute top-10 left-16 text-green-400 font-bold tracking-widest text-sm">SIGNALFEED</div>
-    <!-- 날짜 -->
-    <p class="text-gray-400 text-lg mb-6">{date_str} · 글로벌 경제</p>
-    <!-- 훅 타이틀 -->
-    <h1 class="text-white font-extrabold leading-tight mb-6 word-keep" style="font-size: 84px; line-height: 1.1;">{hook_title}</h1>
-    <!-- 한줄 요약 -->
-    <p class="text-gray-300 text-2xl mb-8 word-keep">{one_line}</p>
-    <!-- 출처 -->
-    <p class="text-gray-500 text-lg">{sources_str}</p>
+<div id="slide-1" class="relative w-[1080px] h-[1350px] overflow-hidden" style="background: #0D0D0D;">
+  <!-- 배경 이미지 (상단 55%) -->
+  <div class="absolute top-0 left-0 right-0 w-full overflow-hidden" style="height: 55%; background: #1A1A1A;">
+    {image_html}
   </div>
+
+  <!-- 텍스트 영역 (하단 45%) -->
+  <div class="absolute left-0 right-0 w-full" style="top: 55%; height: 45%; background: #0D0D0D; padding: 40px 60px;">
+    <!-- 브랜드 -->
+    <div class="text-green-400 font-bold text-sm mb-6" style="letter-spacing: 0.2em;">SIGNALFEED</div>
+
+    <!-- 날짜 -->
+    <p class="text-gray-500 text-lg mb-8">{date_str} · 글로벌 경제</p>
+
+    <!-- 훅 타이틀 (72px, 2줄) -->
+    <h1 class="text-white font-black word-keep mb-6" style="font-size: 72px; line-height: 1.15; font-weight: 900;">{hook_title}</h1>
+
+    <!-- 한줄 요약 -->
+    <p class="text-gray-400 word-keep mb-8" style="font-size: 22px; line-height: 1.4;">{one_line}</p>
+
+    <!-- 출처 -->
+    <p class="text-gray-600" style="font-size: 16px;">{sources_str}</p>
+  </div>
+
   <!-- 하단 그린 라인 -->
-  <div class="absolute bottom-0 left-0 right-0 h-1 bg-green-400"></div>
+  <div class="absolute bottom-0 left-0 right-0 bg-green-400" style="height: 3px;"></div>
 </div>
 </body>
 </html>"""

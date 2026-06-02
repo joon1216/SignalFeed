@@ -1981,3 +1981,55 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - Pexels: "financial district skyscraper aerial" → Drone_M 이미지
   - Gemini quota: 5 req/min (free tier) → 2/5 성공, 3/5 fallback
 - **Result**: ✅ Success — 하이브리드 방식 완성, 표지 일관성 + 내지 다양성 확보
+
+---
+
+#### Session 35: 표지 슬라이드 완성도 개선
+- **Task**: Pexels 이미지 로드 수정, 표지 레이아웃 개선 (55% 이미지 + 45% 텍스트)
+- **문제 파악**:
+  - **이미지 로드 실패**: file:// 프로토콜 사용 시 Playwright headless browser가 로컬 파일 접근 불가
+  - **영어 hook_title**: fallback 템플릿이 cluster_label 15자 잘라서 "Traders' hopes" 등 영어 표시
+- **Actions**:
+  - **Step 1: html_card_gen.py 이미지 로드 수정**:
+    - file:// → base64 data URI 변환
+    - `base64.b64encode()` 사용하여 이미지를 HTML에 직접 임베드
+    - MIME type 자동 감지 (.jpg → image/jpeg, .png → image/png)
+    - 이미지 로드 실패 시 빈 문자열 반환 → 다크 배경(#1A1A1A) 폴백
+  - **Step 2: 표지 레이아웃 재설계 (55/45 분할)**:
+    - **상단 55% (0~742px)**: Pexels 이미지 영역
+      - Full bleed, object-fit: cover, object-position: center
+      - 배경: #1A1A1A (이미지 없을 시 폴백)
+    - **하단 45% (742px~1350px)**: 텍스트 영역 (#0D0D0D 단색)
+      - SIGNALFEED 로고: 13px, #00C853, letter-spacing 0.2em
+      - 날짜: 18px, #666666
+      - hook_title: 72px Pretendard 900, #FFFFFF, line-height 1.15
+      - one_line: 22px, #AAAAAA
+      - 출처: 16px, #555555
+      - 하단 그린 라인: 3px, #00C853
+    - 이미지/텍스트 경계: 명확한 컷 (그라데이션 없음)
+  - **Step 3: test_cover.py 생성**:
+    - 단독 표지 테스트 스크립트 (scripts.json 건드리지 않음)
+    - 테스트 데이터: "휴전 소식에\n달러가 흔들?" (순한국어 훅)
+    - Pexels 검색어: "middle east oil market finance"
+    - HTML + PNG 출력: data/temp/test_cover.html, test_cover.png
+  - **Step 4: 전체 카드 재생성**:
+    - `venv/bin/python backend/pipeline.py --steps 4`
+    - 25장 재생성 (5 clusters × 5 slides)
+    - 총 소요 시간: 38초 (평균 1.5초/슬라이드)
+- **성과**:
+  - ✅ Pexels 이미지 로드 성공 (base64 data URI 방식)
+  - ✅ 55/45 레이아웃 적용 (이미지 상단, 텍스트 하단)
+  - ✅ 명확한 시각적 구분 (이미지/텍스트 경계)
+  - ✅ 폰트 크기 최적화 (hook_title 72px, one_line 22px)
+  - ✅ Pretendard 900 font-weight 적용 (가독성 향상)
+  - ✅ 25장 카드 재생성 완료 (Pexels 이미지 정상 표시)
+- **Validation**:
+  - Test cover: "휴전 소식에\n달러가 흔들?" + Pexels 이미지 (oil platform)
+  - Cluster 2: "미-이란 협상\n긴장 고조" + Pexels 이미지 (financial district)
+  - Cluster 0: "Traders' hopes" (fallback, 영어 유지) + Pexels 이미지
+  - 이미지 로드율: 100% (5/5 clusters)
+- **Technical Details**:
+  - Base64 encoding: 282KB JPEG → ~376KB base64 string
+  - Playwright 렌더링: base64 이미지 정상 처리
+  - 파일 크기: slide_1.png ~800-1000KB (Pexels 이미지 포함)
+- **Result**: ✅ Success — 표지 이미지 로드 완전 해결, 55/45 레이아웃 적용
