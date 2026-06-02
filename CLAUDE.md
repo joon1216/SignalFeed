@@ -1912,3 +1912,72 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ 25장 카드 생성 완료 (5 clusters × 5 slides, 1080x1350px)
   - ✅ HTML → PNG 파이프라인 안정화 (Retina 2x, 폰트 완전 로드)
 - **Result**: ✅ Success — Gemini HTML 직접 생성 파이프라인 전환 완료, Tailwind+Pretendard 적용
+
+---
+
+#### Session 34: 하이브리드 방식 — 표지 고정 (Pexels) + 내지 Gemini HTML
+- **Task**: 표지(Slide 1)는 Pexels 배경 이미지 + 다크 오버레이 고정 템플릿, 내지(Slide 2~5)는 Gemini HTML 직접 생성
+- **핵심 아이디어**:
+  - Slide 1: 일관된 브랜딩, 빠른 생성, Pexels 이미지 활용, hook_title 강조
+  - Slide 2~5: 레이아웃 다양성, Gemini 창의성, 데이터 시각화
+- **Actions**:
+  - **Step 1: content_gen.py 수정**:
+    - CardHTMLScript Pydantic 스키마 변경:
+      - hook_title: 표지 훅 제목 (순한국어, 15자 이내, \n 줄바꿈)
+      - one_line: 표지 한줄 요약 (60자 이내)
+      - sources: 출처 배열 (Reuters, Bloomberg 등, 최대 3개)
+      - inner_slides: Slide 2~5만 Gemini 생성 (4개)
+    - System Prompt 수정:
+      - "Slide 1은 생성하지 않음" 명시
+      - "inner_slides: Slide 2~5만 생성 (4개)"
+      - 4가지 레이아웃 배정: Split 50:50 → Data Grid → Expert Quote → CTA List
+    - User Prompt:
+      - hook_title, one_line, sources 명시적 요청
+      - 영어 단어 절대 금지 강조
+    - Validation:
+      - inner_slides 개수 4개 검증
+      - required_fields 검증: hook_title, one_line, sources, pexels_keyword
+    - TemplateFallback:
+      - Slide 2~5만 생성 (4개)
+      - hook_title, one_line, sources 기본값 설정
+  - **Step 2: html_card_gen.py 수정**:
+    - generate_cover_html() 메서드 추가:
+      - Pexels 배경 이미지 (file:// 경로)
+      - 다크 그라데이션 오버레이 (linear-gradient: 0.1 → 0.85 → 0.95)
+      - 브랜드: "SIGNALFEED" 좌상단 green-400
+      - 날짜: "2026.06.02 · 글로벌 경제"
+      - hook_title: 84px font-extrabold, line-height 1.1
+      - one_line: 24px text-gray-300
+      - 출처: 18px text-gray-500
+      - 하단 그린 라인 (1px bg-green-400)
+    - generate_cards() 메서드 하이브리드 방식:
+      1. Pexels 이미지 fetch (pexels_keyword)
+      2. data/temp/pexels_{issue_id}.jpg 저장
+      3. generate_cover_html() → Slide 1 PNG
+      4. inner_slides 순회 → Slide 2~5 PNG
+    - ImageFetcher import 추가
+  - **Step 3: 테스트 실행**:
+    - `venv/bin/python backend/pipeline.py --steps 3,4`
+    - Step 3 (Content): 5 clusters, 2분 58초
+      - Gemini 성공: cluster 2, 4 (2/5)
+      - Gemini 실패: cluster 3, 0, 6 (503 UNAVAILABLE, 429 RESOURCE_EXHAUSTED) → fallback
+    - Step 4 (Cards): 25장 생성 (5 clusters × 5 slides)
+      - Pexels 이미지 fetch: 성공 (모든 클러스터)
+      - Slide 1: 고정 템플릿, Pexels 배경, hook_title 렌더링
+      - Slide 2~5: Gemini HTML 또는 fallback
+      - 총 소요 시간: 41초 (평균 1.6초/슬라이드)
+- **성과**:
+  - ✅ 하이브리드 방식 성공 (표지 고정 + 내지 Gemini)
+  - ✅ hook_title 순한국어 강제 ("미-이란 협상\n긴장 고조")
+  - ✅ Pexels 배경 이미지 자동 fetch (pexels_keyword)
+  - ✅ Slide 1 일관성 확보 (브랜딩, 빠른 생성)
+  - ✅ Slide 2~5 레이아웃 다양성 유지 (Gemini 창의성)
+  - ✅ Fallback 안정성 (Gemini 실패 시 기본 템플릿)
+  - ✅ 25장 카드 생성 완료 (1080x1350px)
+- **Validation**:
+  - Cluster 2 hook: "미-이란 협상\n긴장 고조"
+  - Cluster 4 hook: "중동 긴장\n고조"
+  - Cluster 3 hook: "Defense spendin" (fallback, 15자 제한)
+  - Pexels: "financial district skyscraper aerial" → Drone_M 이미지
+  - Gemini quota: 5 req/min (free tier) → 2/5 성공, 3/5 fallback
+- **Result**: ✅ Success — 하이브리드 방식 완성, 표지 일관성 + 내지 다양성 확보

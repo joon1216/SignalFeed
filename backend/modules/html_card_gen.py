@@ -1,6 +1,6 @@
 """
 SignalFeed HTML Card Generator
-Playwright Screenshot Only (HTML from Gemini)
+Hybrid: Fixed Cover (Pexels) + Gemini Inner Slides
 """
 
 import os
@@ -8,6 +8,7 @@ import json
 import logging
 from typing import List, Dict
 from pathlib import Path
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -18,12 +19,16 @@ logger = logging.getLogger(__name__)
 
 
 class HTMLCardGenerator:
-    """Playwright 기반 HTML → PNG 스크린샷 생성기"""
+    """Hybrid: Fixed Cover + Gemini Inner Slides"""
 
     def __init__(self):
         """Initialize HTMLCardGenerator"""
         self.browser = None
         self.playwright = None
+
+        # Import image_fetcher for Pexels
+        from backend.modules.image_fetcher import ImageFetcher
+        self.image_fetcher = ImageFetcher()
 
     def _start_browser(self):
         """Start pre-warmed browser instance"""
@@ -63,19 +68,95 @@ class HTMLCardGenerator:
 
         context.close()
 
-    def generate_cards(self, script: dict, output_dir: str):
+    def generate_cover_html(self, script: dict, pexels_image_path: str) -> str:
         """
-        Generate PNG cards from HTML script
+        Generate Slide 1 (Cover) HTML with fixed template
 
         Args:
-            script: HTML script dict with slides
+            script: Script dict with hook_title, one_line, sources
+            pexels_image_path: Path to Pexels background image
+
+        Returns:
+            Complete HTML string
+        """
+        hook_title = script.get("hook_title", "경제 뉴스")
+        one_line = script.get("one_line", "")
+        sources = script.get("sources", ["Reuters"])
+
+        # Format date
+        date_str = datetime.now().strftime("%Y.%m.%d")
+
+        # Format sources
+        sources_str = " · ".join(sources[:3])
+
+        html = f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard-dynamic-subset.min.css"/>
+  <style>
+    body {{ margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; }}
+    .word-keep {{ word-break: keep-all; overflow-wrap: break-word; }}
+  </style>
+</head>
+<body>
+<div id="slide-1" class="relative w-[1080px] h-[1350px] overflow-hidden">
+  <!-- 배경 이미지 -->
+  <img src="file://{pexels_image_path}" class="absolute inset-0 w-full h-full object-cover"/>
+  <!-- 다크 그라데이션 오버레이 -->
+  <div class="absolute inset-0" style="background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.85) 60%, rgba(0,0,0,0.95) 100%);"></div>
+  <!-- 콘텐츠 -->
+  <div class="absolute inset-0 flex flex-col justify-end p-16 pb-20 word-keep">
+    <!-- 브랜드 -->
+    <div class="absolute top-10 left-16 text-green-400 font-bold tracking-widest text-sm">SIGNALFEED</div>
+    <!-- 날짜 -->
+    <p class="text-gray-400 text-lg mb-6">{date_str} · 글로벌 경제</p>
+    <!-- 훅 타이틀 -->
+    <h1 class="text-white font-extrabold leading-tight mb-6 word-keep" style="font-size: 84px; line-height: 1.1;">{hook_title}</h1>
+    <!-- 한줄 요약 -->
+    <p class="text-gray-300 text-2xl mb-8 word-keep">{one_line}</p>
+    <!-- 출처 -->
+    <p class="text-gray-500 text-lg">{sources_str}</p>
+  </div>
+  <!-- 하단 그린 라인 -->
+  <div class="absolute bottom-0 left-0 right-0 h-1 bg-green-400"></div>
+</div>
+</body>
+</html>"""
+        return html
+
+    def generate_cards(self, script: dict, output_dir: str):
+        """
+        Generate PNG cards from HTML script (hybrid approach)
+
+        Args:
+            script: HTML script dict with hook_title, one_line, sources, inner_slides
             output_dir: Output directory for PNG files
         """
-        slides = script.get("slides", [])
         os.makedirs(output_dir, exist_ok=True)
+        issue_id = script.get("issue_id", "unknown")
 
-        for slide in slides:
-            slide_num = slide.get("slide_num", 1)
+        # Step 1: Fetch Pexels image
+        pexels_keyword = script.get("pexels_keyword", "financial district")
+        pexels_image = self.image_fetcher.fetch_with_fallback([pexels_keyword])
+
+        # Save Pexels image to temp
+        os.makedirs("data/temp", exist_ok=True)
+        pexels_path = f"data/temp/pexels_{issue_id}.jpg"
+        pexels_image.save(pexels_path, quality=90)
+        logger.info(f"Pexels image saved: {pexels_path}")
+
+        # Step 2: Generate Slide 1 (Cover)
+        cover_html = self.generate_cover_html(script, os.path.abspath(pexels_path))
+        cover_output = f"{output_dir}/slide_1.png"
+        self.screenshot_slide(cover_html, cover_output)
+        logger.info(f"Slide 1 (Cover) saved: {cover_output}")
+
+        # Step 3: Generate Slides 2~5 (Gemini HTML)
+        inner_slides = script.get("inner_slides", [])
+        for slide in inner_slides:
+            slide_num = slide.get("slide_num", 2)
             html = slide.get("html", "")
 
             if not html:
@@ -123,7 +204,8 @@ class HTMLCardGenerator:
 
             try:
                 self.generate_cards(script, output_dir)
-                slides_count = len(script.get("slides", []))
+                # Count: 1 cover + inner_slides
+                slides_count = 1 + len(script.get("inner_slides", []))
                 total_cards += slides_count
                 logger.info(f"✅ Cluster {issue_id}: {slides_count} slides")
             except Exception as e:
