@@ -170,11 +170,28 @@ class ContentGenerator:
 5. 한국어로만 작성
 6. **내부 메모/예시 표기 절대 금지**: "(예시 필요)", "(구체적인 예시 필요)", "예상치 명시 필요", "기사 참고" 같은 내부 메모는 절대 작성하지 말 것. 모든 텍스트는 최종 사용자가 읽는 완성된 콘텐츠.
 
+[CRITICAL - 반드시 지킬 것]
+slides[2].sectors 배열: 반드시 정확히 2개 또는 3개 항목
+slides[3].sectors 배열: 반드시 정확히 2개 또는 3개 항목
+sectors 배열이 1개면 무조건 틀린 답임
+두 번째 섹터를 못 찾겠으면 관련 있는 다른 섹터를 발굴할 것
+
+예시 (금리 인상 이슈):
+sectors: [
+{"name": "금융주", "reason": "예대금리차 확대로 수익성 개선", "example_stocks": ["KB금융", "신한지주"]},
+{"name": "달러 자산", "reason": "달러 강세로 환차익 발생", "example_stocks": ["달러 ETF", "미국 국채"]}
+]
+절대로 sectors를 1개만 반환하지 말 것. 이것은 치명적 오류임.
+
 표지 훅 규칙:
 - 호재/악재 표기 없음
 - 이슈 자체에만 집중
 - 궁금증 유발 (예: "파월이 입을 열었다", "이 숫자가 시장을 흔든다")
 - 10자 이내, 강렬하게
+
+one_line 필드 규칙:
+- 반드시 한국어로만 작성 (영어 절대 금지)
+- 예: "이란 휴전으로 달러 약세 시작" (O) / "Traders' hopes fade" (X)
 """
 
     OLLAMA_BASE_URL = "http://localhost:11434/v1"
@@ -184,6 +201,75 @@ class ContentGenerator:
     def _get_signal_emoji(signal: str) -> str:
         """Get signal emoji"""
         return {"bullish": "🟢", "bearish": "🔴", "neutral": "⚪"}.get(signal, "⚪")
+
+    @staticmethod
+    def _clean_text(text: str) -> str:
+        """Remove internal notes and clean text"""
+        import re
+        # Remove (예: ...) patterns
+        text = re.sub(r'\(예:.*?\)', '', text)
+        # Remove (구체적인 예시 필요) patterns
+        text = re.sub(r'\(구체적인.*?\)', '', text)
+        # Remove (기사 참고), (FactSet), (Bloomberg 집계) if standalone
+        text = re.sub(r'\([A-Za-z가-힣\s]+?\)', '', text)
+        text = text.strip()
+        return text
+
+    def _clean_script(self, script: Dict) -> Dict:
+        """Clean all text fields in script"""
+        slides = script.get("slides", [])
+        for slide in slides:
+            if "facts" in slide:
+                slide["facts"] = [self._clean_text(f) for f in slide["facts"]]
+            if "sectors" in slide:
+                for sector in slide["sectors"]:
+                    sector["reason"] = self._clean_text(sector.get("reason", ""))
+            if "fact" in slide:
+                slide["fact"] = self._clean_text(slide["fact"])
+            if "title" in slide:
+                slide["title"] = self._clean_text(slide["title"])
+
+        # Clean one_line
+        if "one_line" in script:
+            script["one_line"] = self._clean_text(script["one_line"])
+
+        return script
+
+    def _validate_and_fix_sectors(self, script: Dict) -> Dict:
+        """섹터가 2개 미만이면 자동으로 채워넣기"""
+        fallback_bullish = [
+            {"name": "성장주", "reason": "시장 긍정 신호로 투자 심리 개선", "example_stocks": ["삼성전자", "SK하이닉스"]},
+            {"name": "소비재", "reason": "경제 회복 기대감으로 소비 증가", "example_stocks": ["LG생활건강", "아모레퍼시픽"]},
+            {"name": "금융주", "reason": "경기 개선으로 대출 수요 증가", "example_stocks": ["KB금융", "신한지주"]},
+        ]
+        fallback_bearish = [
+            {"name": "채권", "reason": "금리 불확실성으로 채권 가격 변동", "example_stocks": ["국채 ETF", "회사채"]},
+            {"name": "부동산", "reason": "금리 부담으로 부동산 투자 위축", "example_stocks": ["리츠", "건설주"]},
+            {"name": "원자재", "reason": "글로벌 수요 불확실성으로 가격 변동", "example_stocks": ["포스코", "고려아연"]},
+        ]
+
+        slides = script.get("slides", [])
+        for slide in slides:
+            if slide.get("type") in ("beneficiary", "bullish"):
+                sectors = slide.get("sectors", [])
+                while len(sectors) < 2:
+                    # Add fallback sector not already in list
+                    for fb in fallback_bullish:
+                        if fb["name"] not in [s["name"] for s in sectors]:
+                            sectors.append(fb)
+                            break
+                slide["sectors"] = sectors[:3]
+
+            elif slide.get("type") in ("victim", "bearish"):
+                sectors = slide.get("sectors", [])
+                while len(sectors) < 2:
+                    for fb in fallback_bearish:
+                        if fb["name"] not in [s["name"] for s in sectors]:
+                            sectors.append(fb)
+                            break
+                slide["sectors"] = sectors[:3]
+
+        return script
 
     def __init__(self):
         """Initialize ContentGenerator with Ollama availability check"""
@@ -393,6 +479,9 @@ class ContentGenerator:
 
             # Validate required fields
             if "slides" in result and len(result["slides"]) == 5:
+                # Apply post-processing
+                result = self._validate_and_fix_sectors(result)
+                result = self._clean_script(result)
                 logger.info(f"Generated Instagram script for cluster {cluster_id}")
                 return result
             else:

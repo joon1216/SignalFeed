@@ -1401,3 +1401,42 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ EXAONE 내부 메모 제거 규칙 추가
   - ✅ 25장 카드 생성 완료 (새 비율 적용)
 - **Result**: ✅ Success — 1080x1350 비율, 폰트 개선, 레이아웃 최적화 완료
+
+#### Session 24: 섹터 2개 강제 - JSON 후처리 + 텍스트 클리닝
+- **Task**: EXAONE 프롬프트 강화 + JSON 후처리로 섹터 최소 2개 보장, 내부 메모 제거
+- **Actions**:
+  - **Step 1: content_gen.py EXAONE 프롬프트 강화**
+    - [CRITICAL] 규칙 추가: slides[2].sectors, slides[3].sectors 반드시 2-3개
+    - "sectors 배열이 1개면 무조건 틀린 답임" 명시
+    - 예시 추가: 금리 인상 → 금융주 + 달러 자산 (2개)
+    - one_line 필드: 반드시 한국어만 (영어 절대 금지)
+  - **Step 2: _validate_and_fix_sectors() 메서드 추가**
+    - 섹터 2개 미만 시 자동으로 fallback 섹터 추가
+    - fallback_bullish: 성장주, 소비재, 금융주
+    - fallback_bearish: 채권, 부동산, 원자재
+    - 중복 방지: 기존 섹터명 체크 후 추가
+    - 최대 3개로 제한
+  - **Step 3: _clean_text() + _clean_script() 메서드 추가**
+    - 정규식으로 내부 메모 패턴 제거:
+      - `\(예:.*?\)` → "" (예시 괄호)
+      - `\(구체적인.*?\)` → "" (구체적인 예시 필요)
+      - `\([A-Za-z가-힣\s]+?\)` → "" (FactSet, Bloomberg 집계 등)
+    - 모든 텍스트 필드 클리닝: facts, sectors.reason, fact, title, one_line
+  - **Step 4: generate_instagram_script() 후처리 통합**
+    - JSON 파싱 후 즉시 실행:
+      - `result = self._validate_and_fix_sectors(result)`
+      - `result = self._clean_script(result)`
+  - **Step 5: 테스트 실행**
+    - test_regenerate.py: 기존 클러스터 데이터로 3개 스크립트 재생성
+    - 결과:
+      - Cluster 2: beneficiary 2개 (반도체, 2차전지), victim 2개 (에너지, 채권)
+      - Cluster 4: beneficiary 2개 (방산, 해운), victim 2개 (에너지, 화학)
+      - Cluster 3: beneficiary 2개 (반도체, 2차전지), victim 2개 (전통 제조업, 채권)
+    - test_cards.py: 2개 클러스터 × 5장 = 10장 생성
+- **성과**:
+  - ✅ 섹터 최소 2개 강제 성공 (EXAONE 무시해도 후처리로 보장)
+  - ✅ 내부 메모 패턴 완전 제거 (예시 필요, 구체적인 등)
+  - ✅ one_line 한국어 강제 규칙 추가
+  - ✅ Fallback 섹터 시스템 구축 (중복 방지, 최대 3개)
+  - ✅ 10장 카드 생성 완료 (모든 섹터 슬라이드 2개 보장)
+- **Result**: ✅ Success — 섹터 2개 강제 후처리, 텍스트 클리닝 완료
