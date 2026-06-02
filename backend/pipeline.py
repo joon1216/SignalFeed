@@ -102,7 +102,7 @@ def step2_clustering(input_file):
 
 def step3_content_generation(input_file):
     """
-    Step 3: Gemini 2.5 Flash 콘텐츠 생성
+    Step 3: Gemini HTML 직접 생성
 
     Args:
         input_file: 클러스터링 결과 파일 (data/2_clustered/clustered.jsonl)
@@ -111,7 +111,7 @@ def step3_content_generation(input_file):
         str: 출력 파일 경로
     """
     print("\n" + "="*70)
-    print("3️⃣ 콘텐츠 생성 단계 (Gemini 2.5 Flash)")
+    print("3️⃣ HTML 생성 단계 (Gemini HTML Direct)")
     print("="*70)
 
     if not os.path.exists(input_file):
@@ -120,22 +120,22 @@ def step3_content_generation(input_file):
     generator = ContentGenerator()
     scripts = generator.run(input_file)
 
-    print(f"\n✅ 콘텐츠 생성 완료! {len(scripts)}개 스크립트 → data/3_generated/scripts.json")
+    print(f"\n✅ HTML 생성 완료! {len(scripts)}개 스크립트 → data/3_generated/scripts.json")
     return 'data/3_generated/scripts.json'
 
 
 def step4_card_generation(input_file):
     """
-    Step 4: HTML 카드 이미지 생성
+    Step 4: Playwright 스크린샷 (HTML → PNG)
 
     Args:
-        input_file: 스크립트 파일 (data/3_generated/scripts.json)
+        input_file: HTML 스크립트 파일 (data/3_generated/scripts.json)
 
     Returns:
-        dict: 클러스터별 카드 경로
+        int: 생성된 카드 수
     """
     print("\n" + "="*70)
-    print("4️⃣ 카드 생성 단계 (HTML + Playwright)")
+    print("4️⃣ 스크린샷 단계 (Playwright HTML → PNG)")
     print("="*70)
 
     if not os.path.exists(input_file):
@@ -144,7 +144,7 @@ def step4_card_generation(input_file):
     generator = HTMLCardGenerator()
     results = generator.run(input_file)
 
-    print(f"\n✅ 카드 생성 완료! {results}개 클러스터 → data/4_cards/")
+    print(f"\n✅ 스크린샷 완료! {results}장 카드 → data/4_cards/")
     return results
 
 

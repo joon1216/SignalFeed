@@ -1834,3 +1834,81 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ slides 3-4 content 정상 렌더링 (섹터 카드 표시)
   - ✅ 25장 카드 생성 완료 (모든 슬라이드 정상)
 - **Result**: ✅ Success — 슬라이드 타입 불일치 버그 완전 해결
+
+---
+
+#### Session 32: Gemini HTML 직접 생성 파이프라인 전환
+- **Task**: 파이프라인 완전 재설계 — JSON 스크립트 → HTML 직접 생성
+- **핵심 변경**:
+  - 기존: Gemini → JSON → html_card_gen.py (고정 레이아웃) → PNG
+  - 변경: Gemini → 슬라이드별 HTML 직접 생성 → Playwright → PNG
+- **Actions**:
+  - **Step 1: content_gen.py 완전 재작성** (380 LOC):
+    - Pydantic Schema:
+      - SlideHTML: slide_num, layout_intent (CoT), html (완성된 단일 파일)
+      - CardHTMLScript: issue_id, pexels_keyword, slides (5개)
+    - System Prompt: Bloomberg + 토스증권 디자이너 페르소나
+      - 5가지 레이아웃 강제 (각 슬라이드 서로 다른 레이아웃):
+        - Slide 1 [Hook]: Hero Title — 거대한 타이포그래피
+        - Slide 2 [Context]: Split 50:50 — 좌측 텍스트 + 우측 수치
+        - Slide 3 [Data]: Data Metric Grid — 2x2 카드 그리드
+        - Slide 4 [Analysis]: Expert Quote — 대형 인용구
+        - Slide 5 [CTA]: CTA List — 3줄 요약 + 저장 유도
+      - Design System:
+        - Tailwind CSS CDN (빌드 도구 없이 순수 HTML)
+        - Pretendard font (한국어 최적화)
+        - 한국 시장 color: 빨강 상승 (#ef4444), 파랑 하락 (#3b82f6)
+        - Container: w-[1080px] h-[1350px] 고정
+        - Spacing: 4배수 토큰만 (gap-4, p-16, mb-12)
+        - Typography: text-7xl (Display) → text-5xl (Title) → text-2xl (Body) → text-6xl (Metrics)
+      - Base Template: 완성된 단일 파일 HTML (React/Vue 금지)
+    - Gemini Config:
+      - temperature=0.9 (레이아웃 다양성 확보)
+      - response_schema=CardHTMLScript (Pydantic 강제)
+      - top_p=1.0
+    - TemplateFallback: API key 없을 시 기본 HTML 템플릿
+  - **Step 2: html_card_gen.py 완전 재작성** (130 LOC):
+    - 역할 축소: HTML 생성 제거 → Playwright 스크린샷만
+    - Pre-warmed browser (콜드 스타트 제거)
+      - sync_playwright().start() 재사용
+      - chromium.launch(headless=True) 인스턴스 유지
+    - Retina 고해상도:
+      - device_scale_factor=2
+      - viewport={"width": 1080, "height": 1350}
+    - 폰트 완전 로드 대기:
+      - page.evaluate("document.fonts.ready")
+    - Selector-based screenshot:
+      - #slide-1 div 캡처 (전체 페이지 아님)
+  - **Step 3: pipeline.py 업데이트**:
+    - Step 3 title: "Gemini 2.5 Flash" → "Gemini HTML Direct"
+    - Step 4 title: "HTML + Playwright" → "Playwright HTML → PNG"
+- **실행 결과**:
+  - Step 3 (HTML Generation): 5 clusters × ~50s/cluster = 4분 23초
+    - Gemini API 호출: 5회 성공 (cluster 2, 4, 3, 0, 6)
+    - Layout intent 로그 확인:
+      - Cluster 2 Slide 1: "Hero Title — 거대한 타이포그래피로 미-이란 협상 불확실성과 AI 기술주의 부상을..."
+      - Cluster 2 Slide 2: "Split 50:50 — 좌측에는 美-이란 협상 관련 핵심 쟁점과 트럼프 대통령의 발언을,..."
+      - Cluster 2 Slide 3: "Data Metric Grid — 2x2 카드 그리드 형태로 미-이란 협상 주요 발언과 중..."
+      - Cluster 2 Slide 4: "Expert Quote — 대형 인용구 스타일로 글로벌 시장 분석가의 발언을 인용하여 美-..."
+      - Cluster 2 Slide 5: "CTA List — 3줄 요약 형태로 주요 시사점을 정리하고, 저장 및 공유를 유도하는 문..."
+    - Saved: data/3_generated/scripts.json (5 HTML scripts)
+  - Step 4 (Screenshot): 25장 카드 생성 (5 clusters × 5 slides)
+    - Chromium browser started
+    - 평균 2초/슬라이드 (Retina 2x, 폰트 로드 대기)
+    - 총 소요 시간: ~42초
+    - Saved: data/4_cards/cluster_*/slide_*.png (25 files)
+  - HTML 검증:
+    - ✅ Tailwind CSS CDN 포함
+    - ✅ Pretendard font 로드
+    - ✅ 1080x1350px container
+    - ✅ 한국어 텍스트 (경제 뉴스 분석)
+    - ✅ 5가지 서로 다른 레이아웃 (Hero → Split → Grid → Quote → CTA)
+- **성과**:
+  - ✅ Gemini 레이아웃 다양성 확보 (5가지 서로 다른 레이아웃 강제)
+  - ✅ layout_intent CoT 로그 출력 (레이아웃 전략 가시화, 디버깅 용이)
+  - ✅ Tailwind CSS + Pretendard 적용 (한국어 최적화, 웹 표준)
+  - ✅ 한국 시장 color convention (빨강 상승, 파랑 하락)
+  - ✅ Playwright 스크린샷 성능 최적화 (pre-warmed browser, ~2초/슬라이드)
+  - ✅ 25장 카드 생성 완료 (5 clusters × 5 slides, 1080x1350px)
+  - ✅ HTML → PNG 파이프라인 안정화 (Retina 2x, 폰트 완전 로드)
+- **Result**: ✅ Success — Gemini HTML 직접 생성 파이프라인 전환 완료, Tailwind+Pretendard 적용
