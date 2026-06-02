@@ -102,7 +102,7 @@ def step2_clustering(input_file):
 
 def step3_content_generation(input_file):
     """
-    Step 3: EXAONE CoT 콘텐츠 생성
+    Step 3: Gemini 2.5 Flash 콘텐츠 생성
 
     Args:
         input_file: 클러스터링 결과 파일 (data/2_clustered/clustered.jsonl)
@@ -111,7 +111,7 @@ def step3_content_generation(input_file):
         str: 출력 파일 경로
     """
     print("\n" + "="*70)
-    print("3️⃣ 콘텐츠 생성 단계 (EXAONE CoT)")
+    print("3️⃣ 콘텐츠 생성 단계 (Gemini 2.5 Flash)")
     print("="*70)
 
     if not os.path.exists(input_file):

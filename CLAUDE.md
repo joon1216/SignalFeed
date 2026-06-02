@@ -47,7 +47,7 @@
 - **scikit-learn**: TF-IDF 벡터화
 - **UMAP**: 차원 축소 (클러스터링)
 - **HDBSCAN**: 밀도 기반 클러스터링
-- **EXAONE 3.5 7.8B (Ollama)**: 한국어 특화 LLM (콘텐츠 생성) — Confirmed working via Ollama local
+- **Gemini 2.5 Flash (Google AI Studio)**: 한국어 콘텐츠 생성, Pydantic schema enforcement, 무료 1500 req/day
 
 ### Data Collection
 - **RSS Feeds**: Reuters, Bloomberg, NYT Economy 매크로 경제 뉴스
@@ -55,8 +55,8 @@
 - **FeedParser**: RSS 파싱 및 키워드 필터링 (Fed, inflation, GDP, tariff 등)
 
 ### Content Generation
-- **EXAONE 3.5**: 한국어 요약 생성 (무료, LG AI)
-- **Pillow + ImageMagick**: Instagram 카드 이미지 생성 (1080x1920px, 5장)
+- **Gemini 2.5 Flash**: 한국어 요약 생성 (무료 1500 req/day, Google AI Studio)
+- **HTML + Playwright**: Instagram 카드 이미지 생성 (1080x1350px, 5장, Noto Serif/Sans KR)
 - **MoviePy + gTTS**: YouTube Shorts 영상 생성 (60초, AI 음성)
 
 ### Deployment & DevOps
@@ -67,6 +67,7 @@
 ### External APIs
 - **Finnhub**: 글로벌 뉴스 API (무료 플랜: 60 req/min)
 - **Pexels API**: 배경 이미지 검색 (무료 플랜: 200 req/hour)
+- **Gemini API**: 콘텐츠 생성 (무료 플랜: 1500 req/day, 10 req/min)
 - **Instagram Graph API**: 자동 포스팅 (Phase 2)
 - **YouTube Data API v3**: Shorts 업로드 (Phase 2)
 
@@ -175,8 +176,11 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 | 5.5 | Content Generation Pipeline | ✅ Complete | content_gen.py (template fallback), 9/9 tests passed |
 | 5.6 | Instagram Card Image Generator | ✅ Complete | card_gen.py (Pillow 1080x1920px), 6/6 tests passed |
 | 5.7 | YouTube Shorts Video Generator | ✅ Complete | shorts_gen.py (MoviePy + gTTS), 6/6 tests passed |
-| **Phase 6: Advanced Features** |
-| 6.1 | APScheduler Integration | ⬜ Planned | Periodic crawling (every 4 hours) |
+| **Phase 6: Gemini Upgrade + Design Overhaul** |
+| 6.1 | Gemini 2.5 Flash Integration | ✅ Complete | EXAONE → Gemini, Pydantic schema, 5/5 scripts generated |
+| 6.2 | Design System Redesign | ✅ Complete | 1080x1350px, Noto Serif/Sans KR, editorial layouts |
+| **Phase 7: Advanced Features** |
+| 7.1 | APScheduler Integration | ⬜ Planned | Periodic crawling (every 4 hours) |
 | 6.2 | Newsletter Module | ⬜ Planned | Stibee/Substack integration |
 | 6.3 | Premium API Server | ⬜ Planned | FastAPI for enterprise clients |
 | 6.4 | A/B Testing Framework | ⬜ Planned | Content performance analytics |
@@ -200,10 +204,10 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 - **Rationale**: No manual annotation needed, scalable, cost-effective ($0.15 for ~6,600 articles)
 - **Tradeoff**: Label noise (~5-10% error rate), requires validation set for quality control
 
-**3. EXAONE 3.5 (LG AI) for Content Generation**
-- **Decision**: Use EXAONE 3.5 instead of GPT-4/Claude for summarization
-- **Rationale**: Free API (LG AI Research), Korean-specialized (better than GPT-4 for Korean), no cost ceiling
-- **Tradeoff**: Slightly lower quality vs. GPT-4o, requires LG AI account, potential rate limits
+**3. Gemini 2.5 Flash for Content Generation**
+- **Decision**: Use Gemini 2.5 Flash instead of EXAONE/GPT-4/Claude for summarization
+- **Rationale**: Free API (Google AI Studio, 1500 req/day), Pydantic schema enforcement, fast generation, no cost ceiling
+- **Tradeoff**: Rate limits (10 req/min), requires Google account, template fallback needed
 
 **4. Fact-Constrained Prompts (STOCKER-style)**
 - **Decision**: Enforce fact-only extraction, ban prediction/recommendation expressions
@@ -332,8 +336,8 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 - NEVER silently swallow exceptions
 
 **14. Environment Variables**
-- REQUIRED: `POLYGON_API_KEY`, `FINNHUB_API_KEY`, `OPENAI_API_KEY`
-- OPTIONAL: `EXAONE_API_KEY`, `INSTAGRAM_ACCESS_TOKEN`, `YOUTUBE_API_KEY`
+- REQUIRED: `FINNHUB_API_KEY`, `GEMINI_API_KEY`, `PEXELS_API_KEY`
+- OPTIONAL: `OPENAI_API_KEY`, `INSTAGRAM_ACCESS_TOKEN`, `YOUTUBE_API_KEY`
 - Load via `python-dotenv`
 
 **15. Logging**
@@ -1440,3 +1444,70 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ Fallback 섹터 시스템 구축 (중복 방지, 최대 3개)
   - ✅ 10장 카드 생성 완료 (모든 섹터 슬라이드 2개 보장)
 - **Result**: ✅ Success — 섹터 2개 강제 후처리, 텍스트 클리닝 완료
+
+#### Session 25: Gemini 2.5 Flash 교체 + 디자인 전면 개선
+- **Task**: EXAONE → Gemini 2.5 Flash 교체, HTML 카드 디자인 완전 재설계 (1080x1350px)
+- **Actions**:
+  - **Step 1: content_gen.py 완전 재작성 (Gemini 2.5 Flash)**
+    - Installed: google-generativeai (0.8.5), pydantic (2.12.3)
+    - Pydantic Schema for structured output enforcement
+      - Sector: name, reason, example_stocks
+      - Slide: type, hook_title, one_line, facts, sectors, summaries, watch_point
+      - CardScript: cluster_id, macro_issue, pexels_keyword, hook_title, reasoning_chain, slides, hashtags, disclaimer
+    - Gemini 2.5 Flash 설정:
+      - model_name="gemini-2.5-flash"
+      - response_mime_type="application/json"
+      - response_schema=CardScript (Pydantic)
+    - System Prompt 재작성:
+      - 한국어 전용, 순한국어 hook_title, 팩트 수치 포함 강제
+      - CoT 추론 경로: 팩트 추출 → 경제 메커니즘 → 한국 주식 영향
+      - sectors 2-3개 강제
+    - Template Fallback 유지 (API key 없을 시)
+    - Retry logic: max 3 retries, 5s backoff
+  - **Step 2: html_card_gen.py 전면 재작성 (1080x1350px)**
+    - **New Design System**:
+      - Canvas: 1080x1350px (Instagram 4:5 ratio)
+      - Fonts: Google Fonts (Noto Serif KR 900/700, Noto Sans KR 400/500/700)
+      - Colors: #0D0D0D bg, #00C853 bullish, #FF3D3D bearish, #888888 neutral
+    - **Slide 1 (Cover)**:
+      - Full bleed Pexels 배경 + dark gradient (bottom 60% → 85% opacity)
+      - hook_title: Noto Serif KR 900, 88px, bottom: 380px (center-left aligned)
+      - one_line: 24px, bottom: 310px
+      - Signal badge (pill): background signal color, bottom: 240px
+      - Sources: 18px, bottom: 190px
+      - Bottom green line: 3px full width
+    - **Slide 2 (Context "무슨 일이?")**:
+      - Dark bg #0D0D0D
+      - Title: Noto Serif KR 700, 52px
+      - 3 facts: green dash "—" + text (28px), evenly distributed (y=200/533/866)
+      - Source attribution at bottom
+    - **Slides 3-4 (Bullish/Bearish)**:
+      - Section label: 4px vertical bar + 52px text (signal color)
+      - Sectors: 56px name + 24px reason + 18px stocks, evenly distributed
+      - Bottom fact box: separator + "FACT /" label + text
+    - **Slide 5 (Conclusion)**:
+      - Title: Noto Serif KR 900, 64px
+      - 3 summary rows: colored dot (12px) + text (30px), evenly distributed
+      - Watch point box: #161616 bg, green border-left
+      - CTA section: main CTA (26px) + sub CTA (20px green)
+      - Disclaimer: 13px, #333333, center
+  - **Step 3: pipeline.py 업데이트**
+    - Step 3 title: "EXAONE CoT" → "Gemini 2.5 Flash"
+  - **Step 4: .env.example 업데이트**
+    - EXAONE_API_KEY 제거 → GEMINI_API_KEY 추가 (https://aistudio.google.com/app/apikey)
+  - **Step 5: 전체 파이프라인 테스트**
+    - Step 2 (Clustering): 5 clusters, 90/100 articles clustered
+    - Step 3 (Content): 5 scripts generated (template fallback, no GEMINI_API_KEY)
+    - Step 4 (Cards): 25 PNG files generated (5 clusters × 5 slides)
+    - 총 소요 시간: ~18초 (clustering + content + cards)
+  - **Step 6: Pexels 이미지 저장 버그 수정**
+    - image_fetcher.fetch() returns PIL Image object → html_card_gen.py에서 temp file로 저장
+    - data/temp/pexels_{cluster_id}.jpg 생성 → HTML에서 file:// URL로 참조
+- **성과**:
+  - ✅ Gemini 2.5 Flash 연동 완료 (Pydantic schema, template fallback)
+  - ✅ 디자인 전면 개선 (1080x1350px, Noto Serif/Sans KR, editorial layouts)
+  - ✅ 슬라이드 2-4 공간 활용 개선 (evenly distributed content, no empty space)
+  - ✅ Letter-spacing 정상화 (섹터명 깨짐 해결)
+  - ✅ 25장 카드 생성 성공 (5 clusters × 5 slides, 1080x1350px)
+  - ✅ Google Fonts 사용으로 폰트 품질 향상
+- **Result**: ✅ Success — Gemini 2.5 Flash 교체, 디자인 완전 재설계 완료
