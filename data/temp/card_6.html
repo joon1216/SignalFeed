@@ -30,7 +30,6 @@
       margin-bottom: 20px;
     }
 
-    /* Typography */
     .serif {
       font-family: 'Noto Serif KR', serif;
     }
@@ -38,228 +37,227 @@
     .sans {
       font-family: 'Noto Sans KR', sans-serif;
     }
-
-    /* Micro brand */
-    .micro-brand {
-      position: absolute;
-      top: 30px;
-      left: 30px;
-      font-size: 13px;
-      letter-spacing: 0.2em;
-      font-weight: 700;
-      color: #00C853;
-      text-transform: uppercase;
-      z-index: 10;
-    }
   </style>
 </head>
 <body>
 
 
 <div class="card" id="slide-1" style="background: #0D0D0D;">
-  <!-- Top 50%: Image -->
-  <div style="position: absolute; top: 0; left: 0; right: 0; height: 675px; background-image: url('file:///Users/joon/Documents/GitHub/issuefit_project/data/temp/pexels_6.jpg'); background-size: cover; background-position: center;"></div>
+  <!-- Background image: y=0~620px -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 620px; background-image: url('file:///Users/joon/Documents/GitHub/issuefit_project/data/temp/pexels_6.jpg'); background-size: cover; background-position: center;"></div>
 
-  <!-- Bottom 50%: Dark solid (flex column space-between) -->
-  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 675px; background: #0D0D0D; padding: 40px; display: flex; flex-direction: column; justify-content: space-between;">
-    <!-- Date line -->
-    <p style="font-size: 18px; color: #666666;">
-      2026.06.02 · 글로벌 경제
-    </p>
+  <!-- Dark background: y=620px~1350px -->
+  <div style="position: absolute; top: 620px; left: 0; right: 0; height: 730px; background: #0D0D0D;"></div>
 
-    <!-- Hook title (HUGE) -->
-    <h1 class="serif" style="font-size: 80px; font-weight: 900; line-height: 1.2; letter-spacing: -0.02em; color: #FFFFFF;">
-      경제<br>주목
-    </h1>
-
-    <!-- One-line -->
-    <p class="sans" style="font-size: 24px; line-height: 1.4; color: #AAAAAA;">
-      India's forex reserves fa
-    </p>
-
-    <!-- Sources (bottom) -->
-    <p style="font-size: 18px; color: #666666;">
-      Reuters
-    </p>
+  <!-- SIGNALFEED brand -->
+  <div style="position: absolute; top: 24px; left: 40px; font-size: 13px; letter-spacing: 0.2em; font-weight: 700; color: #00C853; text-transform: uppercase; z-index: 10;">
+    SIGNALFEED
   </div>
 
-  <!-- Top-left brand -->
-  <div class="micro-brand">SIGNALFEED</div>
+  <!-- Date: y=640px -->
+  <p style="position: absolute; top: 640px; left: 40px; right: 40px; font-size: 18px; color: #666666;">
+    2026.06.02 · 글로벌 경제
+  </p>
+
+  <!-- Hook title: y=700px -->
+  <h1 class="serif" style="position: absolute; top: 700px; left: 40px; right: 40px; font-size: 80px; font-weight: 900; line-height: 1.2; letter-spacing: -0.02em; color: #FFFFFF;">
+    경제<br>주목
+  </h1>
+
+  <!-- One-line: y=950px -->
+  <p class="sans" style="position: absolute; top: 950px; left: 40px; right: 40px; font-size: 24px; line-height: 1.4; color: #AAAAAA;">
+    India's forex reserves fa
+  </p>
+
+  <!-- Sources: y=1270px -->
+  <p style="position: absolute; top: 1270px; left: 40px; font-size: 16px; color: #555555;">
+    Reuters
+  </p>
 </div>
 
-<div class="card" id="slide-2" style="background: #0D0D0D; display: flex; flex-direction: column;">
-  <div class="micro-brand">SIGNALFEED</div>
-
-  <!-- Title -->
-  <div style="padding: 40px 40px 20px 40px;">
-    <h2 class="serif" style="font-size: 52px; font-weight: 700; color: #FFFFFF;">
+<div class="card" id="slide-2" style="background: #0D0D0D;">
+  <!-- Header bar: y=0~100px -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 100px; background: #111111; display: flex; align-items: center; padding: 0 40px; justify-content: space-between;">
+    <span style="font-size: 13px; letter-spacing: 0.2em; font-weight: 700; color: #00C853; text-transform: uppercase;">SIGNALFEED</span>
+    <h2 class="serif" style="font-size: 44px; font-weight: 700; color: #FFFFFF;">
       무슨 일이?
     </h2>
   </div>
 
-  <!-- Fact blocks (flex: 1, equal height) -->
+  <!-- Fact blocks -->
   
-    <div style="flex: 1; background: #161616; border-left: 4px solid #00C853; padding: 28px 40px; display: flex; align-items: center; position: relative;">
-      <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A; z-index: 0;">
-        01
-      </div>
-      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF; position: relative; z-index: 1;">
-        주요 경제 지표 발표
-      </p>
+  <!-- Fact block 1: y=100~450px -->
+  <div style="position: absolute; top: 100px; left: 0; right: 0; height: 350px; background: #161616; border-left: 4px solid #00C853;">
+    <!-- Watermark number -->
+    <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A;">
+      01
     </div>
+    <!-- Fact text -->
+    <p class="sans" style="position: absolute; top: 60px; left: 40px; right: 40px; font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF;">
+      주요 경제 지표 발표
+    </p>
+  </div>
 
-    <div style="flex: 1; background: #161616; border-left: 4px solid #00C853; padding: 28px 40px; display: flex; align-items: center; position: relative;">
-      <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A; z-index: 0;">
-        02
-      </div>
-      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF; position: relative; z-index: 1;">
-        시장 반응 나타남
-      </p>
+  <!-- Fact block 2: y=458~808px -->
+  <div style="position: absolute; top: 458px; left: 0; right: 0; height: 350px; background: #161616; border-left: 4px solid #00C853;">
+    <!-- Watermark number -->
+    <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A;">
+      02
     </div>
+    <!-- Fact text -->
+    <p class="sans" style="position: absolute; top: 60px; left: 40px; right: 40px; font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF;">
+      시장 반응 나타남
+    </p>
+  </div>
 
-    <div style="flex: 1; background: #161616; border-left: 4px solid #00C853; padding: 28px 40px; display: flex; align-items: center; position: relative;">
-      <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A; z-index: 0;">
-        03
-      </div>
-      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF; position: relative; z-index: 1;">
-        분석가들 주목
-      </p>
+  <!-- Fact block 3: y=816~1166px -->
+  <div style="position: absolute; top: 816px; left: 0; right: 0; height: 350px; background: #161616; border-left: 4px solid #00C853;">
+    <!-- Watermark number -->
+    <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A;">
+      03
     </div>
+    <!-- Fact text -->
+    <p class="sans" style="position: absolute; top: 60px; left: 40px; right: 40px; font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF;">
+      분석가들 주목
+    </p>
+  </div>
 
 
-  <!-- Source badge -->
-  <p style="padding: 20px 40px; font-size: 14px; color: #444444;">
+  <!-- Source: y=1280px -->
+  <p style="position: absolute; top: 1280px; left: 40px; font-size: 16px; color: #444444;">
     출처: Reuters
   </p>
 </div>
 
-<div class="card" id="slide-3" style="background: #0D0D0D; display: flex; flex-direction: column;">
-  <div class="micro-brand">SIGNALFEED</div>
-
-  <!-- Header -->
-  <div style="padding: 40px 40px 20px 40px;">
-    <h2 class="serif" style="font-size: 52px; font-weight: 900; color: #00C853;">
+<div class="card" id="slide-3" style="background: #0D0D0D;">
+  <!-- Header: y=0~120px -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 120px; background: #0D0D0D; display: flex; align-items: center; padding: 0 40px;">
+    <div style="font-size: 13px; letter-spacing: 0.2em; font-weight: 700; color: #00C853; text-transform: uppercase; position: absolute; top: 24px; left: 40px;">SIGNALFEED</div>
+    <h2 class="serif" style="font-size: 52px; font-weight: 900; color: #00C853; margin-top: 20px;">
       ↑ 수혜주는?
     </h2>
   </div>
 
-  <!-- Sector cards (flex: 1, 12px gap) -->
-  <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 40px;">
-    
-    <div style="flex: 1; background: #0F1F0F; border: 1px solid #00C85333; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
-      <h3 class="serif" style="font-size: 72px; font-weight: 900; color: #00C853; margin-bottom: 16px; line-height: 1.1; letter-spacing: -0.02em;">
-        성장주
-      </h3>
-      <p class="sans" style="font-size: 28px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
-        실적 개선으로 수혜
-      </p>
-    </div>
-
-    <div style="flex: 1; background: #0F1F0F; border: 1px solid #00C85333; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
-      <h3 class="serif" style="font-size: 72px; font-weight: 900; color: #00C853; margin-bottom: 16px; line-height: 1.1; letter-spacing: -0.02em;">
-        소비재
-      </h3>
-      <p class="sans" style="font-size: 28px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
-        소비 증가 기대
-      </p>
-    </div>
-
+  <!-- Sector cards -->
+  
+  <!-- Sector card 1: y=120~620px -->
+  <div style="position: absolute; top: 120px; left: 40px; right: 40px; height: 500px; background: #0F1F0F; border: 1px solid #00C85333; border-radius: 8px;">
+    <!-- Sector name: 수직 중앙 위쪽 -->
+    <h3 class="serif" style="position: absolute; top: 190px; left: 40px; right: 40px; font-size: 72px; font-weight: 900; color: #00C853; line-height: 1.1; letter-spacing: -0.02em;">
+      성장주
+    </h3>
+    <!-- Reason: 섹터명 아래 -->
+    <p class="sans" style="position: absolute; top: 290px; left: 40px; right: 40px; font-size: 26px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
+      실적 개선으로 수혜
+    </p>
   </div>
 
-  <!-- Bottom FACT box -->
-  <div style="padding: 20px 40px;">
-    <div style="background: #161616; padding: 24px; border-radius: 8px;">
-      <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: #00C853; margin-bottom: 8px;">
-        FACT /
-      </p>
-      <p class="sans" style="font-size: 20px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
-        경제 지표 개선으로 투자 심리 회복
-      </p>
-    </div>
+  <!-- Sector card 2: y=628~1128px -->
+  <div style="position: absolute; top: 628px; left: 40px; right: 40px; height: 500px; background: #0F1F0F; border: 1px solid #00C85333; border-radius: 8px;">
+    <!-- Sector name: 수직 중앙 위쪽 -->
+    <h3 class="serif" style="position: absolute; top: 190px; left: 40px; right: 40px; font-size: 72px; font-weight: 900; color: #00C853; line-height: 1.1; letter-spacing: -0.02em;">
+      소비재
+    </h3>
+    <!-- Reason: 섹터명 아래 -->
+    <p class="sans" style="position: absolute; top: 290px; left: 40px; right: 40px; font-size: 26px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
+      소비 증가 기대
+    </p>
+  </div>
+
+
+  <!-- FACT box: y=1136~1350px -->
+  <div style="position: absolute; top: 1136px; left: 40px; right: 40px; background: #161616; padding: 24px; border-radius: 8px;">
+    <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: #00C853; margin-bottom: 8px;">
+      FACT /
+    </p>
+    <p class="sans" style="font-size: 20px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
+      경제 지표 개선으로 투자 심리 회복
+    </p>
   </div>
 </div>
 
-<div class="card" id="slide-4" style="background: #0D0D0D; display: flex; flex-direction: column;">
-  <div class="micro-brand">SIGNALFEED</div>
-
-  <!-- Header -->
-  <div style="padding: 40px 40px 20px 40px;">
-    <h2 class="serif" style="font-size: 52px; font-weight: 900; color: #FF3D3D;">
+<div class="card" id="slide-4" style="background: #0D0D0D;">
+  <!-- Header: y=0~120px -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 120px; background: #0D0D0D; display: flex; align-items: center; padding: 0 40px;">
+    <div style="font-size: 13px; letter-spacing: 0.2em; font-weight: 700; color: #00C853; text-transform: uppercase; position: absolute; top: 24px; left: 40px;">SIGNALFEED</div>
+    <h2 class="serif" style="font-size: 52px; font-weight: 900; color: #FF3D3D; margin-top: 20px;">
       ↓ 주의할 섹터는?
     </h2>
   </div>
 
-  <!-- Sector cards (flex: 1, 12px gap) -->
-  <div style="flex: 1; display: flex; flex-direction: column; gap: 12px; padding: 0 40px;">
-    
-    <div style="flex: 1; background: #1F0F0F; border: 1px solid #FF3D3D33; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
-      <h3 class="serif" style="font-size: 72px; font-weight: 900; color: #FF3D3D; margin-bottom: 16px; line-height: 1.1; letter-spacing: -0.02em;">
-        채권
-      </h3>
-      <p class="sans" style="font-size: 28px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
-        금리 불확실성
-      </p>
-    </div>
-
-    <div style="flex: 1; background: #1F0F0F; border: 1px solid #FF3D3D33; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
-      <h3 class="serif" style="font-size: 72px; font-weight: 900; color: #FF3D3D; margin-bottom: 16px; line-height: 1.1; letter-spacing: -0.02em;">
-        부동산
-      </h3>
-      <p class="sans" style="font-size: 28px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
-        금리 부담
-      </p>
-    </div>
-
+  <!-- Sector cards -->
+  
+  <!-- Sector card 1: y=120~620px -->
+  <div style="position: absolute; top: 120px; left: 40px; right: 40px; height: 500px; background: #1F0F0F; border: 1px solid #FF3D3D33; border-radius: 8px;">
+    <!-- Sector name: 수직 중앙 위쪽 -->
+    <h3 class="serif" style="position: absolute; top: 190px; left: 40px; right: 40px; font-size: 72px; font-weight: 900; color: #FF3D3D; line-height: 1.1; letter-spacing: -0.02em;">
+      채권
+    </h3>
+    <!-- Reason: 섹터명 아래 -->
+    <p class="sans" style="position: absolute; top: 290px; left: 40px; right: 40px; font-size: 26px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
+      금리 불확실성
+    </p>
   </div>
 
-  <!-- Bottom FACT box -->
-  <div style="padding: 20px 40px;">
-    <div style="background: #161616; padding: 24px; border-radius: 8px;">
-      <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: #FF3D3D; margin-bottom: 8px;">
-        FACT /
-      </p>
-      <p class="sans" style="font-size: 20px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
-        인플레이션 압력으로 통화 긴축 지속
-      </p>
-    </div>
+  <!-- Sector card 2: y=628~1128px -->
+  <div style="position: absolute; top: 628px; left: 40px; right: 40px; height: 500px; background: #1F0F0F; border: 1px solid #FF3D3D33; border-radius: 8px;">
+    <!-- Sector name: 수직 중앙 위쪽 -->
+    <h3 class="serif" style="position: absolute; top: 190px; left: 40px; right: 40px; font-size: 72px; font-weight: 900; color: #FF3D3D; line-height: 1.1; letter-spacing: -0.02em;">
+      부동산
+    </h3>
+    <!-- Reason: 섹터명 아래 -->
+    <p class="sans" style="position: absolute; top: 290px; left: 40px; right: 40px; font-size: 26px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
+      금리 부담
+    </p>
+  </div>
+
+
+  <!-- FACT box: y=1136~1350px -->
+  <div style="position: absolute; top: 1136px; left: 40px; right: 40px; background: #161616; padding: 24px; border-radius: 8px;">
+    <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: #FF3D3D; margin-bottom: 8px;">
+      FACT /
+    </p>
+    <p class="sans" style="font-size: 20px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
+      인플레이션 압력으로 통화 긴축 지속
+    </p>
   </div>
 </div>
 
-<div class="card" id="slide-5" style="background: #0D0D0D; display: flex; flex-direction: column; padding: 40px; justify-content: space-between;">
-  <div class="micro-brand">SIGNALFEED</div>
-
-  <!-- Title -->
-  <div>
-    <h2 class="serif" style="font-size: 64px; font-weight: 900; color: #FFFFFF;">
+<div class="card" id="slide-5" style="background: #0D0D0D;">
+  <!-- Header: y=0~130px -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 130px; display: flex; align-items: center; padding: 0 40px;">
+    <div style="font-size: 13px; letter-spacing: 0.2em; font-weight: 700; color: #00C853; text-transform: uppercase; position: absolute; top: 24px; left: 40px;">SIGNALFEED</div>
+    <h2 class="serif" style="font-size: 64px; font-weight: 900; color: #FFFFFF; margin-top: 20px;">
       오늘의 핵심
     </h2>
   </div>
 
-  <!-- 3 summary blocks (stacked) -->
-  <div style="display: flex; flex-direction: column; gap: 16px;">
-    
-    <div style="background: #161616; padding: 28px 32px; border-left: 8px solid #00C853; border-radius: 4px;">
-      <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
-        성장주 중심 수혜 전망
-      </p>
-    </div>
-
-    <div style="background: #161616; padding: 28px 32px; border-left: 8px solid #FF3D3D; border-radius: 4px;">
-      <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
-        채권은 금리 부담
-      </p>
-    </div>
-
-    <div style="background: #161616; padding: 28px 32px; border-left: 8px solid #888888; border-radius: 4px;">
-      <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
-        시장 변동성 주의
-      </p>
-    </div>
-
+  <!-- Summary blocks -->
+  
+  <!-- Summary block 1: y=150~310px -->
+  <div style="position: absolute; top: 150px; left: 40px; right: 40px; height: 160px; background: #161616; border-left: 8px solid #00C853; border-radius: 4px; display: flex; align-items: center; padding: 0 32px;">
+    <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
+      성장주 중심 수혜 전망
+    </p>
   </div>
 
-  <!-- Watch point box -->
-  <div style="background: #111111; border-left: 4px solid #00C853; padding: 28px; border-radius: 8px;">
+  <!-- Summary block 2: y=318~478px -->
+  <div style="position: absolute; top: 318px; left: 40px; right: 40px; height: 160px; background: #161616; border-left: 8px solid #FF3D3D; border-radius: 4px; display: flex; align-items: center; padding: 0 32px;">
+    <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
+      채권은 금리 부담
+    </p>
+  </div>
+
+  <!-- Summary block 3: y=486~646px -->
+  <div style="position: absolute; top: 486px; left: 40px; right: 40px; height: 160px; background: #161616; border-left: 8px solid #888888; border-radius: 4px; display: flex; align-items: center; padding: 0 32px;">
+    <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
+      시장 변동성 주의
+    </p>
+  </div>
+
+
+  <!-- Watch point: y=670~870px -->
+  <div style="position: absolute; top: 670px; left: 40px; right: 40px; height: 200px; background: #111111; border-left: 4px solid #00C853; padding: 28px; border-radius: 8px;">
     <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: #00C853; margin-bottom: 8px;">
       주목 포인트
     </p>
@@ -268,8 +266,8 @@
     </p>
   </div>
 
-  <!-- CTA block (inverted, green bg) -->
-  <div style="background: #00C853; padding: 28px; border-radius: 8px;">
+  <!-- CTA box: y=900~1100px -->
+  <div style="position: absolute; top: 900px; left: 40px; right: 40px; height: 200px; background: #00C853; padding: 28px; border-radius: 8px; display: flex; flex-direction: column; justify-content: center;">
     <p class="sans" style="font-size: 26px; font-weight: 700; color: #000000; margin-bottom: 6px; letter-spacing: -0.01em;">
       더 궁금하다면 댓글에 '분석' 남겨주세요
     </p>
@@ -278,8 +276,8 @@
     </p>
   </div>
 
-  <!-- Disclaimer -->
-  <p style="text-align: center; font-size: 13px; color: #333333;">
+  <!-- Disclaimer: y=1290px -->
+  <p style="position: absolute; top: 1290px; left: 40px; right: 40px; text-align: center; font-size: 13px; color: #333333;">
     본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다
   </p>
 </div>
