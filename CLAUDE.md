@@ -1163,6 +1163,43 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 
 ---
 
+#### Session 28: 레이아웃 공백 수정 + 콘텐츠 간소화
+- **Task**: html_card_gen.py 공백 제거, 시그널 배지 제거, 티커 제거
+- **Actions**:
+  - **변경 1: Slide 1 (Cover) — 시그널 배지 완전 제거**
+    - 하단 675px를 flex column space-between으로 재구성
+    - 구성: 날짜 / hook_title(80px) / one_line / 출처
+    - 시그널 배지 제거 → 심플하게 이슈 어그로만
+  - **변경 2: Slide 2 (Context) — flex:1 균등 분할**
+    - 팩트 블록 3개를 `flex: 1`로 전체 높이 균등 분할
+    - 기존: `position: absolute` + 계산된 y_pos
+    - 변경: `flex: 1` → 자동 균등 분할, 공백 없음
+  - **변경 3: Slide 3-4 (Sectors) — 티커 제거, 폰트 크기 증가**
+    - example_stocks 필드 완전 제거 (티커 정보 삭제)
+    - 섹터명: 64px → **72px** (더 크게)
+    - 이유 텍스트: 24px → **28px** (가독성 향상)
+    - 섹터 카드: `flex: 1` + 12px gap → 균등 분할
+    - 카드 내부 텍스트: `justify-content: center` (수직 중앙 정렬)
+  - **변경 4: Slide 5 (Conclusion) — flex space-between**
+    - 전체 슬라이드: `display: flex; flex-direction: column; justify-content: space-between;`
+    - 구성 요소: 타이틀 / 요약3개 / 주목포인트 / CTA / 디스클레이머
+    - 기존: `position: absolute` + 고정 y 좌표
+    - 변경: flex space-between → 1350px 꽉 채움, 자동 간격 조정
+  - **테스트 실행**:
+    - `venv/bin/python backend/pipeline.py --steps 4`
+    - 25장 카드 재생성 성공 (5 clusters × 5 slides)
+    - 파일 크기: slide_1 (1.1MB), slides 2-5 (55-77KB) — 티커 제거로 약간 감소
+- **성과**:
+  - ✅ 시그널 배지 완전 제거 (Slide 1 심플화)
+  - ✅ 티커 정보 완전 제거 (Slide 3-4 간소화)
+  - ✅ flex 기반 레이아웃으로 전환 (공백 자동 제거, 유지보수성 향상)
+  - ✅ 섹터명 72px, 이유 28px (폰트 크기 증가, 가독성 향상)
+  - ✅ 모든 슬라이드 1350px 꽉 채움 (flex: 1, space-between)
+  - ✅ 25장 카드 정상 생성 (1080x1350px, 공백 없음)
+- **Result**: ✅ Success — 공백 제거, 콘텐츠 간소화 완료
+
+---
+
 **Last Updated**: 2026-06-02  
 **Version**: 2.0 (SignalFeed MVP)  
 **Maintainer**: joon1216 (rlawnsdudrlawnsdud1216@gmail.com)
