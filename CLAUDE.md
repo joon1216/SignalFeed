@@ -1105,6 +1105,64 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 
 ---
 
+#### Session 27: 카드뉴스 디자인 전면 개선 (AIMing 스타일 참고)
+- **Task**: html_card_gen.py 전면 재작성, 레퍼런스 기반 디자인 개선
+- **Actions**:
+  - **디자인 방향**: 한국 주식 인스타그램 스타일 (AIMing, Telonews_kr)
+    - 텍스트 크고 굵게, 공백 없이 꽉 채움
+    - 수치 강조 (색상 또는 크기)
+    - 섹터는 카드 형태로 공간 분할
+  - **공통 원칙**:
+    - Canvas: 1080x1350px (Instagram 4:5 ratio)
+    - Font: Noto Serif KR 900 (헤드라인) + Noto Sans KR 700/400 (본문)
+    - Brand: 좌상단 "SIGNALFEED" 13px #00C853
+  - **Slide 1 (Cover)**: AIMing 스타일
+    - 상단 50%: Pexels 이미지 영역
+    - 하단 50%: #0D0D0D 단색 배경
+      - 날짜: "2026.06.02 · 글로벌 경제" 18px #666666
+      - hook_title: Noto Serif KR 900, 80px, line-height 1.2
+      - one_line: 24px #AAAAAA
+      - 하단: 출처 + 시그널 배지
+  - **Slide 2 (Context)**: 꽉 채우기 + 수치 강조
+    - 팩트 3개 세로 균등 분할 (각 1/3 높이)
+    - 각 팩트 블록: 배경 #161616, border-left 4px #00C853
+    - 팩트 번호 워터마크: "01" "02" "03" 100px #1A1A1A
+    - 수치 하이라이팅: `_highlight_numbers()` 함수로 숫자+단위 자동 감지 → green
+    - 정규식: `\d+\.?\d*\s*[%$억달러만원↑↓]` → `<span style="color:#00C853;font-weight:700;">`
+  - **Slide 3-4 (Bullish/Bearish)**: 섹터 카드
+    - 섹터 2-3개 균등 분할 (카드 형태)
+    - 카드 배경: #0F1F0F (bullish) / #1F0F0F (bearish), border 1px 20% opacity
+    - 섹터명: Noto Serif KR 900, 64px, signal color
+    - 이유 + 종목: 24px + 18px, 수치 하이라이팅
+    - 하단 FACT 박스: #161616 배경, 전체 너비
+  - **Slide 5 (Conclusion)**: 심플 + 임팩트
+    - 3줄 요약: 전체 너비 블록, 좌측 컬러 바 8px
+    - 블록 배경: #161616, 텍스트 28px bold
+    - 주목 포인트: border-left 4px #00C853, 배경 #111
+    - CTA 블록: **배경 #00C853 (반전), 텍스트 #000000**
+      - "댓글에 '분석' 남겨주세요" bold
+    - 디스클레이머: 맨 하단 13px #333
+  - **highlight_numbers() 함수 추가**:
+    - 정규식으로 숫자+단위 감지: `\d+\.?\d*[%$억달러만원↑↓]`
+    - bearish 슬라이드는 #FF3D3D, bullish는 #00C853
+    - `<span style="color:{color};font-weight:700;">{num}</span>` 래핑
+  - **테스트 실행**:
+    - `venv/bin/python backend/pipeline.py --steps 4`
+    - 25장 카드 생성 성공 (5 clusters × 5 slides)
+    - 파일 크기: slide_1 (1.1MB, Pexels 이미지), slides 2-5 (56-77KB)
+    - Pexels 이미지 fetch 성공 (Middle East tension, conflict, peace)
+- **성과**:
+  - ✅ AIMing 스타일 디자인 적용 (텍스트 크게, 공백 없이 꽉 채움)
+  - ✅ 수치 자동 하이라이팅 성공 (정규식 기반, 0.5%, 2.5% 등 자동 감지)
+  - ✅ 섹터 카드 레이아웃 개선 (공간 균등 분할, 시각적 임팩트 향상)
+  - ✅ Slide 1 상하 50% 분할 (이미지 영역 명확, 텍스트 가독성 향상)
+  - ✅ Slide 2 팩트 블록 stacked (공백 없음, 100px 워터마크 넘버링)
+  - ✅ Slide 5 CTA 반전 디자인 (green bg + black text, 주목도 최대)
+  - ✅ 25장 카드 정상 생성 (1080x1350px, AIMing 스타일)
+- **Result**: ✅ Success — 카드뉴스 레이아웃 전면 개선 완료, AIMing 스타일 적용
+
+---
+
 **Last Updated**: 2026-06-02  
 **Version**: 2.0 (SignalFeed MVP)  
 **Maintainer**: joon1216 (rlawnsdudrlawnsdud1216@gmail.com)

@@ -6,7 +6,7 @@
   <title>SignalFeed Cards - Cluster 2</title>
   <style>
     
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;700&display=swap');
     
     * {
       margin: 0;
@@ -17,7 +17,7 @@
     body {
       font-family: 'Noto Sans KR', -apple-system, sans-serif;
       background: #000;
-      color: #F5F5F5;
+      color: #FFFFFF;
       -webkit-font-smoothing: antialiased;
       text-rendering: optimizeLegibility;
     }
@@ -42,8 +42,8 @@
     /* Micro brand */
     .micro-brand {
       position: absolute;
-      top: 72px;
-      left: 72px;
+      top: 30px;
+      left: 30px;
       font-size: 13px;
       letter-spacing: 0.2em;
       font-weight: 700;
@@ -51,150 +51,134 @@
       text-transform: uppercase;
       z-index: 10;
     }
-
-    /* Slide counter */
-    .slide-counter {
-      position: absolute;
-      top: 72px;
-      right: 72px;
-      font-size: 14px;
-      color: #444444;
-      z-index: 10;
-    }
   </style>
 </head>
 <body>
 
 
-<div class="card" id="slide-1" style="background: #000;">
-  <!-- Full bleed background image -->
-  <div style="position: absolute; inset: 0; background-image: url('file:///Users/joon/Documents/GitHub/issuefit_project/data/temp/pexels_2.jpg'); background-size: cover; background-position: center;"></div>
+<div class="card" id="slide-1" style="background: #0D0D0D;">
+  <!-- Top 50%: Image -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 675px; background-image: url('file:///Users/joon/Documents/GitHub/issuefit_project/data/temp/pexels_2.jpg'); background-size: cover; background-position: center;"></div>
 
-  <!-- Dark gradient overlay (bottom 60% → 85% opacity) -->
-  <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(13,13,13,0) 0%, rgba(13,13,13,0.3) 40%, rgba(13,13,13,0.85) 100%);"></div>
+  <!-- Bottom 50%: Dark solid -->
+  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 675px; background: #0D0D0D; padding: 40px;">
+    <!-- Date line -->
+    <p style="font-size: 18px; color: #666666; margin-bottom: 20px;">
+      2026.06.02 · 글로벌 경제
+    </p>
 
-  <!-- Content -->
-  <div class="micro-brand">SIGNALFEED</div>
-
-  <!-- Hook title (center-left aligned, y=380px from bottom) -->
-  <div style="position: absolute; bottom: 380px; left: 72px; right: 72px;">
-    <h1 class="serif" style="font-size: 88px; font-weight: 900; line-height: 1.15; letter-spacing: -0.03em; color: #F5F5F5;">
+    <!-- Hook title (HUGE) -->
+    <h1 class="serif" style="font-size: 80px; font-weight: 900; line-height: 1.2; letter-spacing: -0.02em; color: #FFFFFF; margin-bottom: 24px;">
       중동 긴장, 시장은<br>어디로 갈까?
     </h1>
-  </div>
 
-  <!-- One-line summary -->
-  <div style="position: absolute; bottom: 310px; left: 72px; right: 72px;">
-    <p class="sans" style="font-size: 24px; letter-spacing: -0.01em; line-height: 1.4; color: #AAAAAA;">
+    <!-- One-line -->
+    <p class="sans" style="font-size: 24px; line-height: 1.4; color: #AAAAAA; margin-bottom: 32px;">
       미국-이란 협상 불확실성 속 시장의 관심이 AI로 이동합니다.
     </p>
-  </div>
 
-  <!-- Signal badge (pill) -->
-  <div style="position: absolute; bottom: 240px; left: 72px;">
-    <div style="display: inline-block; background: #00C853; padding: 8px 20px; border-radius: 20px;">
-      <span class="sans" style="font-size: 16px; font-weight: 700; color: #000; letter-spacing: 0.05em;">
-        시그널
-      </span>
+    <!-- Bottom: Sources + Signal badge -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+      <p style="font-size: 18px; color: #666666;">
+        Reuters · CNBC
+      </p>
+      <div style="background: #00C853; padding: 8px 24px; border-radius: 20px;">
+        <span class="sans" style="font-size: 14px; font-weight: 700; color: #000; letter-spacing: 0.05em;">
+          시그널
+        </span>
+      </div>
     </div>
   </div>
 
-  <!-- Sources -->
-  <div style="position: absolute; bottom: 190px; left: 72px;">
-    <p style="font-size: 18px; color: #666666;">
-      Reuters · CNBC
-    </p>
-  </div>
-
-  <!-- Bottom green line -->
-  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #00C853;"></div>
+  <!-- Top-left brand -->
+  <div class="micro-brand">SIGNALFEED</div>
 </div>
 
 <div class="card" id="slide-2" style="background: #0D0D0D;">
   <div class="micro-brand">SIGNALFEED</div>
-  <div class="slide-counter">2 / 5</div>
 
   <!-- Title -->
-  <div style="position: absolute; top: 120px; left: 72px;">
-    <h2 class="serif" style="font-size: 52px; font-weight: 700; color: #F5F5F5;">
+  <div style="position: absolute; top: 40px; left: 40px;">
+    <h2 class="serif" style="font-size: 52px; font-weight: 700; color: #FFFFFF;">
       무슨 일이?
     </h2>
   </div>
 
-  <!-- Facts (evenly distributed) -->
+  <!-- Fact blocks (stacked, no gaps) -->
   
-    <div style="position: absolute; top: 200px; left: 72px; right: 72px; display: flex; gap: 24px; align-items: flex-start;">
-      <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #DDDDDD; max-width: 880px;">
-        사우디 증시는 미국-이란 협상 불확실성 속 0.5% 상승을 기록했습니다.
+    <div style="position: absolute; top: 120px; left: 0; right: 0; height: 393px; background: #161616; border-left: 4px solid #00C853; padding: 28px 40px; display: flex; align-items: center;">
+      <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A; z-index: 0;">
+        01
+      </div>
+      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF; position: relative; z-index: 1;">
+        사우디 증시는 미국-이란 협상 불확실성 속 <span style="color:#00C853;font-weight:700;">0.5%</span> 상승을 기록했습니다.
       </p>
     </div>
 
-    <div style="position: absolute; top: 533px; left: 72px; right: 72px; display: flex; gap: 24px; align-items: flex-start;">
-      <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #DDDDDD; max-width: 880px;">
-        카타르 증시는 같은 불확실성으로 인해 0.3% 하락했습니다.
+    <div style="position: absolute; top: 513px; left: 0; right: 0; height: 393px; background: #161616; border-left: 4px solid #00C853; padding: 28px 40px; display: flex; align-items: center;">
+      <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A; z-index: 0;">
+        02
+      </div>
+      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF; position: relative; z-index: 1;">
+        카타르 증시는 같은 불확실성으로 인해 <span style="color:#00C853;font-weight:700;">0.3%</span> 하락했습니다.
       </p>
     </div>
 
-    <div style="position: absolute; top: 866px; left: 72px; right: 72px; display: flex; gap: 24px; align-items: flex-start;">
-      <span style="color: #00C853; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #DDDDDD; max-width: 880px;">
+    <div style="position: absolute; top: 906px; left: 0; right: 0; height: 393px; background: #161616; border-left: 4px solid #00C853; padding: 28px 40px; display: flex; align-items: center;">
+      <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A; z-index: 0;">
+        03
+      </div>
+      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #FFFFFF; position: relative; z-index: 1;">
         시장 참여자들은 중동 긴장 고조 가능성보다 AI 관련 기술 기업에 대한 투자 관심이 2배 이상 높아졌다고 평가하고 있습니다.
       </p>
     </div>
 
 
-  <!-- Source -->
-  <p style="position: absolute; bottom: 60px; left: 72px; font-size: 16px; color: #444444;">
+  <!-- Source badge -->
+  <p style="position: absolute; bottom: 30px; left: 40px; font-size: 14px; color: #444444;">
     출처: Reuters, CNBC
   </p>
 </div>
 
 <div class="card" id="slide-3" style="background: #0D0D0D;">
   <div class="micro-brand">SIGNALFEED</div>
-  <div class="slide-counter">3 / 5</div>
 
-  <!-- Section label -->
-  <div style="position: absolute; top: 120px; left: 72px; display: flex; align-items: center; gap: 16px;">
-    <div style="width: 4px; height: 48px; background: #00C853;"></div>
+  <!-- Header -->
+  <div style="position: absolute; top: 40px; left: 40px; display: flex; align-items: center; gap: 16px;">
     <h2 class="serif" style="font-size: 52px; font-weight: 900; color: #00C853;">
-      수혜주는?
+      ↑ 수혜주는?
     </h2>
   </div>
 
-  <!-- Sectors (evenly distributed) -->
+  <!-- Sector cards (stacked with gaps) -->
   
-    <div style="position: absolute; top: 200px; left: 72px; right: 72px;">
-      <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #00C853; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+    <div style="position: absolute; top: 200px; left: 40px; right: 40px; height: 469px; background: #0F1F0F; border: 1px solid #00C85333; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
+      <h3 class="serif" style="font-size: 64px; font-weight: 900; color: #00C853; margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.02em;">
         인공지능 (AI) 기술
       </h3>
-      <p class="sans" style="font-size: 24px; color: #888888; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 6px;">
+      <p class="sans" style="font-size: 24px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 8px;">
         시장의 주요 관심이 AI 기술주로 쏠리며 투자 자금 유입이 증가합니다.
       </p>
       <p class="sans" style="font-size: 18px; color: #555555; letter-spacing: -0.01em;">
         삼성전자, SK하이닉스
       </p>
-      <div style="margin-top: 20px; height: 1px; background: #1A1A1A;"></div>
     </div>
 
-    <div style="position: absolute; top: 625px; left: 72px; right: 72px;">
-      <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #00C853; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+    <div style="position: absolute; top: 681px; left: 40px; right: 40px; height: 469px; background: #0F1F0F; border: 1px solid #00C85333; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
+      <h3 class="serif" style="font-size: 64px; font-weight: 900; color: #00C853; margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.02em;">
         방위산업
       </h3>
-      <p class="sans" style="font-size: 24px; color: #888888; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 6px;">
+      <p class="sans" style="font-size: 24px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 8px;">
         중동 지역의 지정학적 긴장감 고조로 국방 관련 수요가 늘어날 수 있습니다.
       </p>
       <p class="sans" style="font-size: 18px; color: #555555; letter-spacing: -0.01em;">
         한국항공우주, 한화에어로스페이스
       </p>
-      <div style="margin-top: 20px; height: 1px; background: #1A1A1A;"></div>
     </div>
 
 
-  <!-- Bottom fact box -->
-  <div style="position: absolute; bottom: 80px; left: 72px; right: 72px;">
-    <div style="height: 1px; background: #222222; margin-bottom: 16px;"></div>
+  <!-- Bottom FACT box -->
+  <div style="position: absolute; bottom: 40px; left: 40px; right: 40px; background: #161616; padding: 24px; border-radius: 8px;">
     <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: #00C853; margin-bottom: 8px;">
       FACT /
     </p>
@@ -206,62 +190,56 @@
 
 <div class="card" id="slide-4" style="background: #0D0D0D;">
   <div class="micro-brand">SIGNALFEED</div>
-  <div class="slide-counter">4 / 5</div>
 
-  <!-- Section label -->
-  <div style="position: absolute; top: 120px; left: 72px; display: flex; align-items: center; gap: 16px;">
-    <div style="width: 4px; height: 48px; background: #FF3D3D;"></div>
+  <!-- Header -->
+  <div style="position: absolute; top: 40px; left: 40px; display: flex; align-items: center; gap: 16px;">
     <h2 class="serif" style="font-size: 52px; font-weight: 900; color: #FF3D3D;">
-      주의할 섹터는?
+      ↓ 주의할 섹터는?
     </h2>
   </div>
 
-  <!-- Sectors (evenly distributed) -->
+  <!-- Sector cards (stacked with gaps) -->
   
-    <div style="position: absolute; top: 200px; left: 72px; right: 72px;">
-      <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #FF3D3D; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+    <div style="position: absolute; top: 200px; left: 40px; right: 40px; height: 308px; background: #1F0F0F; border: 1px solid #FF3D3D33; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
+      <h3 class="serif" style="font-size: 64px; font-weight: 900; color: #FF3D3D; margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.02em;">
         항공운송
       </h3>
-      <p class="sans" style="font-size: 24px; color: #888888; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 6px;">
+      <p class="sans" style="font-size: 24px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 8px;">
         중동 긴장으로 인한 유가 상승 가능성과 여행 심리 위축이 부담으로 작용합니다.
       </p>
       <p class="sans" style="font-size: 18px; color: #555555; letter-spacing: -0.01em;">
         대한항공, 아시아나항공
       </p>
-      <div style="margin-top: 20px; height: 1px; background: #1A1A1A;"></div>
     </div>
 
-    <div style="position: absolute; top: 483px; left: 72px; right: 72px;">
-      <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #FF3D3D; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+    <div style="position: absolute; top: 520px; left: 40px; right: 40px; height: 308px; background: #1F0F0F; border: 1px solid #FF3D3D33; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
+      <h3 class="serif" style="font-size: 64px; font-weight: 900; color: #FF3D3D; margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.02em;">
         석유화학
       </h3>
-      <p class="sans" style="font-size: 24px; color: #888888; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 6px;">
+      <p class="sans" style="font-size: 24px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 8px;">
         국제 유가 변동성 확대 및 원자재 가격 상승이 원가 부담으로 작용할 수 있습니다.
       </p>
       <p class="sans" style="font-size: 18px; color: #555555; letter-spacing: -0.01em;">
         LG화학, 롯데케미칼
       </p>
-      <div style="margin-top: 20px; height: 1px; background: #1A1A1A;"></div>
     </div>
 
-    <div style="position: absolute; top: 766px; left: 72px; right: 72px;">
-      <h3 class="serif" style="font-size: 56px; font-weight: 700; color: #FF3D3D; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+    <div style="position: absolute; top: 840px; left: 40px; right: 40px; height: 308px; background: #1F0F0F; border: 1px solid #FF3D3D33; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
+      <h3 class="serif" style="font-size: 64px; font-weight: 900; color: #FF3D3D; margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.02em;">
         해운
       </h3>
-      <p class="sans" style="font-size: 24px; color: #888888; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 6px;">
+      <p class="sans" style="font-size: 24px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 8px;">
         중동 지역의 지정학적 불안정은 글로벌 물류 비용 상승과 교역량 감소 우려를 키웁니다.
       </p>
       <p class="sans" style="font-size: 18px; color: #555555; letter-spacing: -0.01em;">
         HMM, 팬오션
       </p>
-      <div style="margin-top: 20px; height: 1px; background: #1A1A1A;"></div>
     </div>
 
 
-  <!-- Bottom fact box -->
-  <div style="position: absolute; bottom: 80px; left: 72px; right: 72px;">
-    <div style="height: 1px; background: #222222; margin-bottom: 16px;"></div>
-    <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: #00C853; margin-bottom: 8px;">
+  <!-- Bottom FACT box -->
+  <div style="position: absolute; bottom: 40px; left: 40px; right: 40px; background: #161616; padding: 24px; border-radius: 8px;">
+    <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: #FF3D3D; margin-bottom: 8px;">
       FACT /
     </p>
     <p class="sans" style="font-size: 20px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
@@ -274,38 +252,35 @@
   <div class="micro-brand">SIGNALFEED</div>
 
   <!-- Title -->
-  <div style="position: absolute; top: 120px; left: 72px;">
-    <h2 class="serif" style="font-size: 64px; font-weight: 900; color: #F5F5F5;">
+  <div style="position: absolute; top: 40px; left: 40px;">
+    <h2 class="serif" style="font-size: 64px; font-weight: 900; color: #FFFFFF;">
       오늘의 핵심
     </h2>
   </div>
 
-  <!-- 3 summary rows -->
+  <!-- 3 summary blocks (full width) -->
   
-    <div style="position: absolute; top: 200px; left: 72px; right: 72px; display: flex; align-items: center; gap: 20px;">
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: #00C853; flex-shrink: 0;"></div>
-      <p class="sans" style="font-size: 30px; font-weight: 500; color: #DDDDDD; line-height: 1.3; letter-spacing: -0.01em;">
+    <div style="position: absolute; top: 200px; left: 40px; right: 40px; background: #161616; padding: 28px 32px; border-left: 8px solid #00C853; border-radius: 4px;">
+      <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
         AI 기술주 투자 관심 증대
       </p>
     </div>
 
-    <div style="position: absolute; top: 270px; left: 72px; right: 72px; display: flex; align-items: center; gap: 20px;">
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: #FF3D3D; flex-shrink: 0;"></div>
-      <p class="sans" style="font-size: 30px; font-weight: 500; color: #DDDDDD; line-height: 1.3; letter-spacing: -0.01em;">
+    <div style="position: absolute; top: 310px; left: 40px; right: 40px; background: #161616; padding: 28px 32px; border-left: 8px solid #FF3D3D; border-radius: 4px;">
+      <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
         중동 지정학적 리스크 고조
       </p>
     </div>
 
-    <div style="position: absolute; top: 340px; left: 72px; right: 72px; display: flex; align-items: center; gap: 20px;">
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: #888888; flex-shrink: 0;"></div>
-      <p class="sans" style="font-size: 30px; font-weight: 500; color: #DDDDDD; line-height: 1.3; letter-spacing: -0.01em;">
+    <div style="position: absolute; top: 420px; left: 40px; right: 40px; background: #161616; padding: 28px 32px; border-left: 8px solid #888888; border-radius: 4px;">
+      <p class="sans" style="font-size: 28px; font-weight: 700; color: #FFFFFF; line-height: 1.4; letter-spacing: -0.01em;">
         미국-이란 협상 결과 주시
       </p>
     </div>
 
 
   <!-- Watch point box -->
-  <div style="position: absolute; top: 500px; left: 72px; right: 72px; background: #161616; border-left: 3px solid #00C853; padding: 24px 28px; border-radius: 4px;">
+  <div style="position: absolute; top: 570px; left: 40px; right: 40px; background: #111111; border-left: 4px solid #00C853; padding: 28px; border-radius: 8px;">
     <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: #00C853; margin-bottom: 8px;">
       주목 포인트
     </p>
@@ -314,19 +289,18 @@
     </p>
   </div>
 
-  <!-- CTA section -->
-  <div style="position: absolute; bottom: 120px; left: 72px; right: 72px;">
-    <div style="height: 1px; background: #222222; margin-bottom: 24px;"></div>
-    <p class="sans" style="font-size: 26px; font-weight: 700; color: #F5F5F5; margin-bottom: 8px; letter-spacing: -0.01em;">
+  <!-- CTA block (inverted, green bg) -->
+  <div style="position: absolute; bottom: 120px; left: 40px; right: 40px; background: #00C853; padding: 28px; border-radius: 8px;">
+    <p class="sans" style="font-size: 26px; font-weight: 700; color: #000000; margin-bottom: 6px; letter-spacing: -0.01em;">
       더 궁금하다면 댓글에 '분석' 남겨주세요
     </p>
-    <p class="sans" style="font-size: 20px; color: #00C853; letter-spacing: -0.01em;">
+    <p class="sans" style="font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">
       → 상세 리포트 DM으로 드립니다
     </p>
   </div>
 
   <!-- Disclaimer -->
-  <p style="position: absolute; bottom: 60px; left: 72px; right: 72px; text-align: center; font-size: 13px; color: #333333;">
+  <p style="position: absolute; bottom: 40px; left: 40px; right: 40px; text-align: center; font-size: 13px; color: #333333;">
     본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다
   </p>
 </div>

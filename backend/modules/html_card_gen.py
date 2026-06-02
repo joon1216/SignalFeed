@@ -1,12 +1,12 @@
 """
 SignalFeed HTML Card Generator
-HTML + Playwright 방식으로 Instagram 카드 생성 (1080x1350px 완전 재설계)
+AIMing 스타일 참고: 텍스트 크고 굵게, 공백 없이 꽉 채움, 수치 강조
 """
 
 import os
 import json
 import logging
-import subprocess
+import re
 from typing import List, Dict
 from pathlib import Path
 
@@ -19,22 +19,24 @@ logger = logging.getLogger(__name__)
 
 
 class HTMLCardGenerator:
-    """HTML + Playwright 기반 Instagram 카드 생성기 (완전 재설계)"""
+    """HTML + Playwright 기반 Instagram 카드 생성기 (AIMing 스타일)"""
 
     # Canvas dimensions (Instagram 4:5 ratio)
     WIDTH = 1080
     HEIGHT = 1350
 
-    # New Design System
+    # New Design System (AIMing-inspired)
     COLORS = {
         "bg": "#0D0D0D",
         "surface": "#161616",
+        "card_bg": "#111111",
         "bullish": "#00C853",
         "bearish": "#FF3D3D",
         "neutral": "#888888",
-        "text_primary": "#F5F5F5",
-        "text_secondary": "#888888",
+        "text_primary": "#FFFFFF",
+        "text_secondary": "#AAAAAA",
         "divider": "#222222",
+        "brand": "#00C853",
     }
 
     def __init__(self):
@@ -44,8 +46,31 @@ class HTMLCardGenerator:
     def _get_font_css(self) -> str:
         """Get Google Fonts CSS"""
         return """
-    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@700;900&family=Noto+Sans+KR:wght@400;700&display=swap');
     """
+
+    def _highlight_numbers(self, text: str, color: str = None) -> str:
+        """
+        숫자+단위 하이라이팅
+
+        Args:
+            text: 원본 텍스트
+            color: 하이라이트 색상 (None이면 bullish 사용)
+
+        Returns:
+            하이라이트된 HTML 텍스트
+        """
+        if color is None:
+            color = self.COLORS["bullish"]
+
+        # 정규식: 숫자 + 단위 (%, $, 억, 달러, 만, 원, ↑, ↓, %p, bp)
+        pattern = r'(\d+\.?\d*\s*[%$억달러만원↑↓]|[+-]?\d+\.?\d*%p|[+-]?\d+\.?\d*bp)'
+
+        def replacer(match):
+            num = match.group(1)
+            return f'<span style="color:{color};font-weight:700;">{num}</span>'
+
+        return re.sub(pattern, replacer, text)
 
     def generate_html(self, script: Dict, image_path: str) -> str:
         """
@@ -121,23 +146,13 @@ class HTMLCardGenerator:
     /* Micro brand */
     .micro-brand {{
       position: absolute;
-      top: 72px;
-      left: 72px;
+      top: 30px;
+      left: 30px;
       font-size: 13px;
       letter-spacing: 0.2em;
       font-weight: 700;
-      color: {self.COLORS["bullish"]};
+      color: {self.COLORS["brand"]};
       text-transform: uppercase;
-      z-index: 10;
-    }}
-
-    /* Slide counter */
-    .slide-counter {{
-      position: absolute;
-      top: 72px;
-      right: 72px;
-      font-size: 14px;
-      color: #444444;
       z-index: 10;
     }}
   </style>
@@ -152,7 +167,7 @@ class HTMLCardGenerator:
         return html
 
     def _generate_slide1_html(self, slide_data: Dict, image_path: str, slide_num: int) -> str:
-        """Slide 1: Cover with full bleed image + signal badge"""
+        """Slide 1: Cover — AIMing 스타일 (상단 50% 이미지, 하단 50% 단색)"""
         hook_title = slide_data.get("hook_title", "")
         one_line = slide_data.get("one_line", "")
         sources = slide_data.get("sources", ["Reuters", "Bloomberg"])
@@ -162,69 +177,78 @@ class HTMLCardGenerator:
         # Use absolute file:// URL for image
         img_url = f"file://{os.path.abspath(image_path)}"
 
+        # Date placeholder (현재 날짜)
+        from datetime import datetime
+        date_str = datetime.now().strftime("%Y.%m.%d")
+
         return f"""
-<div class="card" id="slide-{slide_num}" style="background: #000;">
-  <!-- Full bleed background image -->
-  <div style="position: absolute; inset: 0; background-image: url('{img_url}'); background-size: cover; background-position: center;"></div>
+<div class="card" id="slide-{slide_num}" style="background: {self.COLORS["bg"]};">
+  <!-- Top 50%: Image -->
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 675px; background-image: url('{img_url}'); background-size: cover; background-position: center;"></div>
 
-  <!-- Dark gradient overlay (bottom 60% → 85% opacity) -->
-  <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(13,13,13,0) 0%, rgba(13,13,13,0.3) 40%, rgba(13,13,13,0.85) 100%);"></div>
+  <!-- Bottom 50%: Dark solid -->
+  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 675px; background: {self.COLORS["bg"]}; padding: 40px;">
+    <!-- Date line -->
+    <p style="font-size: 18px; color: #666666; margin-bottom: 20px;">
+      {date_str} · 글로벌 경제
+    </p>
 
-  <!-- Content -->
-  <div class="micro-brand">SIGNALFEED</div>
-
-  <!-- Hook title (center-left aligned, y=380px from bottom) -->
-  <div style="position: absolute; bottom: 380px; left: 72px; right: 72px;">
-    <h1 class="serif" style="font-size: 88px; font-weight: 900; line-height: 1.15; letter-spacing: -0.03em; color: {self.COLORS["text_primary"]};">
+    <!-- Hook title (HUGE) -->
+    <h1 class="serif" style="font-size: 80px; font-weight: 900; line-height: 1.2; letter-spacing: -0.02em; color: {self.COLORS["text_primary"]}; margin-bottom: 24px;">
       {hook_title.replace(chr(10), '<br>')}
     </h1>
-  </div>
 
-  <!-- One-line summary -->
-  <div style="position: absolute; bottom: 310px; left: 72px; right: 72px;">
-    <p class="sans" style="font-size: 24px; letter-spacing: -0.01em; line-height: 1.4; color: #AAAAAA;">
+    <!-- One-line -->
+    <p class="sans" style="font-size: 24px; line-height: 1.4; color: #AAAAAA; margin-bottom: 32px;">
       {one_line}
     </p>
-  </div>
 
-  <!-- Signal badge (pill) -->
-  <div style="position: absolute; bottom: 240px; left: 72px;">
-    <div style="display: inline-block; background: {self.COLORS["bullish"]}; padding: 8px 20px; border-radius: 20px;">
-      <span class="sans" style="font-size: 16px; font-weight: 700; color: #000; letter-spacing: 0.05em;">
-        시그널
-      </span>
+    <!-- Bottom: Sources + Signal badge -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
+      <p style="font-size: 18px; color: #666666;">
+        {sources_text}
+      </p>
+      <div style="background: {self.COLORS["bullish"]}; padding: 8px 24px; border-radius: 20px;">
+        <span class="sans" style="font-size: 14px; font-weight: 700; color: #000; letter-spacing: 0.05em;">
+          시그널
+        </span>
+      </div>
     </div>
   </div>
 
-  <!-- Sources -->
-  <div style="position: absolute; bottom: 190px; left: 72px;">
-    <p style="font-size: 18px; color: #666666;">
-      {sources_text}
-    </p>
-  </div>
-
-  <!-- Bottom green line -->
-  <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: {self.COLORS["bullish"]};"></div>
+  <!-- Top-left brand -->
+  <div class="micro-brand">SIGNALFEED</div>
 </div>
 """
 
     def _generate_slide2_html(self, slide_data: Dict, slide_num: int) -> str:
-        """Slide 2: Context (무슨 일이?) — filling the space"""
+        """Slide 2: Context — 꽉 채우기, 수치 강조"""
         title = slide_data.get("title", "무슨 일이?")
         facts = slide_data.get("facts", [])
         source = slide_data.get("source", "")
 
-        # Distribute facts evenly across card height
-        # Card content area: y=200 → y=1200 (1000px)
-        # 3 facts → ~333px spacing each
+        # Total content area: y=120 → y=1300 (1180px)
+        # 3 fact blocks, equal height
+        num_facts = len(facts)
+        block_height = 1180 // num_facts if num_facts > 0 else 390
+
         facts_html = ""
         for i, fact in enumerate(facts):
-            y_pos = 200 + (i * 333)
+            y_pos = 120 + (i * block_height)
+
+            # Highlight numbers in green
+            highlighted_fact = self._highlight_numbers(fact, self.COLORS["bullish"])
+
+            # Fact number watermark
+            fact_num = f"{i+1:02d}"
+
             facts_html += f"""
-    <div style="position: absolute; top: {y_pos}px; left: 72px; right: 72px; display: flex; gap: 24px; align-items: flex-start;">
-      <span style="color: {self.COLORS["bullish"]}; font-size: 24px; font-weight: 700; flex-shrink: 0;">—</span>
-      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: #DDDDDD; max-width: 880px;">
-        {fact}
+    <div style="position: absolute; top: {y_pos}px; left: 0; right: 0; height: {block_height}px; background: {self.COLORS["surface"]}; border-left: 4px solid {self.COLORS["bullish"]}; padding: 28px 40px; display: flex; align-items: center;">
+      <div style="position: absolute; top: 12px; right: 40px; font-size: 100px; font-weight: 900; color: #1A1A1A; z-index: 0;">
+        {fact_num}
+      </div>
+      <p class="sans" style="font-size: 28px; line-height: 1.6; letter-spacing: -0.01em; color: {self.COLORS["text_primary"]}; position: relative; z-index: 1;">
+        {highlighted_fact}
       </p>
     </div>
 """
@@ -232,42 +256,45 @@ class HTMLCardGenerator:
         return f"""
 <div class="card" id="slide-{slide_num}" style="background: {self.COLORS["bg"]};">
   <div class="micro-brand">SIGNALFEED</div>
-  <div class="slide-counter">{slide_num} / 5</div>
 
   <!-- Title -->
-  <div style="position: absolute; top: 120px; left: 72px;">
+  <div style="position: absolute; top: 40px; left: 40px;">
     <h2 class="serif" style="font-size: 52px; font-weight: 700; color: {self.COLORS["text_primary"]};">
       {title}
     </h2>
   </div>
 
-  <!-- Facts (evenly distributed) -->
+  <!-- Fact blocks (stacked, no gaps) -->
   {facts_html}
 
-  <!-- Source -->
-  <p style="position: absolute; bottom: 60px; left: 72px; font-size: 16px; color: #444444;">
+  <!-- Source badge -->
+  <p style="position: absolute; bottom: 30px; left: 40px; font-size: 14px; color: #444444;">
     출처: {source}
   </p>
 </div>
 """
 
     def _generate_slide3_html(self, slide_data: Dict, slide_num: int) -> str:
-        """Slide 3: Beneficiary (수혜주는?)"""
-        return self._generate_sector_slide_html(slide_data, slide_num, "수혜주는?", self.COLORS["bullish"])
+        """Slide 3: Bullish — 섹터 카드, 공간 분할"""
+        return self._generate_sector_slide_html(slide_data, slide_num, "↑ 수혜주는?", self.COLORS["bullish"], is_bearish=False)
 
     def _generate_slide4_html(self, slide_data: Dict, slide_num: int) -> str:
-        """Slide 4: Victim (주의할 섹터는?)"""
-        return self._generate_sector_slide_html(slide_data, slide_num, "주의할 섹터는?", self.COLORS["bearish"])
+        """Slide 4: Bearish — 섹터 카드, 공간 분할"""
+        return self._generate_sector_slide_html(slide_data, slide_num, "↓ 주의할 섹터는?", self.COLORS["bearish"], is_bearish=True)
 
-    def _generate_sector_slide_html(self, slide_data: Dict, slide_num: int, label: str, color: str) -> str:
-        """Generate sector slide (beneficiary/victim) — filling space"""
+    def _generate_sector_slide_html(self, slide_data: Dict, slide_num: int, label: str, color: str, is_bearish: bool = False) -> str:
+        """Generate sector slide — 카드 형태로 공간 분할"""
         sectors = slide_data.get("sectors", [])
         fact = slide_data.get("fact", "")
 
-        # Card content area: y=200 → y=1050 (850px for sectors)
-        # 2 sectors → ~425px each, 3 sectors → ~283px each
+        # Content area: y=200 → y=1150 (950px for sectors)
         num_sectors = len(sectors)
-        spacing = 850 // num_sectors if num_sectors > 0 else 400
+        total_gap = (num_sectors - 1) * 12  # 12px gap between cards
+        card_height = (950 - total_gap) // num_sectors if num_sectors > 0 else 300
+
+        # Card background color (very dark tinted)
+        card_bg = "#0F1F0F" if not is_bearish else "#1F0F0F"
+        border_color = f"{color}33"  # 20% opacity
 
         sectors_html = ""
         for i, sector in enumerate(sectors):
@@ -275,61 +302,61 @@ class HTMLCardGenerator:
             reason = sector.get("reason", "")
             example_stocks = sector.get("example_stocks", "")
 
-            y_pos = 200 + (i * spacing)
+            y_pos = 200 + (i * (card_height + 12))
+
+            # Highlight numbers in sector reason
+            highlight_color = self.COLORS["bearish"] if is_bearish else self.COLORS["bullish"]
+            highlighted_reason = self._highlight_numbers(reason, highlight_color)
 
             sectors_html += f"""
-    <div style="position: absolute; top: {y_pos}px; left: 72px; right: 72px;">
-      <h3 class="serif" style="font-size: 56px; font-weight: 700; color: {color}; margin-bottom: 12px; line-height: 1.2; letter-spacing: -0.02em;">
+    <div style="position: absolute; top: {y_pos}px; left: 40px; right: 40px; height: {card_height}px; background: {card_bg}; border: 1px solid {border_color}; padding: 32px; display: flex; flex-direction: column; justify-content: center; border-radius: 8px;">
+      <h3 class="serif" style="font-size: 64px; font-weight: 900; color: {color}; margin-bottom: 12px; line-height: 1.1; letter-spacing: -0.02em;">
         {name}
       </h3>
-      <p class="sans" style="font-size: 24px; color: {self.COLORS["text_secondary"]}; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 6px;">
-        {reason}
+      <p class="sans" style="font-size: 24px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em; margin-bottom: 8px;">
+        {highlighted_reason}
       </p>
       <p class="sans" style="font-size: 18px; color: #555555; letter-spacing: -0.01em;">
         {example_stocks}
       </p>
-      <div style="margin-top: 20px; height: 1px; background: #1A1A1A;"></div>
     </div>
 """
 
         return f"""
 <div class="card" id="slide-{slide_num}" style="background: {self.COLORS["bg"]};">
   <div class="micro-brand">SIGNALFEED</div>
-  <div class="slide-counter">{slide_num} / 5</div>
 
-  <!-- Section label -->
-  <div style="position: absolute; top: 120px; left: 72px; display: flex; align-items: center; gap: 16px;">
-    <div style="width: 4px; height: 48px; background: {color};"></div>
+  <!-- Header -->
+  <div style="position: absolute; top: 40px; left: 40px; display: flex; align-items: center; gap: 16px;">
     <h2 class="serif" style="font-size: 52px; font-weight: 900; color: {color};">
       {label}
     </h2>
   </div>
 
-  <!-- Sectors (evenly distributed) -->
+  <!-- Sector cards (stacked with gaps) -->
   {sectors_html}
 
-  <!-- Bottom fact box -->
-  <div style="position: absolute; bottom: 80px; left: 72px; right: 72px;">
-    <div style="height: 1px; background: {self.COLORS["divider"]}; margin-bottom: 16px;"></div>
-    <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: {self.COLORS["bullish"]}; margin-bottom: 8px;">
+  <!-- Bottom FACT box -->
+  <div style="position: absolute; bottom: 40px; left: 40px; right: 40px; background: {self.COLORS["surface"]}; padding: 24px; border-radius: 8px;">
+    <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.15em; color: {color}; margin-bottom: 8px;">
       FACT /
     </p>
     <p class="sans" style="font-size: 20px; color: #AAAAAA; line-height: 1.5; letter-spacing: -0.01em;">
-      {fact}
+      {self._highlight_numbers(fact, color)}
     </p>
   </div>
 </div>
 """
 
     def _generate_slide5_html(self, slide_data: Dict, slide_num: int) -> str:
-        """Slide 5: Conclusion — hierarchical layout"""
-        title = slide_data.get("title", "오늘의 결론")
+        """Slide 5: Conclusion — 심플 + 임팩트"""
+        title = slide_data.get("title", "오늘의 핵심")
         summaries = slide_data.get("summaries", [])
         watch_point = slide_data.get("watch_point", "")
         cta = slide_data.get("cta", "더 궁금하다면 댓글에 '분석' 남겨주세요")
         cta_sub = slide_data.get("cta_sub", "→ 상세 리포트 DM으로 드립니다")
 
-        # Generate 3 summary rows (evenly distributed)
+        # 3 summary blocks (full width, stacked)
         summaries_html = ""
         signal_colors = {"bullish": self.COLORS["bullish"], "bearish": self.COLORS["bearish"], "neutral": self.COLORS["neutral"]}
 
@@ -337,12 +364,11 @@ class HTMLCardGenerator:
             signal = summary.get("signal", "neutral")
             text = summary.get("text", "")
             color = signal_colors.get(signal, self.COLORS["neutral"])
-            y_pos = 200 + (i * 70)
+            y_pos = 200 + (i * 110)
 
             summaries_html += f"""
-    <div style="position: absolute; top: {y_pos}px; left: 72px; right: 72px; display: flex; align-items: center; gap: 20px;">
-      <div style="width: 12px; height: 12px; border-radius: 50%; background: {color}; flex-shrink: 0;"></div>
-      <p class="sans" style="font-size: 30px; font-weight: 500; color: #DDDDDD; line-height: 1.3; letter-spacing: -0.01em;">
+    <div style="position: absolute; top: {y_pos}px; left: 40px; right: 40px; background: {self.COLORS["surface"]}; padding: 28px 32px; border-left: 8px solid {color}; border-radius: 4px;">
+      <p class="sans" style="font-size: 28px; font-weight: 700; color: {self.COLORS["text_primary"]}; line-height: 1.4; letter-spacing: -0.01em;">
         {text}
       </p>
     </div>
@@ -353,17 +379,17 @@ class HTMLCardGenerator:
   <div class="micro-brand">SIGNALFEED</div>
 
   <!-- Title -->
-  <div style="position: absolute; top: 120px; left: 72px;">
+  <div style="position: absolute; top: 40px; left: 40px;">
     <h2 class="serif" style="font-size: 64px; font-weight: 900; color: {self.COLORS["text_primary"]};">
       {title}
     </h2>
   </div>
 
-  <!-- 3 summary rows -->
+  <!-- 3 summary blocks (full width) -->
   {summaries_html}
 
   <!-- Watch point box -->
-  <div style="position: absolute; top: 500px; left: 72px; right: 72px; background: {self.COLORS["surface"]}; border-left: 3px solid {self.COLORS["bullish"]}; padding: 24px 28px; border-radius: 4px;">
+  <div style="position: absolute; top: 570px; left: 40px; right: 40px; background: {self.COLORS["card_bg"]}; border-left: 4px solid {self.COLORS["bullish"]}; padding: 28px; border-radius: 8px;">
     <p class="sans" style="font-size: 12px; font-weight: 700; letter-spacing: 0.1em; color: {self.COLORS["bullish"]}; margin-bottom: 8px;">
       주목 포인트
     </p>
@@ -372,19 +398,18 @@ class HTMLCardGenerator:
     </p>
   </div>
 
-  <!-- CTA section -->
-  <div style="position: absolute; bottom: 120px; left: 72px; right: 72px;">
-    <div style="height: 1px; background: {self.COLORS["divider"]}; margin-bottom: 24px;"></div>
-    <p class="sans" style="font-size: 26px; font-weight: 700; color: {self.COLORS["text_primary"]}; margin-bottom: 8px; letter-spacing: -0.01em;">
+  <!-- CTA block (inverted, green bg) -->
+  <div style="position: absolute; bottom: 120px; left: 40px; right: 40px; background: {self.COLORS["bullish"]}; padding: 28px; border-radius: 8px;">
+    <p class="sans" style="font-size: 26px; font-weight: 700; color: #000000; margin-bottom: 6px; letter-spacing: -0.01em;">
       {cta}
     </p>
-    <p class="sans" style="font-size: 20px; color: {self.COLORS["bullish"]}; letter-spacing: -0.01em;">
+    <p class="sans" style="font-size: 20px; font-weight: 700; color: #000000; letter-spacing: -0.01em;">
       {cta_sub}
     </p>
   </div>
 
   <!-- Disclaimer -->
-  <p style="position: absolute; bottom: 60px; left: 72px; right: 72px; text-align: center; font-size: 13px; color: #333333;">
+  <p style="position: absolute; bottom: 40px; left: 40px; right: 40px; text-align: center; font-size: 13px; color: #333333;">
     본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다
   </p>
 </div>
@@ -479,7 +504,7 @@ class HTMLCardGenerator:
         from .image_fetcher import ImageFetcher
 
         logger.info("=" * 70)
-        logger.info("SignalFeed Card Generation Started")
+        logger.info("SignalFeed Card Generation Started (AIMing Style)")
         logger.info("=" * 70)
 
         # Load scripts
