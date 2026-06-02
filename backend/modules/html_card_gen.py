@@ -437,8 +437,10 @@ class HTMLCardGenerator:
 
     def generate_all_slides(self, script: Dict, pexels_image_path: str = None) -> str:
         """Generate HTML for all 5 slides"""
-        cluster_id = script.get("cluster_id", 0)
-        slides = script.get("slides", [])
+        # Access instagram object if present
+        instagram = script.get("instagram", script)
+        cluster_id = instagram.get("cluster_id", script.get("cluster_id", 0))
+        slides = instagram.get("slides", [])
 
         if not pexels_image_path:
             pexels_image_path = f"data/temp/pexels_{cluster_id}.jpg"
@@ -456,9 +458,9 @@ class HTMLCardGenerator:
                 html = self._generate_slide1_html(slide, pexels_image_path, slide_num)
             elif slide_type == "context":
                 html = self._generate_slide2_html(slide, slide_num)
-            elif slide_type == "bullish":
+            elif slide_type in ("bullish", "beneficiary"):
                 html = self._generate_slide3_html(slide, slide_num)
-            elif slide_type == "bearish":
+            elif slide_type in ("bearish", "victim"):
                 html = self._generate_slide4_html(slide, slide_num)
             elif slide_type == "conclusion":
                 html = self._generate_slide5_html(slide, slide_num)
@@ -586,8 +588,10 @@ class HTMLCardGenerator:
         total_generated = 0
 
         for script in scripts:
-            cluster_id = script.get("cluster_id", 0)
-            pexels_keyword = script.get("pexels_keyword", "global economy finance business")
+            # Access instagram object
+            instagram = script.get("instagram", script)
+            cluster_id = instagram.get("cluster_id", script.get("cluster_id", 0))
+            pexels_keyword = instagram.get("pexels_keyword", "global economy finance business")
 
             # Fetch Pexels image
             logger.info(f"Fetching Pexels image: {pexels_keyword}")
@@ -600,8 +604,8 @@ class HTMLCardGenerator:
             pexels_image.save(pexels_path, "JPEG", quality=95)
             logger.info(f"Saved Pexels image: {pexels_path}")
 
-            # Generate HTML
-            html = self.generate_all_slides(script, pexels_path)
+            # Generate HTML (pass instagram object)
+            html = self.generate_all_slides(instagram, pexels_path)
             html_path = os.path.join(temp_dir, f"card_{cluster_id}.html")
             self.save_html(html, html_path)
 

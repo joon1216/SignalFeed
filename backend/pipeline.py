@@ -213,7 +213,7 @@ def main():
         if '3' in steps:
             print(f"   3️⃣ {generated_file}")
         if '4' in steps:
-            print(f"   4️⃣ data/4_cards/ ({len(cards_result)} clusters)")
+            print(f"   4️⃣ data/4_cards/ ({cards_result} clusters)")
 
     except Exception as e:
         print(f"\n❌ 오류 발생: {str(e)}")

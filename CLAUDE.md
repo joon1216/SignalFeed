@@ -1800,3 +1800,37 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ 수치 자동 하이라이팅 유지 (팩트 텍스트 내 수치 green/red 강조)
   - ✅ 25장 카드 생성 완료 (1080x1350px, B-style)
 - **Result**: ✅ Success — B-스타일 뉴스피드 디자인 전면 적용 완료
+
+---
+
+#### Session 31: 슬라이드 타입 불일치 버그 수정
+- **Task**: scripts.json 슬라이드 타입 (beneficiary/victim)과 html_card_gen.py 기대 타입 (bullish/bearish) 불일치 해결
+- **문제 분석**:
+  - scripts.json 구조: `script.get('instagram').get('slides')` (nested)
+  - 슬라이드 타입: `beneficiary` (수혜주), `victim` (주의할 섹터)
+  - html_card_gen.py 기대: `bullish`, `bearish`
+  - 불일치로 인해 slides 3-4가 빈 화면으로 렌더링됨
+- **Actions**:
+  - **Step 1: html_card_gen.py 수정** (3개 메서드):
+    - generate_all_slides(): `instagram` object 접근 추가
+      - `instagram = script.get("instagram", script)`
+      - `slides = instagram.get("slides", [])`
+    - 슬라이드 타입 매핑 추가:
+      - `elif slide_type in ("bullish", "beneficiary"):` → slide 3
+      - `elif slide_type in ("bearish", "victim"):` → slide 4
+    - run(): `instagram` object 접근 통일
+      - `instagram = script.get("instagram", script)`
+      - `pexels_keyword = instagram.get("pexels_keyword")`
+      - `generate_all_slides(instagram, pexels_path)` 호출
+  - **Step 2: pipeline.py 수정**:
+    - `len(cards_result)` → `cards_result` (int 타입 오류 수정)
+  - **Step 3: 테스트 실행**:
+    - 25장 카드 재생성 (5 clusters × 5 slides)
+    - 모든 슬라이드 정상 렌더링 확인 (slides 3-4 content 정상)
+    - 소요 시간: ~4.1초
+- **성과**:
+  - ✅ beneficiary/victim 타입 매핑 완료 (bullish/bearish 별칭)
+  - ✅ instagram nested 구조 정상 접근 (데이터 경로 통일)
+  - ✅ slides 3-4 content 정상 렌더링 (섹터 카드 표시)
+  - ✅ 25장 카드 생성 완료 (모든 슬라이드 정상)
+- **Result**: ✅ Success — 슬라이드 타입 불일치 버그 완전 해결
