@@ -1042,7 +1042,70 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
 
 ---
 
-**Last Updated**: 2026-05-29  
+#### Session 26: google-genai 패키지 전환 + Pydantic schema 강제
+- **Task**: content_gen.py 완전 재작성 (google-genai package), Pydantic schema enforcement
+- **Actions**:
+  - **Step 1: Packages Installed**
+    - google-genai (2.7.0): NEW Google AI SDK (google-generativeai deprecated)
+    - python-dotenv, pydantic (이미 설치됨)
+    - feedparser, finnhub-python, jsonlines (pipeline 의존성)
+    - pandas, umap-learn, hdbscan, scikit-learn (clustering 의존성)
+    - Pillow, playwright (카드 생성 의존성)
+    - Chromium browser installed via playwright
+  - **Step 2: content_gen.py 완전 재작성** (380 LOC):
+    - Pydantic Schema 정의:
+      - `Sector(BaseModel)`: name, reason, example_stocks
+      - `CardScript(BaseModel)`: hook_title, one_line, pexels_keyword, context_facts, context_source, bullish_sectors, bearish_sectors, bullish_fact, bearish_fact, summaries, watch_point
+    - google-genai API 호출:
+      - `from google import genai` (NOT google.generativeai)
+      - `genai.Client(api_key=GEMINI_API_KEY)`
+      - `client.models.generate_content(model="gemini-2.5-flash", config=types.GenerateContentConfig(response_mime_type="application/json", response_schema=CardScript))`
+    - JSON 파싱:
+      - `result = json.loads(response.text)`
+      - Sectors: dicts (not Pydantic objects) — handled with `isinstance(s, dict)`
+    - Validation: bullish_sectors ≥ 2, bearish_sectors ≥ 2
+    - Template Fallback 유지 (API key 없을 시)
+    - Retry logic: max 3 retries, 5s backoff
+  - **Step 3: 실제 파이프라인 테스트 (Step 3)**
+    - Input: data/2_clustered/clustered.jsonl (100 articles, 5 clusters)
+    - Gemini API 성공: 3/5 clusters (cluster 2, 4, 0)
+    - Gemini API 실패: 2/5 clusters (quota 429, fallback 사용)
+    - 소요 시간: 1분 40초 (5 clusters, avg 20초/cluster)
+    - Hook title 샘플 (Gemini 생성):
+      - Cluster 2: "중동 긴장, 시장은\n어디로 갈까?"
+      - Cluster 4: "중동 긴장 고조\n시장 향방은?"
+      - Cluster 0: "휴전 소식에\n달러가 흔들?"
+    - Validation 결과:
+      - Facts: 3-4 items (구체적 수치 포함 확인: "0.5% 상승", "2.5% 하락")
+      - Bullish sectors: 2-3 items ✅
+      - Bearish sectors: 2-3 items ✅
+      - 순한국어 hook_title ✅ (영어 단어 없음)
+  - **Step 4: 카드 생성 테스트 (Step 4)**
+    - Input: data/3_generated/scripts.json (5 scripts)
+    - Output: 25 PNG files (5 clusters × 5 slides, 1080x1350px)
+    - Pexels 이미지 fetch 성공:
+      - Cluster 2: "Middle East tension, AI technology, oil market volatility, stock market" → Alex Luna
+      - Cluster 4: "Middle East conflict oil military" → Ibrahim Bashr
+      - Cluster 0: "Middle East peace oil market" → Christophe RASCLE
+    - Playwright HTML 렌더링: 성공 (Chromium)
+    - 소요 시간: 20초 (5 clusters, avg 4초/cluster)
+    - 파일 크기: slide_1 (816KB, full bleed Pexels), slides 2-5 (58-81KB, dark bg)
+- **성과**:
+  - ✅ google-genai 패키지 전환 완료 (google-generativeai deprecated → google-genai)
+  - ✅ Pydantic schema enforcement 성공 (CardScript model)
+  - ✅ JSON 파싱 성공률: 3/5 (60%, quota limit로 2개 fallback)
+  - ✅ 순한국어 hook_title 강제 성공 (영어 단어 0개)
+  - ✅ 섹터 2개 이상 강제 성공 (bullish 2-3개, bearish 2-3개)
+  - ✅ 팩트 수치 포함 검증 ("0.5% 상승", "2.5% 하락")
+  - ✅ 25장 카드 생성 완료 (1080x1350px, Pexels 배경, Hallmark design)
+- **Issues**:
+  - ⚠️ Gemini free tier quota: 20 req/day → 실제 테스트에서 2/5 실패 (429 RESOURCE_EXHAUSTED)
+  - ✅ Template fallback 정상 작동 (quota 초과 시 자동 전환)
+- **Result**: ✅ Success — google-genai 패키지 전환 완료, Pydantic schema 강제, 3/5 Gemini 성공, 25장 카드 생성
+
+---
+
+**Last Updated**: 2026-06-02  
 **Version**: 2.0 (SignalFeed MVP)  
 **Maintainer**: joon1216 (rlawnsdudrlawnsdud1216@gmail.com)
 
