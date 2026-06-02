@@ -144,7 +144,7 @@ def step4_card_generation(input_file):
     generator = HTMLCardGenerator()
     results = generator.run(input_file)
 
-    print(f"\n✅ 카드 생성 완료! {len(results)}개 클러스터 → data/4_cards/")
+    print(f"\n✅ 카드 생성 완료! {results}개 클러스터 → data/4_cards/")
     return results
 
 

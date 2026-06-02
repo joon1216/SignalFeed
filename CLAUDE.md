@@ -1727,3 +1727,76 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ 25장 카드 생성 성공 (5 clusters × 5 slides, 1080x1350px)
   - ✅ Google Fonts 사용으로 폰트 품질 향상
 - **Result**: ✅ Success — Gemini 2.5 Flash 교체, 디자인 완전 재설계 완료
+
+---
+
+#### Session 30: B-스타일 뉴스피드 디자인 전면 재작성
+- **Task**: 다크 커버 + 화이트 내지 뉴스피드 스타일 디자인 적용
+- **Actions**:
+  - **Step 1: html_card_gen.py 완전 재작성** (850 LOC):
+    - **Design System — B Style**:
+      - Cover: #111111 다크 배경 (훅 임팩트)
+      - Inner pages: #FFFFFF 화이트 베이스 + 컬러 카드
+      - Number badges: pill 형태 수치 강조 (bullish green, bearish red)
+    - **Slide 1 (Cover)**:
+      - Pexels 이미지: y=0~600px, gradient overlay (transparent 30% → #111 100%)
+      - hook_title: Noto Serif KR 900, 84px, #FFFFFF, y=620px
+      - one_line: 22px, #AAAAAA, y=870px
+      - 수치 배지: y=950px, flex row gap 12px
+        - bullish: bg #E8FAF0, color #0F6E56, border #C0E8C0
+        - bearish: bg #FEF0E8, color #993C1D, border #F5C4B3
+        - 각 pill: 22px bold, padding 8px 20px, border-radius 8px
+      - 출처: y=1280px, 16px #555555
+      - 하단 라인: y=1347px, 3px #00C853
+    - **Slide 2 (Context "무슨 일이?")**:
+      - 배경: #FFFFFF (화이트)
+      - 헤더바: #111111, height 100px
+        - "SIGNALFEED" 좌측 13px #00C853
+        - "무슨 일이?" 우측 36px #FFFFFF
+        - "2/5" 우상단 14px #555
+      - 팩트 3개: 각 380px, border-left 4px #00C853
+        - 워터마크 "01" "02" "03": 120px #F0F0F0
+        - 팩트 텍스트: 30px #111111, line-height 1.6
+        - 수치 강조: <span color="#00C853" font-weight:700>
+        - 블록 사이: 1px solid #F0F0F0
+      - 출처: y=1290px, 16px #AAAAAA
+    - **Slide 3 (Bullish "↑ 수혜주는?")**:
+      - 배경: #FFFFFF
+      - 헤더: "↑ 수혜주는?" 36px #00C853
+      - 섹터 카드:
+        - bg #F0FFF4, border 1px #C0E8C0, border-radius 12px
+        - 섹터명: 72px #0F6E56
+        - 이유: 26px #444444
+        - 2개: 각 500px / 3개: 각 330px
+      - FACT 박스: y=1130px, bg #F8F8F6, border-top 2px #00C853
+    - **Slide 4 (Bearish "↓ 주의할 섹터는?")**:
+      - Slide 3 동일 구조, 빨간색 테마
+      - 카드: bg #FFF5F5, border #F5C4B3
+      - 섹터명: #993C1D
+      - FACT 박스: border-top #FF3D3D
+    - **Slide 5 (Conclusion "오늘의 핵심")**:
+      - 배경: #FFFFFF
+      - 헤더: "오늘의 핵심" 36px #FFFFFF (검정 바탕)
+      - 요약 3개: 각 200px, border-left 8px (bullish/bearish/neutral)
+        - 텍스트: 30px #111111, bold
+      - 주목 포인트: bg #F8F8F6, border-left 4px #00C853
+        - "주목 포인트" 14px #00C853
+        - 내용 24px #444444
+      - CTA 박스: bg #111111, border-radius 12px
+        - "댓글에 '분석' 남겨주세요" 30px #FFFFFF
+        - "→ 상세 리포트 DM으로 드립니다" 22px #00C853
+      - 디스클레이머: y=1300px, 14px #AAAAAA
+  - **Step 2: pipeline.py 수정**:
+    - len(results) → results (return type int로 변경)
+  - **Step 3: 전체 파이프라인 실행**:
+    - 25장 카드 생성 (5 clusters × 5 slides)
+    - 소요 시간: ~4.3초 (평균 0.86초/클러스터)
+    - 파일 크기: slide_1 (800-1000KB, Pexels), slides 2-5 (50-80KB)
+- **성과**:
+  - ✅ B-스타일 뉴스피드 디자인 완성 (다크 커버 + 화이트 내지)
+  - ✅ 수치 배지 pill 자동 생성 (one_line에서 추출, 색상 자동 분류)
+  - ✅ 화이트 배경 내지 가독성 대폭 향상 (검정 텍스트, 컬러 카드)
+  - ✅ 섹터 카드 배경색 차별화 (bullish #F0FFF4, bearish #FFF5F5)
+  - ✅ 수치 자동 하이라이팅 유지 (팩트 텍스트 내 수치 green/red 강조)
+  - ✅ 25장 카드 생성 완료 (1080x1350px, B-style)
+- **Result**: ✅ Success — B-스타일 뉴스피드 디자인 전면 적용 완료
