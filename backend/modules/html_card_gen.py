@@ -205,12 +205,12 @@ class HTMLCardGenerator:
         facts = slide_data.get("facts", [])
         source = slide_data.get("source", "")
 
-        # 팩트 블록 3개: y=100~450, 450~800, 800~1150 (각 350px)
+        # 팩트 블록 3개: y=100~450, 450~800, 800~1150 (각 350px, NO gaps)
         facts_html = ""
         block_positions = [
-            (100, 450),   # 블록 1
-            (458, 808),   # 블록 2 (8px gap)
-            (816, 1166)   # 블록 3 (8px gap)
+            (100, 450),   # 블록 1 (350px)
+            (450, 800),   # 블록 2 (350px)
+            (800, 1150)   # 블록 3 (350px)
         ]
 
         for i, fact in enumerate(facts[:3]):
