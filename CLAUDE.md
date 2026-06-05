@@ -2194,3 +2194,49 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ card_gen/html_card_gen 하위 호환 유지 (fetch_image)
 - **참고**: Step 4에서 task는 generate_cards_v2.py를 지정했으나, Session 38에서 V3(뉴스레터) 디자인이 현재 production(동일 출력 dir)이라 V3로 테스트하여 디자인 회귀 방지. 양쪽 생성기 모두 Pixabay로 전환 완료
 - **Result**: ✅ Success — Pexels → Pixabay 교체 완료, 이슈별 키워드 매핑 도입 및 Pixabay 특성에 맞춰 개선
+
+---
+
+#### Session 40: 팩트 검증 레이어 + Pixabay 키워드 매핑 개선
+- **Task**: 규칙+yfinance 기반 팩트 검증 모듈 추가, content_gen 연동, Pixabay 키워드 매핑 교체
+- **Actions**:
+  - **Step 1: backend/modules/fact_checker.py 신규 생성** (~200 LOC):
+    - MACRO_ECONOMIC_RULES 테이블 (10개 매크로 토픽 → WICS 한국 섹터 pos/neg 매핑)
+      - 유가 상승/하락, 금리 인상/인하, 달러 강세/약세, 지정학 리스크/해소, 중국 경기 호조, AI 반도체
+      - 각 토픽: ticker(CL=F, ^TNX, KRW=X, 000001.SS, ^IXIC), expected_trend, pos/neg 섹터 set
+    - FactChecker 클래스:
+      - verify_market_trend(ticker, trend): yfinance 최근 5일 추세 검증 (±0.5% 허용 오차)
+      - detect_topic(text): 키워드 기반 토픽 감지 (이란/전쟁/금리/달러/AI 등)
+      - validate(macro_text, pos, neg): 시장 팩트 + 섹터 논리 검증 → passed/warning/failed
+        - warning: yfinance 추세가 예상 방향과 불일치 (면책 강화 권장)
+        - failed: LLM 섹터 분류가 경제 논리(pos/neg)와 충돌
+  - **Step 2: image_fetcher.py KEYWORD_MAPPING 전면 교체** (딥리서치 표3 기반):
+    - 무드 기반 시각화: 'rate hike'→"business graph falling dark financial district",
+      'rate cut'→"seedling growing coins bright office", 'war'→"stormy dark clouds sky",
+      'ceasefire'→"bright sunrise city skyline", 'ai'→"glowing microchip blue server room" 등
+    - 지정학/유가/금리/환율무역/주식/AI반도체/중국/방산 카테고리 + default
+  - **Step 3: content_gen.py 팩트 검증 연동**:
+    - CardHTMLScript 스키마에 beneficiary_sectors/victim_sectors (WICS 표준명) 필드 추가
+    - user_prompt에 WICS 섹터명 목록 + 수혜/주의 섹터 출력 규칙 추가
+    - generate_html_script() 검증 흐름 (Gemini path):
+      - Gemini 결과 → FactChecker.validate(hook+one_line+제목, beneficiary, victim)
+      - failed → 정정 프롬프트(올바른 pos/neg 섹터 예시) 추가 후 1회 retry (fact_retry_used 플래그)
+      - warning → 강화된 면책 문구(result["disclaimer"]) 자동 추가
+      - passed → 그대로 진행, result["fact_check"]에 검증 결과 저장
+    - TemplateFallback도 beneficiary_sectors/victim_sectors 빈 배열로 스키마 일관성 유지
+  - **Step 4: 파이프라인 테스트** (`venv/bin/python backend/pipeline.py --steps 3,4`):
+    - Step 3: 5 클러스터 중 1개(issue 6 "물가 다시\n오를까?") Gemini 성공, 4개 quota 초과 → fallback
+    - Gemini 성공 클러스터 팩트 검증 작동 확인:
+      - beneficiary ['은행','보험','에너지'] / victim ['건설','소비재','운송']
+      - fact_check: warning (CL=F 실제 0.7% 변동, 예상 방향 불일치) → 강화 면책 자동 삽입
+    - Step 4: 25장 카드 생성 (data/4_cards/, 5×5)
+    - V3 production 카드(data/6_cards_v2) 재생성: Pixabay '금리 인상'→'dark financial district serious meeting' 정상 매핑
+- **검증**:
+  - ✅ fact_checker 단독 테스트 통과 (지정학 리스크 정상/오류/미지 토픽 케이스)
+  - ✅ Gemini path 팩트 검증 warning 발화 + 면책 강화 확인
+  - ✅ Pixabay 키워드 매핑 교체 ('rate hike', 'war', 'ai' 등 무드 기반)
+  - ✅ beneficiary/victim 섹터 스키마 강제 (WICS 표준명)
+- **Issues / 참고**:
+  - ⚠️ Gemini free tier quota로 5개 중 1개만 Gemini 성공 (나머지 fallback) → fallback은 fact_check 미적용(설계상 Gemini path 전용)
+  - 현재 content_gen은 HTML 직접 생성 방식(Session 32~)이라, task 원안의 generate_instagram_script()/섹터 배열 구조 대신 HTML 스키마에 섹터 필드를 추가하여 검증 가능하도록 적응 구현
+- **Result**: ✅ Success — 팩트 검증 레이어(규칙+yfinance) 추가 및 content_gen 연동, Pixabay 키워드 매핑 개선 완료

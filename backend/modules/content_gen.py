@@ -13,6 +13,8 @@ from tqdm import tqdm
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+from backend.modules.fact_checker import FactChecker
+
 # Load environment variables
 load_dotenv()
 
@@ -37,6 +39,8 @@ class CardHTMLScript(BaseModel):
     hook_title: str       # 표지 훅 제목 (순한국어, 15자 이내, \n 줄바꿈)
     one_line: str         # 표지 한줄 요약
     sources: List[str]    # 출처 (Reuters, Bloomberg 등)
+    beneficiary_sectors: List[str]  # 수혜 섹터 (WICS 표준명, 팩트 검증용)
+    victim_sectors: List[str]       # 주의 섹터 (WICS 표준명, 팩트 검증용)
     inner_slides: List[SlideHTML]  # Slide 2~5만 Gemini 생성 (4개)
 
 
@@ -107,6 +111,8 @@ class TemplateFallback:
             "hook_title": cluster_label[:15],  # 첫 15자
             "one_line": articles[0].get("title", "")[:60] if articles else "",
             "sources": sources[:3] if sources else ["Reuters"],
+            "beneficiary_sectors": [],
+            "victim_sectors": [],
             "inner_slides": inner_slides
         }
 
@@ -188,6 +194,8 @@ Output:
 
     def __init__(self):
         """Initialize ContentGenerator with Gemini API"""
+        self.fact_checker = FactChecker()
+
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
             logger.warning("GEMINI_API_KEY not found. Using template fallback mode.")
@@ -251,6 +259,13 @@ Output:
   - 영어 단어 절대 금지
 - one_line: 표지 한줄 요약 (60자 이내, 수치 포함)
 - sources: 출처 배열 (기사에서 추출, 최대 3개)
+- beneficiary_sectors: 이 이슈로 수혜를 받는 한국 섹터 배열 (WICS 표준 섹터명만, 2~3개)
+  - 사용 가능 섹터명: 에너지, 조선, 자본재, 방위산업, 운송, 유틸리티, 항공, 은행, 보험, 금융,
+    제약, 바이오, 건설, 소프트웨어, 자동차, 반도체, IT, 음식료, 철강, 유통, 여행, 소비재, 해운,
+    정유, 화학, 화장품, 엔터, 전력설비
+  - 예: 유가 상승 → ["에너지", "조선"], 지정학 리스크 → ["방위산업", "해운"]
+- victim_sectors: 이 이슈로 주의가 필요한 한국 섹터 배열 (WICS 표준 섹터명만, 2~3개)
+  - 예: 유가 상승 → ["항공", "운송"], 금리 인상 → ["제약", "건설"]
 - inner_slides: Slide 2~5만 생성 (4개)
   - slide_num: 2~5
   - layout_intent: 레이아웃 전략 설명 (CoT)
@@ -266,11 +281,20 @@ Output:
 
         from google.genai import types
 
+        # 팩트 검증용 매크로 텍스트 (제목 + 라벨 기반 토픽 감지)
+        macro_text = " ".join(
+            [cluster.get("cluster_label", "")]
+            + [a.get("title", "") for a in articles]
+        )
+
+        current_prompt = user_prompt
+        fact_retry_used = False  # 팩트 검증 실패로 인한 재생성은 1회만 허용
+
         for attempt in range(max_retries):
             try:
                 response = self.client.models.generate_content(
                     model="gemini-2.5-flash",
-                    contents=user_prompt,
+                    contents=current_prompt,
                     config=types.GenerateContentConfig(
                         response_mime_type="application/json",
                         response_schema=CardHTMLScript,
@@ -292,7 +316,45 @@ Output:
                     if field not in result:
                         raise ValueError(f"Missing required field: {field}")
 
-                logger.info(f"✅ Generated HTML script for cluster {cluster_id}")
+                # ── 팩트 검증 레이어 ──────────────────────────────
+                fact_text = " ".join([macro_text, result.get("hook_title", ""),
+                                      result.get("one_line", "")])
+                check = self.fact_checker.validate(
+                    fact_text,
+                    result.get("beneficiary_sectors", []),
+                    result.get("victim_sectors", []),
+                )
+                result["fact_check"] = check
+                status = check.get("status")
+
+                if status == "failed" and not fact_retry_used:
+                    # 경제 논리 오류 → 정정 프롬프트 추가 후 1회 재생성
+                    fact_retry_used = True
+                    logger.warning(
+                        f"🔁 Cluster {cluster_id} 팩트 검증 실패 → 재생성: {check.get('message')}"
+                    )
+                    current_prompt = (
+                        user_prompt
+                        + f"\n\n[팩트 검증 정정 요청]\n{check.get('message')}\n"
+                        + f"올바른 수혜 섹터 예시: {check.get('correct_pos')}\n"
+                        + f"올바른 주의 섹터 예시: {check.get('correct_neg')}\n"
+                        + "위 경제 논리에 맞게 beneficiary_sectors와 victim_sectors를 다시 작성하세요."
+                    )
+                    time.sleep(5)
+                    continue
+
+                if status == "warning":
+                    # 시장 데이터 불일치 → 면책 문구 자동 강화
+                    logger.warning(f"⚠️ Cluster {cluster_id} 팩트 경고: {check.get('message')}")
+                    result["disclaimer"] = (
+                        "본 콘텐츠는 AI 분석 정보이며 투자 권유가 아닙니다. "
+                        "최신 시장 데이터와 차이가 있을 수 있습니다."
+                    )
+
+                logger.info(
+                    f"✅ Generated HTML script for cluster {cluster_id} "
+                    f"(fact_check: {status})"
+                )
                 return result
 
             except Exception as e:

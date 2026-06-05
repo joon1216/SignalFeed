@@ -19,65 +19,62 @@ class ImageFetcher:
     PIXABAY_API_URL = "https://pixabay.com/api/"
 
     # 이슈 유형별 키워드 매핑 (한국어 + 영어 키 → Pixabay 검색어)
-    # 주의: Pixabay business 카테고리는 추상어("diplomacy", "geopolitics")에
-    # 약하므로 구체적이고 사진성이 강한 명사 위주로 매핑한다.
+    # 딥리서치 표3 기반: 이슈의 무드를 시각화하는 구체적 명사/장면 위주
     KEYWORD_MAPPING = {
-        # 지정학/전쟁/분쟁 → 중동 스카이라인/에너지 (군사 사진은 business 카테고리에 빈약)
-        "iran": "dubai skyline city",
-        "israel": "dubai skyline city",
-        "중동": "dubai skyline city",
-        "war": "oil refinery industry",
-        "conflict": "oil refinery industry",
-        "military": "oil refinery industry",
-        "지정학": "global economy finance business",
-        "전쟁": "oil refinery industry",
-
-        # 금리/통화정책
-        "fed": "federal reserve central bank",
-        "federal reserve": "federal reserve central bank",
-        "fomc": "federal reserve central bank",
-        "rate": "federal reserve central bank",
-        "금리": "federal reserve central bank",
-        "inflation": "economy inflation prices",
-        "인플레이션": "economy inflation prices",
-        "고물가": "economy inflation prices",
+        # 지정학
+        "iran": "diplomacy handshake suit",
+        "이란": "diplomacy handshake suit",
+        "ceasefire": "bright sunrise city skyline",
+        "휴전": "diplomacy handshake global",
+        "war": "stormy dark clouds sky",
+        "conflict": "stormy dark clouds sky",
+        "지정학": "stormy dark clouds city",
 
         # 유가/에너지
-        "oil": "oil refinery industry",
-        "유가": "oil refinery industry",
-        "opec": "oil refinery industry",
-        "energy": "oil refinery industry",
-        "에너지": "oil refinery industry",
+        "oil rise": "oil refinery sunset pump jack",
+        "oil fall": "calm ocean aerial clear sky",
+        "유가 상승": "oil refinery sunset dark",
+        "유가 하락": "calm ocean aerial green",
+        "opec": "oil refinery sunset",
+        "energy": "oil refinery sunset silhouette",
 
-        # 무역/관세
-        "tariff": "cargo ship port trade",
-        "trade": "cargo ship port trade",
-        "관세": "cargo ship port trade",
-        "수출": "cargo ship port trade",
-        "무역": "cargo ship port trade",
+        # 금리/통화
+        "rate hike": "business graph falling dark financial district",
+        "rate cut": "seedling growing coins bright office",
+        "금리 인상": "dark financial district serious meeting",
+        "금리 인하": "seedling growing coins green arrow",
+        "fed": "federal reserve building washington",
+        "inflation": "business graph falling red",
 
-        # 주식/금융시장
-        "nasdaq": "stock market trading",
-        "kospi": "stock market trading",
-        "코스피": "stock market trading",
-        "market": "stock market trading",
-        "증시": "stock market trading",
-        "주식": "stock market trading",
+        # 환율/무역
+        "dollar": "stack coins international container ship",
+        "환율": "container ship port daytime",
+        "trade": "global trade shipping cargo",
+        "tariff": "container ship cargo port",
+        "관세": "cargo container ship port",
+
+        # 주식/경제
+        "nasdaq": "stock market trading finance blue",
+        "market": "stock market trading finance",
+        "kospi": "korea stock exchange finance",
+        "recession": "business graph falling red dark",
 
         # AI/반도체
-        "ai": "artificial intelligence technology",
-        "semiconductor": "semiconductor chip technology",
-        "반도체": "semiconductor chip technology",
-        "chip": "semiconductor chip technology",
-        "ipo": "stock market trading",
+        "ai": "glowing microchip blue server room",
+        "semiconductor": "glowing microchip blue neural network",
+        "반도체": "microchip technology server room lights",
+        "nvidia": "gpu chip technology blue",
 
-        # 중국/이머징
-        "china": "china economy business",
-        "중국": "china economy business",
-        "emerging": "global economy finance business",
+        # 중국
+        "china": "bustling asian market neon city",
+        "중국": "neon city street crowd colorful",
+
+        # 방산
+        "defense": "military technology aerospace",
+        "방산": "aerospace technology defense",
 
         # 기본값
-        "default": "global economy finance business",
+        "default": "global economy finance business city",
     }
 
     def __init__(self, api_key: Optional[str] = None):
