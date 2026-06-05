@@ -27,6 +27,7 @@ from backend.modules.collector import NewsCollector
 from backend.modules.clusterer import cluster_news_articles
 from backend.modules.content_gen import ContentGenerator
 from backend.modules.html_card_gen import HTMLCardGenerator
+from backend.modules.shorts_gen import ShortsGenerator
 
 
 def create_directories():
@@ -44,6 +45,7 @@ def create_directories():
         'data/2_clustered',
         'data/3_generated',
         'data/4_cards',
+        'data/5_shorts',
         'data/temp'
     ]
 
@@ -148,6 +150,52 @@ def step4_card_generation(input_file):
     return results
 
 
+def step5_shorts_generation(input_file):
+    """
+    Step 5: YouTube Shorts 영상 생성 (매크로 차트 사이버펑크)
+
+    Args:
+        input_file: HTML 스크립트 파일 (data/3_generated/scripts.json)
+
+    Returns:
+        int: 생성된 영상 수
+    """
+    print("\n" + "="*70)
+    print("5️⃣ Shorts 생성 단계 (매크로 차트 + TTS)")
+    print("="*70)
+
+    if not os.path.exists(input_file):
+        raise FileNotFoundError(f"입력 파일을 찾을 수 없습니다: {input_file}")
+
+    # scripts.json 로드
+    with open(input_file, 'r', encoding='utf-8') as f:
+        scripts = json.load(f)
+
+    if not scripts:
+        print("⚠️ 스크립트가 비어있음")
+        return 0
+
+    # 생성기 초기화
+    generator = ShortsGenerator()
+
+    # 첫 2개 클러스터만 생성 (테스트)
+    generated_count = 0
+    for script in scripts[:2]:
+        cluster_id = script.get('cluster_id', '0')
+        print(f"\n📹 Cluster {cluster_id} 영상 생성 중...")
+
+        output_path = generator.generate(script)
+
+        if output_path:
+            generated_count += 1
+            print(f"✅ {output_path}")
+        else:
+            print(f"❌ Cluster {cluster_id} 생성 실패")
+
+    print(f"\n✅ Shorts 생성 완료! {generated_count}개 영상 → data/5_shorts/")
+    return generated_count
+
+
 
 
 def main():
@@ -171,7 +219,7 @@ def main():
 
     # 실행할 단계 파싱
     if args.steps == 'all':
-        steps = ['1', '2', '3', '4']
+        steps = ['1', '2', '3', '4', '5']
     else:
         steps = args.steps.split(',')
 
@@ -182,6 +230,7 @@ def main():
     clustered_file = 'data/2_clustered/clustered.jsonl'
     generated_file = 'data/3_generated/scripts.json'
     cards_result = {}
+    shorts_result = 0
 
     # 단계별 실행
     try:
@@ -201,6 +250,10 @@ def main():
             cards_result = step4_card_generation(generated_file)
             print(f"\n✅ Step 4 완료: data/4_cards/")
 
+        if '5' in steps:
+            shorts_result = step5_shorts_generation(generated_file)
+            print(f"\n✅ Step 5 완료: data/5_shorts/")
+
         # 최종 결과
         print("\n" + "="*70)
         print("🎉 파이프라인 완료!")
@@ -214,6 +267,8 @@ def main():
             print(f"   3️⃣ {generated_file}")
         if '4' in steps:
             print(f"   4️⃣ data/4_cards/ ({cards_result} clusters)")
+        if '5' in steps:
+            print(f"   5️⃣ data/5_shorts/ ({shorts_result} videos)")
 
     except Exception as e:
         print(f"\n❌ 오류 발생: {str(e)}")

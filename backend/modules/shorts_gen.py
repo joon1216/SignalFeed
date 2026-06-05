@@ -1,408 +1,456 @@
 """
-SignalFeed YouTube Shorts Generator
-MoviePy + gTTS 기반 1080x1920px 세로 영상 생성
+YouTube Shorts 생성 모듈 (매크로 차트 사이버펑크 스타일)
+
+입력: scripts.json의 클러스터 스크립트
+출력: data/5_shorts/cluster_{id}.mp4 (38-42초, 1080x1920)
+
+기술 스택:
+- yfinance: 나스닥, KOSPI, 원달러 환율 데이터
+- mplcyberpunk: 사이버펑크 차트 스타일
+- gTTS: 한국어 TTS
+- moviepy: 비디오 합성
+- FFmpeg: 자막 렌더링
 """
 
 import os
-import sys
 import json
 import logging
-import tempfile
-from pathlib import Path
-from typing import List, Dict, Tuple
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import mplcyberpunk
+import yfinance as yf
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
-from moviepy import (
-    VideoClip, TextClip, CompositeVideoClip, AudioFileClip,
-    concatenate_videoclips, ImageClip
-)
 from gtts import gTTS
+try:
+    from moviepy.editor import VideoFileClip, AudioFileClip
+except ImportError:
+    from moviepy import VideoFileClip, AudioFileClip
 
-# Add project root to path
-current_dir = Path(__file__).parent
-project_root = current_dir.parent.parent
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
-
-from assets.colors import COLORS
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 class ShortsGenerator:
-    """YouTube Shorts 영상 생성기"""
+    """
+    매크로 차트 사이버펑크 릴스 생성기
+    """
 
-    # Video specs
-    WIDTH = 1080
-    HEIGHT = 1920
-    FPS = 30
-    DURATION = 60  # seconds
-
-    def __init__(self, font_path: str = "assets/fonts/NanumGothicBold.ttf"):
-        """
-        Initialize ShortsGenerator
-
-        Args:
-            font_path: Path to Korean font file
-        """
-        self.font_path = font_path
-
-        # Create temp directory
-        self.temp_dir = "data/7_shorts/temp"
+    def __init__(self):
+        self.output_dir = 'data/5_shorts'
+        self.temp_dir = 'data/temp'
+        os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.temp_dir, exist_ok=True)
 
-    def _hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
+        # 차트 설정
+        self.width = 1080
+        self.height = 1920
+        self.dpi = 100
+        self.fps = 24
+
+        # 색상 팔레트
+        self.colors = {
+            'bg': '#212946',
+            'nasdaq_up': '#00ff41',  # 매트릭스 그린
+            'nasdaq_down': '#08F7FE',  # 시안
+            'kospi_up': '#00ff41',
+            'kospi_down': '#08F7FE',
+            'brand': '#00C853',
+            'text': '#FFFFFF'
+        }
+
+    def generate_tts(self, text: str, output_path: str) -> float:
         """
-        Convert hex color to RGB tuple
+        gTTS로 한국어 TTS 생성
 
         Args:
-            hex_color: Hex color string (#RRGGBB)
+            text: 나레이션 텍스트
+            output_path: 출력 mp3 파일 경로
 
         Returns:
-            RGB tuple (r, g, b)
+            오디오 길이 (초)
         """
-        hex_color = hex_color.lstrip('#')
-        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+        logger.info(f"TTS 생성 중: {len(text)} 글자")
 
-    def _create_particle_frame(self, t: float, width: int = 1080, height: int = 1920,
-                               n_particles: int = 40, bg_color: str = "#121212") -> np.ndarray:
-        """
-        Create particle animation frame
-
-        Args:
-            t: Time in seconds
-            width: Frame width
-            height: Frame height
-            n_particles: Number of particles
-            bg_color: Background color (hex)
-
-        Returns:
-            Numpy array (height, width, 3)
-        """
-        # Create dark background
-        bg_rgb = self._hex_to_rgb(bg_color)
-        frame = np.full((height, width, 3), bg_rgb, dtype=np.uint8)
-
-        # Draw particles
-        particle_color = (51, 51, 51)  # #333333
-
-        for i in range(n_particles):
-            # Particle base position (pseudo-random but deterministic)
-            x0 = (i * 137) % width
-            y0 = (i * 211) % height
-
-            # Animated movement
-            phase = i * 0.5
-            speed = 0.3
-            amplitude_x = 50
-            amplitude_y = 50
-
-            x = int(x0 + np.sin(t * speed + phase) * amplitude_x) % width
-            y = int(y0 + np.cos(t * speed + phase) * amplitude_y) % height
-
-            # Particle size (2-4px)
-            size = 2 + (i % 3)
-
-            # Draw particle as small circle
-            for dx in range(-size, size + 1):
-                for dy in range(-size, size + 1):
-                    if dx*dx + dy*dy <= size*size:
-                        px = x + dx
-                        py = y + dy
-                        if 0 <= px < width and 0 <= py < height:
-                            frame[py, px] = particle_color
-
-        return frame
-
-    def generate_narration(self, script: Dict) -> str:
-        """
-        Generate Korean narration audio using gTTS
-
-        Args:
-            script: Shorts script dict with narration field
-
-        Returns:
-            Path to generated MP3 file
-        """
-        cluster_id = script.get("cluster_id", "0")
-        narration_text = script.get("narration", "")
-
-        logger.info(f"Generating narration for cluster {cluster_id}...")
-
-        # Generate TTS
-        tts = gTTS(text=narration_text, lang='ko', slow=False)
-
-        # Save to temp file
-        output_path = os.path.join(self.temp_dir, f"narration_{cluster_id}.mp3")
+        tts = gTTS(text=text, lang='ko', slow=False)
         tts.save(output_path)
 
-        logger.info(f"Narration saved to {output_path}")
-        return output_path
+        # 오디오 길이 계산 (대략 150글자/분)
+        duration = len(text) / 150 * 60
+        logger.info(f"TTS 생성 완료: {duration:.1f}초")
 
-    def generate_video(self, script: Dict, instagram_script: Dict) -> str:
+        return duration
+
+    def _fetch_market_data(self, ticker: str, days: int = 30) -> Optional[np.ndarray]:
         """
-        Generate YouTube Shorts video
+        yfinance로 시장 데이터 가져오기
 
         Args:
-            script: Shorts script dict
-            instagram_script: Instagram script dict (for visual data)
+            ticker: 티커 심볼 (^IXIC, ^KS11, KRW=X)
+            days: 데이터 일수
 
         Returns:
-            Path to generated MP4 file
+            종가 데이터 (numpy array)
         """
-        cluster_id = str(script.get("cluster_id", "0"))
-        signal = instagram_script.get("signal", "neutral")
+        try:
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=days)
 
-        logger.info(f"Generating video for cluster {cluster_id}...")
+            data = yf.download(
+                ticker,
+                start=start_date.strftime('%Y-%m-%d'),
+                end=end_date.strftime('%Y-%m-%d'),
+                progress=False
+            )
 
-        # Create particle background clip (60 seconds)
-        bg_clip = VideoClip(
-            lambda t: self._create_particle_frame(t, bg_color=COLORS["bg"]),
-            duration=self.DURATION
-        )
+            if data.empty:
+                logger.warning(f"데이터 없음: {ticker}")
+                return None
 
-        # Intro section (0-3s): Brand text
-        intro_text = TextClip(
-            "SIGNALFEED",
-            fontsize=60,
-            color='white',
-            font=self.font_path,
-            size=(self.WIDTH, None),
-            method='caption'
-        ).set_position('center').set_start(0).set_duration(3).crossfadein(0.5)
+            close_prices = data['Close'].values
+            logger.info(f"{ticker} 데이터: {len(close_prices)}일")
+            return close_prices
 
-        intro_subtitle = TextClip(
-            "오늘의 글로벌 경제 시그널",
-            fontsize=28,
-            color='gray',
-            font=self.font_path,
-            size=(self.WIDTH - 100, None),
-            method='caption'
-        ).set_position(('center', 800)).set_start(0.5).set_duration(2.5).crossfadein(0.3)
+        except Exception as e:
+            logger.error(f"{ticker} 데이터 가져오기 실패: {e}")
+            return None
 
-        # Issue title section (3-11s)
-        issue_title = instagram_script["slides"][0]["title"]
-        signal_emoji = instagram_script["slides"][0].get("signal_emoji", "⚪")
-
-        title_text = TextClip(
-            issue_title[:50],  # Max 50 chars
-            fontsize=52,
-            color='white',
-            font=self.font_path,
-            size=(self.WIDTH - 100, None),
-            method='caption'
-        ).set_position('center').set_start(3).set_duration(8).crossfadein(0.5)
-
-        signal_badge = TextClip(
-            f"{signal_emoji} {signal.upper()}",
-            fontsize=36,
-            color=self._hex_to_rgb(COLORS["bullish"] if signal == "bullish" else
-                                   COLORS["bearish"] if signal == "bearish" else
-                                   COLORS["neutral"]),
-            font=self.font_path
-        ).set_position(('center', 700)).set_start(4).set_duration(7).crossfadein(0.3)
-
-        # Sources chip
-        sources_text = TextClip(
-            "Reuters · Bloomberg · FT",
-            fontsize=20,
-            color='gray',
-            font=self.font_path
-        ).set_position(('center', 900)).set_start(5).set_duration(6)
-
-        # Bullish section (11-23s) - simplified
-        bullish_label = TextClip(
-            "🟢 호재",
-            fontsize=48,
-            color=self._hex_to_rgb(COLORS["bullish"]),
-            font=self.font_path
-        ).set_position((60, 400)).set_start(11).set_duration(12).crossfadein(0.3)
-
-        bullish_text = TextClip(
-            "금리 인하로 성장 섹터 수혜\nTech · Real Estate · 소비재",
-            fontsize=28,
-            color='white',
-            font=self.font_path,
-            size=(self.WIDTH - 120, None),
-            method='caption'
-        ).set_position((60, 550)).set_start(12).set_duration(11).crossfadein(0.5)
-
-        # Bearish section (23-35s) - simplified
-        bearish_label = TextClip(
-            "🔴 악재",
-            fontsize=48,
-            color=self._hex_to_rgb(COLORS["bearish"]),
-            font=self.font_path
-        ).set_position((60, 400)).set_start(23).set_duration(12).crossfadein(0.3)
-
-        bearish_text = TextClip(
-            "인플레이션 압력 지속\n소비 · 에너지 부담 증가",
-            fontsize=28,
-            color='white',
-            font=self.font_path,
-            size=(self.WIDTH - 120, None),
-            method='caption'
-        ).set_position((60, 550)).set_start(24).set_duration(11).crossfadein(0.5)
-
-        # Key fact (35-43s)
-        fact_label = TextClip(
-            "핵심 팩트",
-            fontsize=32,
-            color=self._hex_to_rgb(COLORS["brand"]),
-            font=self.font_path
-        ).set_position((60, 400)).set_start(35).set_duration(8).crossfadein(0.3)
-
-        fact_text = TextClip(
-            "글로벌 경제 변화가\n투자 환경에 영향을 줄 것으로 보입니다",
-            fontsize=28,
-            color='white',
-            font=self.font_path,
-            size=(self.WIDTH - 120, None),
-            method='caption'
-        ).set_position((60, 520)).set_start(36).set_duration(7).crossfadein(0.5)
-
-        # Conclusion (43-53s)
-        conclusion_text = TextClip(
-            f"{signal.upper()} 시그널\n\n자세한 분석은\n프로필 링크에서",
-            fontsize=36,
-            color='white',
-            font=self.font_path,
-            size=(self.WIDTH - 120, None),
-            method='caption',
-            align='center'
-        ).set_position('center').set_start(43).set_duration(10).crossfadein(0.5)
-
-        # Outro (53-60s)
-        outro_logo = TextClip(
-            "SIGNALFEED",
-            fontsize=54,
-            color=self._hex_to_rgb(COLORS["brand"]),
-            font=self.font_path
-        ).set_position('center').set_start(53).set_duration(7).crossfadein(0.5)
-
-        outro_cta = TextClip(
-            "구독과 좋아요 부탁드립니다 🙏",
-            fontsize=28,
-            color='white',
-            font=self.font_path
-        ).set_position(('center', 800)).set_start(54).set_duration(6).crossfadein(0.3)
-
-        disclaimer_text = TextClip(
-            "본 콘텐츠는 AI 분석 정보이며\n투자 권유가 아닙니다",
-            fontsize=18,
-            color='gray',
-            font=self.font_path,
-            size=(self.WIDTH - 100, None),
-            method='caption',
-            align='center'
-        ).set_position(('center', 1000)).set_start(54.5).set_duration(5.5)
-
-        # Composite all clips
-        video = CompositeVideoClip([
-            bg_clip,
-            intro_text, intro_subtitle,
-            title_text, signal_badge, sources_text,
-            bullish_label, bullish_text,
-            bearish_label, bearish_text,
-            fact_label, fact_text,
-            conclusion_text,
-            outro_logo, outro_cta, disclaimer_text
-        ], size=(self.WIDTH, self.HEIGHT))
-
-        # Generate narration audio
-        narration_path = self.generate_narration(script)
-        audio = AudioFileClip(narration_path)
-
-        # Set audio (cut to video duration if longer)
-        if audio.duration > video.duration:
-            audio = audio.subclip(0, video.duration)
-        video = video.set_audio(audio)
-
-        # Export video
-        output_dir = "data/7_shorts"
-        os.makedirs(output_dir, exist_ok=True)
-        output_path = os.path.join(output_dir, f"cluster_{cluster_id}.mp4")
-
-        logger.info(f"Exporting video to {output_path}...")
-
-        # Write video file with containsSyntheticMedia flag in metadata
-        video.write_videofile(
-            output_path,
-            fps=self.FPS,
-            codec='libx264',
-            audio_codec='aac',
-            preset='medium',
-            ffmpeg_params=[
-                '-metadata', 'containsSyntheticMedia=true',
-                '-metadata', 'comment=AI-generated content (gTTS + MoviePy)'
-            ]
-        )
-
-        logger.info(f"Video exported to {output_path}")
-
-        # Cleanup
-        video.close()
-        audio.close()
-
-        return output_path
-
-    def run(self, scripts_path: str = "data/5_generated/scripts.json") -> List[str]:
+    def generate_chart_image(
+        self,
+        cluster_data: Dict,
+        output_path: str
+    ) -> bool:
         """
-        Full pipeline: load scripts → generate videos → return paths
+        mplcyberpunk 사이버펑크 정적 차트 이미지 생성
 
         Args:
-            scripts_path: Input scripts JSON path
+            cluster_data: 클러스터 스크립트 데이터
+            output_path: 출력 PNG 파일 경로
 
         Returns:
-            List of output video paths
+            성공 여부
         """
-        logger.info("=" * 70)
-        logger.info("SignalFeed Shorts Generator Started")
-        logger.info("=" * 70)
+        logger.info("차트 이미지 생성 중...")
 
-        # Load scripts
-        logger.info(f"Loading scripts from {scripts_path}...")
-        with open(scripts_path, 'r', encoding='utf-8') as f:
-            scripts_data = json.load(f)
+        # 시장 데이터 가져오기
+        nasdaq_data = self._fetch_market_data('^IXIC', days=30)
+        kospi_data = self._fetch_market_data('^KS11', days=30)
 
-        logger.info(f"Loaded {len(scripts_data)} scripts")
+        if nasdaq_data is None or kospi_data is None:
+            logger.error("시장 데이터 가져오기 실패")
+            return False
 
-        # Generate videos
-        output_paths = []
+        # 데이터 정규화 (0~100)
+        nasdaq_normalized = (nasdaq_data - nasdaq_data.min()) / (nasdaq_data.max() - nasdaq_data.min()) * 100
+        kospi_normalized = (kospi_data - kospi_data.min()) / (kospi_data.max() - kospi_data.min()) * 100
 
-        for item in scripts_data:
-            try:
-                shorts_script = item.get("shorts", {})
-                instagram_script = item.get("instagram", {})
+        # 사이버펑크 스타일 적용
+        plt.style.use('cyberpunk')
 
-                # Generate video
-                video_path = self.generate_video(shorts_script, instagram_script)
-                output_paths.append(video_path)
+        # Figure 설정 (9:16 세로)
+        fig = plt.figure(
+            figsize=(self.width / self.dpi, self.height / self.dpi),
+            dpi=self.dpi
+        )
+        fig.patch.set_facecolor(self.colors['bg'])
 
-            except Exception as e:
-                logger.error(f"Error generating video for cluster {item.get('cluster_id')}: {e}")
-                continue
+        # 서브플롯 (상단 60%, 하단 40%)
+        ax1 = plt.subplot2grid((10, 1), (0, 0), rowspan=6, fig=fig)
+        ax2 = plt.subplot2grid((10, 1), (6, 0), rowspan=4, fig=fig)
 
-        logger.info("=" * 70)
-        logger.info(f"Shorts Generation Complete: {len(output_paths)} videos")
-        logger.info("=" * 70)
+        for ax in [ax1, ax2]:
+            ax.set_facecolor(self.colors['bg'])
+            ax.grid(True, alpha=0.2, color='#FFFFFF', linestyle='--')
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_color('#FFFFFF')
+            ax.spines['bottom'].set_color('#FFFFFF')
+            ax.tick_params(colors='#FFFFFF', labelsize=10)
 
-        return output_paths
+        # 제목 설정
+        fig.suptitle(
+            'SIGNALFEED',
+            fontsize=24,
+            color=self.colors['brand'],
+            weight='bold',
+            x=0.5,
+            y=0.98
+        )
+
+        ax1.set_title(
+            f'NASDAQ ({len(nasdaq_data)} days)',
+            fontsize=16,
+            color='#00ff41',
+            pad=20
+        )
+        ax2.set_title(
+            f'KOSPI ({len(kospi_data)} days)',
+            fontsize=14,
+            color='#08F7FE',
+            pad=10
+        )
+
+        # 차트 그리기
+        x_nasdaq = np.arange(len(nasdaq_normalized))
+        x_kospi = np.arange(len(kospi_normalized))
+
+        ax1.plot(x_nasdaq, nasdaq_normalized, linewidth=3, color='#00ff41')
+        ax2.plot(x_kospi, kospi_normalized, linewidth=3, color='#08F7FE')
+
+        # 네온 효과 적용
+        try:
+            mplcyberpunk.make_lines_glow(ax1)
+            mplcyberpunk.make_lines_glow(ax2)
+            mplcyberpunk.add_underglow(ax1)
+            mplcyberpunk.add_underglow(ax2)
+        except Exception as e:
+            logger.warning(f"Glow 효과 적용 실패: {e}")
+
+        # 축 범위 설정
+        ax1.set_xlim(0, len(nasdaq_normalized))
+        ax1.set_ylim(0, 110)
+        ax2.set_xlim(0, len(kospi_normalized))
+        ax2.set_ylim(0, 110)
+
+        # PNG 저장
+        logger.info(f"차트 이미지 저장 중: {output_path}")
+
+        try:
+            plt.tight_layout()
+            plt.savefig(output_path, dpi=self.dpi, facecolor=self.colors['bg'])
+            logger.info("차트 이미지 저장 완료")
+            plt.close(fig)
+            return True
+        except Exception as e:
+            logger.error(f"이미지 저장 실패: {e}")
+            plt.close(fig)
+            return False
+
+    def chart_to_video(
+        self,
+        chart_png: str,
+        output_path: str,
+        duration: float
+    ) -> bool:
+        """
+        정적 차트 이미지를 비디오로 변환 (MoviePy)
+
+        Args:
+            chart_png: 차트 PNG 경로
+            output_path: 출력 MP4 경로
+            duration: 비디오 길이 (초)
+
+        Returns:
+            성공 여부
+        """
+        try:
+            from moviepy import ImageClip
+
+            logger.info(f"차트 이미지 → 비디오 변환 중: {duration:.1f}초")
+
+            # 이미지 클립 생성
+            clip = ImageClip(chart_png).with_duration(duration)
+
+            # MP4 저장
+            clip.write_videofile(
+                output_path,
+                fps=self.fps,
+                codec='libx264',
+                preset='ultrafast',
+                threads=4,
+                logger=None
+            )
+
+            clip.close()
+            logger.info("차트 비디오 변환 완료")
+            return True
+
+        except Exception as e:
+            logger.error(f"비디오 변환 실패: {e}")
+            return False
+
+    def _build_tts_script(self, script_data: Dict) -> str:
+        """
+        TTS 스크립트 자동 생성 (Gemini 없이)
+
+        Args:
+            script_data: 클러스터 스크립트
+
+        Returns:
+            TTS 텍스트
+        """
+        hook = script_data.get('hook_title', '').replace('\n', ' ')
+        one_line = script_data.get('one_line', '')
+
+        return f"""
+AI가 오늘의 글로벌 경제 신호를 분석했습니다.
+{hook}.
+{one_line}.
+데이터는 감정이 없습니다.
+매일 아침 가장 냉철한 AI 시그널을 받아보시려면 구독하세요.
+""".strip()
+
+    def compose_video(
+        self,
+        chart_mp4: str,
+        audio_mp3: str,
+        output_path: str
+    ) -> bool:
+        """
+        MoviePy로 차트 + TTS 합성
+
+        Args:
+            chart_mp4: 차트 영상 경로
+            audio_mp3: TTS 오디오 경로
+            output_path: 최종 출력 경로
+
+        Returns:
+            성공 여부
+        """
+        logger.info("비디오 합성 중...")
+
+        try:
+            # 차트 영상 로드
+            video = VideoFileClip(chart_mp4)
+
+            # TTS 오디오 로드
+            audio = AudioFileClip(audio_mp3)
+
+            # 오디오 길이에 맞춰 영상 길이 조정
+            if video.duration < audio.duration:
+                # 영상이 짧으면 마지막 프레임 freeze
+                video = video.set_duration(audio.duration)
+            else:
+                # 영상이 길면 자르기
+                video = video.subclipped(0, audio.duration)
+
+            # 오디오 합성
+            video = video.with_audio(audio)
+
+            # 최종 저장
+            logger.info(f"최종 영상 저장 중: {output_path}")
+            video.write_videofile(
+                output_path,
+                fps=self.fps,
+                codec='libx264',
+                audio_codec='aac',
+                preset='medium',
+                threads=4,
+                logger=None  # MoviePy 로그 숨기기
+            )
+
+            # 리소스 정리
+            video.close()
+            audio.close()
+
+            logger.info("비디오 합성 완료")
+            return True
+
+        except Exception as e:
+            logger.error(f"비디오 합성 실패: {e}")
+            return False
+
+    def generate(self, script_data: Dict) -> Optional[str]:
+        """
+        메인 진입점: 클러스터 스크립트 → 릴스 영상 생성
+
+        Args:
+            script_data: scripts.json의 클러스터 데이터
+
+        Returns:
+            생성된 영상 경로 (실패 시 None)
+        """
+        cluster_id = script_data.get('cluster_id', '0')
+        logger.info(f"=== Cluster {cluster_id} 릴스 생성 시작 ===")
+
+        # 파일 경로 설정
+        tts_path = os.path.join(self.temp_dir, f'tts_{cluster_id}.mp3')
+        chart_path = os.path.join(self.temp_dir, f'chart_{cluster_id}.mp4')
+        output_path = os.path.join(self.output_dir, f'cluster_{cluster_id}.mp4')
+
+        try:
+            # Step 1: TTS 생성
+            tts_script = self._build_tts_script(script_data)
+            logger.info(f"TTS 스크립트: {tts_script[:100]}...")
+
+            duration = self.generate_tts(tts_script, tts_path)
+
+            # Step 2: 차트 이미지 생성
+            chart_png = os.path.join(self.temp_dir, f'chart_{cluster_id}.png')
+            success = self.generate_chart_image(script_data, chart_png)
+
+            if not success:
+                logger.error("차트 이미지 생성 실패")
+                return None
+
+            # Step 3: 차트 이미지 → 비디오
+            success = self.chart_to_video(chart_png, chart_path, duration)
+
+            if not success:
+                logger.error("차트 비디오 변환 실패")
+                return None
+
+            # Step 4: 비디오 합성
+            success = self.compose_video(chart_path, tts_path, output_path)
+
+            if not success:
+                logger.error("비디오 합성 실패")
+                return None
+
+            logger.info(f"✅ Cluster {cluster_id} 릴스 생성 완료: {output_path}")
+            return output_path
+
+        except Exception as e:
+            logger.error(f"❌ Cluster {cluster_id} 릴스 생성 실패: {e}")
+            return None
+
+        finally:
+            # 임시 파일 정리
+            for temp_file in [tts_path, chart_path]:
+                if os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                        logger.debug(f"임시 파일 삭제: {temp_file}")
+                    except Exception as e:
+                        logger.warning(f"임시 파일 삭제 실패: {temp_file} - {e}")
 
 
-if __name__ == "__main__":
-    # Test run
+def main():
+    """
+    테스트 실행
+    """
+    import json
+
+    # scripts.json 로드
+    scripts_path = 'data/3_generated/scripts.json'
+
+    if not os.path.exists(scripts_path):
+        logger.error(f"scripts.json 없음: {scripts_path}")
+        return
+
+    with open(scripts_path, 'r', encoding='utf-8') as f:
+        scripts = json.load(f)
+
+    if not scripts:
+        logger.error("scripts.json이 비어있음")
+        return
+
+    # 생성기 초기화
     generator = ShortsGenerator()
 
-    # Use sample data if exists
-    sample_path = "data/5_generated/scripts.json"
-    if os.path.exists(sample_path):
-        paths = generator.run(sample_path)
-        logger.info(f"Generated {len(paths)} videos")
-    else:
-        logger.warning(f"Sample data not found at {sample_path}")
+    # 첫 2개 클러스터만 테스트
+    for script in scripts[:2]:
+        output_path = generator.generate(script)
+
+        if output_path:
+            logger.info(f"✅ 생성 완료: {output_path}")
+        else:
+            logger.error(f"❌ 생성 실패: cluster {script.get('cluster_id')}")
+
+
+if __name__ == '__main__':
+    main()
