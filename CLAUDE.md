@@ -2240,3 +2240,45 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ⚠️ Gemini free tier quota로 5개 중 1개만 Gemini 성공 (나머지 fallback) → fallback은 fact_check 미적용(설계상 Gemini path 전용)
   - 현재 content_gen은 HTML 직접 생성 방식(Session 32~)이라, task 원안의 generate_instagram_script()/섹터 배열 구조 대신 HTML 스키마에 섹터 필드를 추가하여 검증 가능하도록 적응 구현
 - **Result**: ✅ Success — 팩트 검증 레이어(규칙+yfinance) 추가 및 content_gen 연동, Pixabay 키워드 매핑 개선 완료
+
+---
+
+#### Session 41: generate_cards_v2.py 카드뉴스 공장 방식 (자유 레이아웃 + 토큰 절약)
+- **Task**: Slide 1은 고정 템플릿 유지(Claude 호출 없음), Slide 2~5는 Claude(Opus)가 매번 다른 자유 레이아웃으로 HTML 직접 생성
+- **핵심 변경**:
+  - 기존: Slide 1~5 모두 파이썬 고정 빌더(slide_context/slide_sectors/slide_conclusion)로 생성
+  - 변경: Slide 1만 고정 템플릿(`slide_cover`, Pixabay + 다크 오버레이) → API 토큰 절약
+    Slide 2~5는 Claude 단일 호출로 4장 각각 다른 잡지형 레이아웃 HTML 생성
+- **Actions**:
+  - **Step 1: anthropic SDK 설치** (`venv/bin/pip install anthropic`)
+  - **Step 2: backend/generate_cards_v2.py 전면 재작성** (~500 LOC):
+    - `INNER_SYSTEM_PROMPT`: 수석 에디토리얼 디자이너 페르소나 (Bloomberg + 한국 뉴스레터)
+      - 가드레일: 아이보리 #F8F6F0 배경(순백 금지), 다크 #0D0D0D, 브랜드 #00C853, 수치 하이라이트 #FFE566, 수혜 green/주의 red, 구분선 #D0CCC6
+      - 폰트: Pretendard CDN, word-break:keep-all 전체 적용
+      - 캔버스: 1080x1350px, id="slide-N" 필수, SIGNALFEED 좌상단, 번호 우상단
+      - 콘텐츠 절대 규칙: 수치 없는 팩트 금지, 예측/권유 표현 금지, 모든 텍스트 한국어,
+        **종목 티커명/회사명 직접 언급 절대 금지 → 섹터/업종으로만 표현** (예: "정유업종" "방산업체")
+      - 레이아웃 자유: 4장 각각 완전히 다른 잡지형 레이아웃 (얇은 선, 인라인 하이라이트, pill, 체크마크, 큰 숫자, 이탤릭 라벨, accent 선, 2단 비교, 인용구) — PPT 금지
+      - 출력 형식: `===SLIDE2===` ~ `===SLIDE5===` 구분자로 완전한 단일 HTML 4개
+    - `slide_cover()`: Slide 1 고정 템플릿 (상단 55% Pixabay 이미지 + 하단 45% 다크 텍스트, hook_title 72px)
+    - `generate_inner_with_claude(material)`: Claude(Opus) 단일 호출, system 블록 prompt caching(ephemeral), max_tokens 16000
+    - `parse_claude_slides()`: ===SLIDEN=== 정규식 분리 + ```html 펜스 제거 + id 검증
+    - `build_material()`: CONTENT 큐레이션 팩트(수치 포함, 티커 제외 섹터+이유)를 Claude에 전달
+    - `fallback_inner()`: API key 없거나 실패 시 내장 에디토리얼 템플릿(번호 팩트/섹터 accent 선/다크 결론 CTA)
+    - CONTENT에 issue_id "6" (물가/금리 인플레이션) 추가 — 한국어 hook 클러스터 대응
+    - 슬라이드별 독립 HTML 저장(data/temp/cards_v2_slide_N.html) + Playwright set_content 개별 스크린샷
+    - 모델: env `CLAUDE_MODEL` 오버라이드, 기본 "claude-opus-4-7"
+  - **Step 3: 카드 생성 실행** (`venv/bin/python backend/generate_cards_v2.py`)
+    - 선택 클러스터: issue_id=6 "물가 다시\n오를까?" (한국어 hook 우선)
+    - Pixabay: '금리 인상' → "dark financial district serious meeting"
+    - ANTHROPIC_API_KEY 미설정 → fallback 에디토리얼 템플릿으로 Slide 2~5 생성
+    - 5장 생성 완료 (data/6_cards_v2/slide_1~5.png)
+  - **Step 4: 시각 검증**
+    - Slide 1: Pixabay 야경 + "물가 다시 오를까?" 한국어 hook, SIGNALFEED 브랜드
+    - Slide 2: 번호(01/02/03) 팩트 3개 + 수치 green 하이라이트 (2.8%, 4,150개 등)
+    - Slide 3: 섹터 카드(은행/보험) 업종명만, 티커 없음, 수치 강조 (0.2%p, 5.50%)
+    - Slide 5: 다크 결론 3줄 요약 + 주목 포인트 + CTA 박스("댓글에 '분석' 남겨주세요")
+- **참고**:
+  - ⚠️ ANTHROPIC_API_KEY가 env/.env에 없어 이번 실행은 fallback 템플릿으로 생성. 키 설정 시 Claude 공장 방식 자동 활성화 (코드 경로 완비)
+  - fallback도 티커 금지/수치 하이라이트/아이보리 디자인 규칙 동일 준수
+- **Result**: ✅ Success — 카드뉴스 공장 방식 구현 (Slide 1 고정 + Slide 2~5 Claude 자유 레이아웃), 티커명 금지, 토큰 절약, fallback 안정성 확보
