@@ -2282,3 +2282,39 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ⚠️ ANTHROPIC_API_KEY가 env/.env에 없어 이번 실행은 fallback 템플릿으로 생성. 키 설정 시 Claude 공장 방식 자동 활성화 (코드 경로 완비)
   - fallback도 티커 금지/수치 하이라이트/아이보리 디자인 규칙 동일 준수
 - **Result**: ✅ Success — 카드뉴스 공장 방식 구현 (Slide 1 고정 + Slide 2~5 Claude 자유 레이아웃), 티커명 금지, 토큰 절약, fallback 안정성 확보
+
+---
+
+#### Session 42: generate_cards_v2.py Slide 2~5 생성 Claude API → Gemini 2.5 Flash로 교체
+- **Task**: 카드뉴스 공장 방식 유지하되, Slide 2~5 HTML 생성기를 Anthropic(Claude) → Gemini 2.5 Flash로 교체. anthropic 라이브러리/ANTHROPIC_API_KEY 제거
+- **핵심 변경**:
+  - 기존(Session 41): Slide 2~5 = Claude(Opus) 단일 호출 (anthropic SDK, prompt caching, max_tokens 16000)
+  - 변경: Slide 2~5 = Gemini 2.5 Flash 단일 호출 (`google-genai` SDK)
+  - Slide 1 고정 템플릿(slide_cover, Pixabay + 다크 오버레이)은 그대로 유지 — API 호출 없음
+- **Actions**:
+  - **Step 1: backend/generate_cards_v2.py 수정** (Claude → Gemini):
+    - docstring: "Slide 2~5: Gemini 2.5 Flash가 매번 다른 자유 레이아웃으로..."
+    - 상수: `CLAUDE_MODEL` → `GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")`
+    - `generate_inner_with_claude()` → `generate_inner_with_gemini(material)`:
+      - `from google import genai` / `from google.genai import types`
+      - `client = genai.Client(api_key=GEMINI_API_KEY)`
+      - `client.models.generate_content(model=GEMINI_MODEL, contents=user_prompt, config=types.GenerateContentConfig(system_instruction=INNER_SYSTEM_PROMPT, temperature=0.9, max_output_tokens=8192))`
+      - GEMINI_API_KEY 없으면 None 반환 → fallback
+    - `parse_claude_slides()` → `parse_inner_slides()` (로직 동일: ===SLIDEN=== 정규식 분리 + ```html 펜스 제거 + id 검증)
+    - main(): `generate_inner_with_gemini(material)` 호출
+    - INNER_SYSTEM_PROMPT / slide_cover / build_material / fallback_inner / CONTENT 전부 그대로 유지 (anthropic import 완전 제거)
+  - **Step 2: 카드 생성 실행** (`venv/bin/python backend/generate_cards_v2.py`)
+    - 선택 클러스터: issue_id=6 "물가 다시\n오를까?" (한국어 hook 우선)
+    - Pixabay: '금리 인상' → "dark financial district serious meeting" → 도심 야경 스카이라인
+    - 첫 실행 503 UNAVAILABLE(고수요) → fallback. 재시도 루프 3회차에 Gemini 4/4 파싱 성공
+  - **Step 3: 시각 검증** (Gemini 생성 결과)
+    - Slide 1: Pixabay 야경 + "물가 다시 오를까?" 한국어 hook, SIGNALFEED 브랜드
+    - Slide 2: 번호(01/02/03) 팩트 3개, 수치 노란 하이라이트 (2.8%, 2.6%, 4,150개)
+    - Slide 3: 섹터 카드(은행/보험) accent 선, 업종명만, 수치 green (0.2%p, 5.50%)
+    - Slide 4: 2단 비교 카드(건설·부동산 / 소비재·운송) red 테마, "[ MARKET OUTLOOK ]" 이탤릭 라벨
+    - Slide 5: 다크 결론 불릿 3줄 + 주목 포인트 + green CTA 박스
+    - ✅ 슬라이드마다 다른 레이아웃, 티커 없음(섹터만), 전부 한국어, 수치 하이라이트, 면책 포함
+- **참고**:
+  - Gemini free tier는 일시적 503/quota 발생 가능 → fallback 에디토리얼 템플릿이 항상 유효 카드 생성 (안정성 확보)
+  - max_output_tokens=8192는 4장 완전 HTML에 빠듯할 수 있음(가끔 3/4 파싱) → 재시도로 4/4 확보
+- **Result**: ✅ Success — Slide 2~5 생성 Gemini 2.5 Flash로 교체 완료, anthropic 의존성 제거, 공장 방식(고정 표지 + 자유 내지) 유지

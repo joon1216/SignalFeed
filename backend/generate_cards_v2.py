@@ -2,7 +2,7 @@
 SignalFeed 카드뉴스 V2 — 카드뉴스 공장 방식 (Session 41)
 
 - Slide 1 (Cover): 고정 템플릿 유지 (Pixabay 이미지 + 다크 오버레이, Claude API 호출 없음 → 토큰 절약)
-- Slide 2~5: Claude(Opus)가 매번 다른 자유 레이아웃으로 HTML 직접 생성 (잡지/뉴스레터 감성)
+- Slide 2~5: Gemini 2.5 Flash가 매번 다른 자유 레이아웃으로 HTML 직접 생성 (잡지/뉴스레터 감성)
   · 종목 티커/회사명 금지, 섹터·업종으로만 표현
   · 수치 없는 팩트 금지, 예측/권유 표현 금지
   · API key 없거나 실패 시 → 내장 에디토리얼 템플릿 fallback
@@ -58,7 +58,7 @@ HEAD = (
     "</style>"
 )
 
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-opus-4-7")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 # ──────────────────────────────────────────────────────────────
 # Slide 2~5 시스템 프롬프트 (카드뉴스 공장 — 자유 레이아웃)
@@ -281,48 +281,46 @@ def slide_cover(hook_title: str, one_line: str, sources: list, img_uri: str) -> 
 
 
 # ──────────────────────────────────────────────────────────────
-# Slide 2~5 — Claude(Opus) 공장 생성
+# Slide 2~5 — Gemini 2.5 Flash 공장 생성
 # ──────────────────────────────────────────────────────────────
-def generate_inner_with_claude(material: str) -> dict:
-    """Claude(Opus) 단일 호출로 Slide 2~5 HTML 생성. 실패 시 None."""
-    api_key = os.getenv("ANTHROPIC_API_KEY") or os.getenv("CLAUDE_API_KEY")
+def generate_inner_with_gemini(material: str) -> dict:
+    """Gemini 2.5 Flash 단일 호출로 Slide 2~5 HTML 생성. 실패 시 None."""
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        logger.warning("ANTHROPIC_API_KEY 없음 → fallback 템플릿 사용")
+        logger.warning("GEMINI_API_KEY 없음 → fallback 템플릿 사용")
         return None
 
     try:
-        import anthropic
-        client = anthropic.Anthropic(api_key=api_key)
-        logger.info(f"Claude({CLAUDE_MODEL}) 호출 — Slide 2~5 생성")
-        resp = client.messages.create(
-            model=CLAUDE_MODEL,
-            max_tokens=16000,
-            system=[{
-                "type": "text",
-                "text": INNER_SYSTEM_PROMPT,
-                "cache_control": {"type": "ephemeral"},
-            }],
-            messages=[{
-                "role": "user",
-                "content": (
-                    "아래 이슈 자료로 Slide 2~5를 각각 완전히 다른 잡지형 레이아웃으로 만들어줘. "
-                    "출력은 시스템 프롬프트의 ===SLIDEN=== 형식만 사용.\n\n" + material
-                ),
-            }],
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=api_key)
+        logger.info(f"Gemini({GEMINI_MODEL}) 호출 — Slide 2~5 생성")
+        user_prompt = (
+            "아래 이슈 자료로 Slide 2~5를 각각 완전히 다른 잡지형 레이아웃으로 만들어줘. "
+            "출력은 시스템 프롬프트의 ===SLIDEN=== 형식만 사용.\n\n" + material
         )
-        text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text")
-        slides = parse_claude_slides(text)
+        resp = client.models.generate_content(
+            model=GEMINI_MODEL,
+            contents=user_prompt,
+            config=types.GenerateContentConfig(
+                system_instruction=INNER_SYSTEM_PROMPT,
+                temperature=0.9,
+                max_output_tokens=8192,
+            ),
+        )
+        text = resp.text or ""
+        slides = parse_inner_slides(text)
         if len(slides) == 4:
-            logger.info("✅ Claude 4개 슬라이드 파싱 성공")
+            logger.info("✅ Gemini 4개 슬라이드 파싱 성공")
             return slides
-        logger.warning(f"Claude 슬라이드 파싱 부족 ({len(slides)}/4) → fallback")
+        logger.warning(f"Gemini 슬라이드 파싱 부족 ({len(slides)}/4) → fallback")
         return None
     except Exception as e:
-        logger.warning(f"Claude 호출 실패: {e} → fallback")
+        logger.warning(f"Gemini 호출 실패: {e} → fallback")
         return None
 
 
-def parse_claude_slides(text: str) -> dict:
+def parse_inner_slides(text: str) -> dict:
     """===SLIDEN=== 구분자로 슬라이드 HTML 분리"""
     slides = {}
     parts = re.split(r"===SLIDE([2-5])===", text)
@@ -478,7 +476,7 @@ def main():
 
     # Slide 1 (고정) + Slide 2~5 (Claude 공장, 실패 시 fallback)
     material = build_material(script, content)
-    inner = generate_inner_with_claude(material)
+    inner = generate_inner_with_gemini(material)
     if inner is None:
         inner = fallback_inner(content)
         logger.info("내장 에디토리얼 템플릿으로 Slide 2~5 생성")
