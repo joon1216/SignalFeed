@@ -2102,3 +2102,35 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - 정적 이미지 + ImageClip 방식으로 15배 빠른 속도
   - 총 생성 시간: ~25초/영상 (TTS 포함)
 - **Result**: ✅ Success — YouTube Shorts 생성 파이프라인 완성, 매크로 차트 사이버펑크 스타일 적용
+
+---
+
+#### Session 37: 카드뉴스 V2 — 아이보리 디자인 시스템 (Opus 품질)
+- **Task**: 순백 금지 아이보리(#F8F6F0) 편집 디자인으로 카드뉴스 5장 재설계, 다크 커버/결론 + 아이보리 내지
+- **Actions**:
+  - **Step 1: backend/generate_cards_v2.py 신규 생성** (자체 완결형 스크립트, ~400 LOC):
+    - 디자인 토큰 상수화: IVORY #F8F6F0, DARK #0D0D0D, DARK_SURFACE #161616, CARD_SURFACE #EEECEA, DIVIDER #E0DDD8, GREEN #00C853, RED #FF3D3D
+    - `hl()` 수치 자동 하이라이팅: 정규식으로 숫자+단위 감지 → color/font-weight 700 span 래핑 (bullish green, bearish red)
+    - `img_to_base64()`: Pexels 이미지 base64 data URI 변환 (Playwright file:// 우회)
+    - 클러스터별 큐레이션 CONTENT 딕셔너리 (issue_id "2", "4"): facts 3개(수치 포함), bullish/bearish 섹터, FACT, summaries 3개, watch_point
+  - **Step 2: 5장 HTML 빌더 (Pretendard CDN + Tailwind CDN, 1080x1350px)**:
+    - Slide 1 (Cover, Dark): 상단 55% Pexels 이미지 + 하단 45% #0D0D0D, hook_title 72px Pretendard 900, 날짜/출처/하단 그린 라인
+    - Slide 2 (Context, Ivory): 다크 헤더바 "무슨 일이?" + 팩트 3블록 (#EEECEA, border-left 4px green, 번호 워터마크 120px #E0DDD8, 수치 green 강조)
+    - Slide 3 (Bullish, Ivory): "↑ 수혜주는?" green 헤더 + 섹터 카드 (#F0FFF4, border #A8E6C0, 섹터명 64px #0A5C3A) + FACT 박스
+    - Slide 4 (Bearish, Ivory): "↓ 주의할 섹터는?" red 헤더 + 섹터 카드 (#FFF5F5, border #F5C4B3, 섹터명 #8B2020) + FACT 박스
+    - Slide 5 (Conclusion, Dark): "오늘의 핵심" 64px + 요약 3블록(#161616, border-left 8px green/red/gray) + 주목 포인트 + CTA 박스(#00C853 반전) + 면책
+    - word-break: keep-all 전체 적용, "N/5" 슬라이드 번호, 좌상단 SIGNALFEED 브랜드
+  - **Step 3: 클러스터 선택 로직**: hook_title에 한글 포함된 첫 클러스터 우선 선택 → issue_id=2 ("미-이란 협상\n긴장 고조") 선택
+  - **Step 4: Pexels fetch + Playwright 스크린샷**:
+    - pexels_keyword "US Iran diplomacy negotiation" → fallback "financial district skyscraper aerial" (Drone_M)
+    - device_scale_factor=2 (Retina), networkidle + document.fonts.ready 대기
+    - #slide-1 ~ #slide-5 div 캡처 → data/6_cards_v2/slide_1.png ~ slide_5.png
+  - **Step 5: 슬라이드 5 공백 수정**: 요약 블록 영역 flex:1 + justify-content:center로 중앙 영역 균등 분배, watch_point/CTA 하단 정렬 (anti-PPT 규칙 #3 준수)
+- **검증 (시각적 확인)**:
+  - ✅ 아이보리 배경 (#F8F6F0) 적용, 순백 사용 안 함
+  - ✅ 모든 텍스트 한국어, 수치 포함 팩트 3개 (사우디 TASI +0.71%, 카타르 QE -0.32%)
+  - ✅ 수치 자동 하이라이팅 정상 (85달러, 3.8%, 11,540.21p 등)
+  - ✅ 슬라이드마다 다른 레이아웃 (Cover/Context/Bullish/Bearish/Conclusion)
+  - ✅ SIGNALFEED 브랜드 + N/5 슬라이드 번호 일관 적용
+- **파일 크기**: slide_1 (3.0MB, Pexels Retina), slides 2-5 (120-175KB)
+- **Result**: ✅ Success — 아이보리 디자인 시스템 카드뉴스 V2 완성, data/6_cards_v2/ 5장 생성
