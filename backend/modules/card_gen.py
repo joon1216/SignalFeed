@@ -689,7 +689,7 @@ class CardGenerator:
 
         # Fetch background image for slide 1 using pexels_keyword
         pexels_keyword = script.get("pexels_keyword", "financial district skyscraper aerial")
-        background = self.image_fetcher.fetch(pexels_keyword)
+        background = self.image_fetcher.fetch_image(pexels_keyword)
         if not background:
             background = self.image_fetcher._create_fallback_background()
 

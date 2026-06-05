@@ -1,6 +1,6 @@
 """
-Pexels API 이미지 검색 및 다운로드
-Instagram 카드 배경 이미지 자동 수집
+Pixabay API 이미지 검색 및 다운로드
+Instagram 카드 배경 이미지 자동 수집 (이슈 유형별 키워드 매핑)
 """
 
 import os
@@ -14,94 +14,70 @@ logger = logging.getLogger(__name__)
 
 
 class ImageFetcher:
-    """Pexels API로 키워드 기반 이미지 검색 및 다운로드"""
+    """Pixabay API로 키워드 기반 이미지 검색 및 다운로드"""
 
-    PEXELS_API_URL = "https://api.pexels.com/v1/search"
+    PIXABAY_API_URL = "https://pixabay.com/api/"
 
-    # 경제 뉴스 키워드 → Pexels 검색어 매핑 (더 구체적이고 시각적인 키워드)
+    # 이슈 유형별 키워드 매핑 (한국어 + 영어 키 → Pixabay 검색어)
+    # 주의: Pixabay business 카테고리는 추상어("diplomacy", "geopolitics")에
+    # 약하므로 구체적이고 사진성이 강한 명사 위주로 매핑한다.
     KEYWORD_MAPPING = {
-        # 금리/연준
-        "federal reserve": "federal reserve bank building",
-        "interest rate": "federal reserve washington",
-        "rate hike": "central bank money policy",
-        "FOMC": "federal reserve building exterior",
-        "fed": "federal reserve washington",
-        "central bank": "federal reserve building",
+        # 지정학/전쟁/분쟁 → 중동 스카이라인/에너지 (군사 사진은 business 카테고리에 빈약)
+        "iran": "dubai skyline city",
+        "israel": "dubai skyline city",
+        "중동": "dubai skyline city",
+        "war": "oil refinery industry",
+        "conflict": "oil refinery industry",
+        "military": "oil refinery industry",
+        "지정학": "global economy finance business",
+        "전쟁": "oil refinery industry",
 
-        # 인플레이션
-        "inflation": "dollar bills money close up",
-        "CPI": "shopping cart grocery prices",
-        "price increase": "supermarket price tag",
-        "consumer price": "grocery store shopping",
+        # 금리/통화정책
+        "fed": "federal reserve central bank",
+        "federal reserve": "federal reserve central bank",
+        "fomc": "federal reserve central bank",
+        "rate": "federal reserve central bank",
+        "금리": "federal reserve central bank",
+        "inflation": "economy inflation prices",
+        "인플레이션": "economy inflation prices",
+        "고물가": "economy inflation prices",
 
-        # 주식/증시
-        "stock market": "stock market trading screen",
-        "nasdaq": "stock exchange trading floor",
-        "S&P": "wall street bull statue",
-        "dow jones": "new york stock exchange nyse",
-        "earnings": "financial report business meeting",
-        "stock": "stock market digital screen",
-        "market": "trading floor wall street",
+        # 유가/에너지
+        "oil": "oil refinery industry",
+        "유가": "oil refinery industry",
+        "opec": "oil refinery industry",
+        "energy": "oil refinery industry",
+        "에너지": "oil refinery industry",
 
-        # 빅테크
-        "nvidia": "computer chip semiconductor close",
-        "apple": "apple logo technology",
-        "tesla": "electric vehicle charging",
-        "microsoft": "technology office modern",
-        "google": "technology data center",
-        "amazon": "warehouse logistics delivery",
-        "meta": "social media smartphone screen",
-        "semiconductor": "microchip technology close",
-        "chip": "computer chip circuit board",
-        "AI": "artificial intelligence technology",
+        # 무역/관세
+        "tariff": "cargo ship port trade",
+        "trade": "cargo ship port trade",
+        "관세": "cargo ship port trade",
+        "수출": "cargo ship port trade",
+        "무역": "cargo ship port trade",
 
-        # 에너지/원자재
-        "oil": "oil refinery petroleum industry",
-        "energy": "oil pipeline energy infrastructure",
-        "gold": "gold bars precious metal",
-        "commodity": "raw materials industrial",
-        "petroleum": "oil drilling platform",
-        "natural gas": "gas pipeline infrastructure",
+        # 주식/금융시장
+        "nasdaq": "stock market trading",
+        "kospi": "stock market trading",
+        "코스피": "stock market trading",
+        "market": "stock market trading",
+        "증시": "stock market trading",
+        "주식": "stock market trading",
 
-        # 경제지표
-        "GDP": "city skyline economic growth",
-        "unemployment": "office workers business district",
-        "recession": "empty office business decline",
-        "economic growth": "skyscrapers city prosperity",
-        "employment": "business district office workers",
-        "jobs": "corporate office workplace",
+        # AI/반도체
+        "ai": "artificial intelligence technology",
+        "semiconductor": "semiconductor chip technology",
+        "반도체": "semiconductor chip technology",
+        "chip": "semiconductor chip technology",
+        "ipo": "stock market trading",
 
-        # 지정학
-        "war": "military conflict geopolitics",
-        "trade war": "shipping container port cargo",
-        "china": "shanghai skyline financial district",
-        "europe": "european central bank frankfurt",
-        "russia": "moscow city skyscraper",
-        "ukraine": "industrial factory production",
+        # 중국/이머징
+        "china": "china economy business",
+        "중국": "china economy business",
+        "emerging": "global economy finance business",
 
-        # 한국
-        "kospi": "seoul skyline yeouido finance",
-        "korea": "seoul city financial district",
-        "samsung": "technology electronics innovation",
-
-        # 무역
-        "tariff": "cargo port shipping containers",
-        "export": "shipping containers international trade",
-        "trade": "container ship cargo port",
-
-        # 금융
-        "dollar": "us dollar bills currency",
-        "treasury": "us treasury building washington",
-        "bond": "financial bonds investment",
-        "currency": "money exchange foreign currency",
-
-        # 부동산
-        "real estate": "modern apartment building",
-        "housing": "residential housing development",
-        "mortgage": "house keys home loan",
-
-        # 기본
-        "default": "financial district skyscraper aerial"
+        # 기본값
+        "default": "global economy finance business",
     }
 
     def __init__(self, api_key: Optional[str] = None):
@@ -109,204 +85,169 @@ class ImageFetcher:
         Initialize ImageFetcher
 
         Args:
-            api_key: Pexels API key (defaults to PEXELS_API_KEY env var)
+            api_key: Pixabay API key (defaults to PIXABAY_API_KEY env var)
         """
-        self.api_key = api_key or os.getenv("PEXELS_API_KEY")
+        self.api_key = api_key or os.getenv("PIXABAY_API_KEY")
         if not self.api_key:
-            logger.warning("PEXELS_API_KEY not found, will use fallback backgrounds")
+            logger.warning("PIXABAY_API_KEY not found, will use fallback backgrounds")
 
-    def fetch(self, keyword: str, orientation: str = "square") -> Optional[Image.Image]:
+    # ──────────────────────────────────────────────────────────────
+    # 키워드 매핑
+    # ──────────────────────────────────────────────────────────────
+    def get_keyword(self, issue_text: str) -> str:
+        """이슈 텍스트(hook_title + macro_issue 등)에서 Pixabay 검색어 선택"""
+        issue_lower = issue_text.lower()
+        for key, keyword in self.KEYWORD_MAPPING.items():
+            if key == "default":
+                continue
+            if key in issue_lower:
+                logger.info(f"키워드 매핑: '{key}' → '{keyword}'")
+                return keyword
+        return self.KEYWORD_MAPPING["default"]
+
+    # 하위 호환: 기존 코드가 _map_keyword를 사용할 수 있음
+    def _map_keyword(self, keyword: str) -> str:
+        return self.get_keyword(keyword)
+
+    # ──────────────────────────────────────────────────────────────
+    # 다운로드
+    # ──────────────────────────────────────────────────────────────
+    def _query_pixabay(self, keyword: str, with_category: bool = True) -> Optional[str]:
+        """Pixabay API 검색 → 첫 이미지 largeImageURL 반환"""
+        if not self.api_key:
+            return None
+        params = {
+            "key": self.api_key,
+            "q": keyword,
+            "image_type": "photo",
+            "orientation": "vertical",
+            "min_width": 1080,
+            "safesearch": "true",
+            "order": "popular",
+            "per_page": 10,
+        }
+        if with_category:
+            params["category"] = "business"
+        try:
+            resp = requests.get(self.PIXABAY_API_URL, params=params, timeout=10)
+            resp.raise_for_status()
+            hits = resp.json().get("hits", [])
+            if hits:
+                return hits[0]["largeImageURL"]
+            return None
+        except Exception as e:
+            logger.error(f"Pixabay 검색 실패 '{keyword}': {e}")
+            return None
+
+    def fetch(self, keyword: str, save_path: str) -> bool:
         """
-        Pexels API로 이미지 검색 및 다운로드
+        Pixabay 이미지 검색 후 save_path에 저장
 
         Args:
             keyword: 검색 키워드
-            orientation: 이미지 방향 (square/landscape/portrait)
+            save_path: 저장 경로
 
         Returns:
-            PIL Image object (1080x1080px) or None if failed
+            성공 여부 (bool)
         """
         if not self.api_key:
-            logger.warning("No API key, returning None")
-            return None
+            logger.warning("No Pixabay API key")
+            return False
+
+        # 1차: category=business / 2차: category 없이 재시도
+        img_url = self._query_pixabay(keyword, with_category=True)
+        if not img_url:
+            img_url = self._query_pixabay(keyword, with_category=False)
+        if not img_url:
+            logger.warning(f"No photos found for keyword: {keyword}")
+            return False
 
         try:
-            headers = {"Authorization": self.api_key}
-            params = {
-                "query": keyword,
-                "per_page": 5,
-                "orientation": orientation
-            }
-
-            response = requests.get(
-                self.PEXELS_API_URL,
-                headers=headers,
-                params=params,
-                timeout=10
-            )
-            response.raise_for_status()
-
-            data = response.json()
-            photos = data.get("photos", [])
-
-            if not photos:
-                logger.warning(f"No photos found for keyword: {keyword}")
-                return None
-
-            # Download first photo
-            photo = photos[0]
-            image_url = photo["src"]["large"]  # Use large size for quality
-
-            img_response = requests.get(image_url, timeout=10)
-            img_response.raise_for_status()
-
-            # Open and resize to 1080x1080
-            image = Image.open(BytesIO(img_response.content))
-            image = image.resize((1080, 1080), Image.Resampling.LANCZOS)
-
-            logger.info(f"✅ Fetched image for '{keyword}': {photo['photographer']}")
-            return image
-
+            img_resp = requests.get(img_url, timeout=15)
+            img_resp.raise_for_status()
+            os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+            with open(save_path, "wb") as f:
+                f.write(img_resp.content)
+            logger.info(f"✅ Pixabay 이미지 저장: {save_path} ('{keyword}')")
+            return True
         except Exception as e:
-            logger.error(f"Failed to fetch image for '{keyword}': {e}")
+            logger.error(f"이미지 다운로드 실패 '{keyword}': {e}")
+            return False
+
+    def fetch_image(self, keyword: str) -> Optional[Image.Image]:
+        """Pixabay 이미지를 PIL Image로 반환 (in-memory 사용처용)"""
+        img_url = self._query_pixabay(keyword, with_category=True)
+        if not img_url:
+            img_url = self._query_pixabay(keyword, with_category=False)
+        if not img_url:
+            return None
+        try:
+            img_resp = requests.get(img_url, timeout=15)
+            img_resp.raise_for_status()
+            return Image.open(BytesIO(img_resp.content)).convert("RGB")
+        except Exception as e:
+            logger.error(f"이미지 로드 실패 '{keyword}': {e}")
             return None
 
     def fetch_with_fallback(self, keywords: List[str]) -> Image.Image:
         """
-        여러 키워드 시도 후 fallback 배경 반환
+        여러 키워드 시도 후 fallback 배경 반환 (하위 호환)
 
         Args:
             keywords: 검색 키워드 리스트 (우선순위 순)
 
         Returns:
-            PIL Image object (1080x1080px), fallback if all fail
+            PIL Image object, 모두 실패 시 단색 dark bg
         """
-        # Try each keyword
         for keyword in keywords:
-            # Map to Pexels-friendly term
-            mapped_keyword = self._map_keyword(keyword)
-            image = self.fetch(mapped_keyword)
+            mapped = self.get_keyword(keyword)
+            image = self.fetch_image(mapped)
             if image:
                 return image
-
-        # All failed → return dark solid background
-        logger.warning(f"All keywords failed, using fallback background")
+        logger.warning("All keywords failed, using fallback background")
         return self._create_fallback_background()
 
-    def _map_keyword(self, keyword: str) -> str:
-        """
-        경제 뉴스 키워드를 Pexels 검색어로 변환
-
-        Args:
-            keyword: 원본 키워드
-
-        Returns:
-            Pexels 검색어
-        """
-        keyword_lower = keyword.lower()
-
-        # Check exact matches first
-        if keyword_lower in self.KEYWORD_MAPPING:
-            return self.KEYWORD_MAPPING[keyword_lower]
-
-        # Check partial matches
-        for key, value in self.KEYWORD_MAPPING.items():
-            if key in keyword_lower or keyword_lower in key:
-                return value
-
-        # Default fallback
-        return self.KEYWORD_MAPPING["default"]
+    def save_fallback(self, save_path: str) -> None:
+        """단색 dark bg를 save_path에 저장"""
+        os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+        self._create_fallback_background().save(save_path, quality=90)
 
     def _create_fallback_background(self) -> Image.Image:
-        """
-        Fallback 배경 이미지 생성 (단색 dark bg)
-
-        Returns:
-            PIL Image object (1080x1080px, #1A1A1A)
-        """
-        image = Image.new("RGB", (1080, 1080), "#1A1A1A")
-        return image
+        """Fallback 배경 이미지 (단색 dark bg, 1080x1350px)"""
+        return Image.new("RGB", (1080, 1350), "#1A1A1A")
 
     def extract_keywords_from_cluster(self, cluster_data: dict) -> List[str]:
         """
-        클러스터 데이터에서 Pexels 검색 키워드 추출 (개선된 엔티티 추출)
-
-        Args:
-            cluster_data: 클러스터 데이터 (cluster_label, articles)
+        클러스터 데이터에서 검색 키워드 추출 (하위 호환)
 
         Returns:
             검색 키워드 리스트 (우선순위 순, 최대 3개)
         """
-        keywords = []
-        text_to_analyze = []
-
-        # 1. cluster_label 추가
+        text_parts = []
         cluster_label = cluster_data.get("cluster_label", "")
         if cluster_label and cluster_label != "노이즈":
-            text_to_analyze.append(cluster_label.lower())
-
-        # 2. article titles 추가 (첫 3개)
-        articles = cluster_data.get("articles", [])
-        for article in articles[:3]:
+            text_parts.append(cluster_label)
+        for article in cluster_data.get("articles", [])[:3]:
             title = article.get("title", "")
             if title:
-                text_to_analyze.append(title.lower())
+                text_parts.append(title)
 
-        # 3. 모든 텍스트에서 매핑된 키워드 추출
-        combined_text = " ".join(text_to_analyze)
-
-        # 우선순위 1: KEYWORD_MAPPING에 정확히 있는 키워드
-        for key in self.KEYWORD_MAPPING.keys():
-            if key in combined_text and key != "default":
-                keywords.append(key)
-                if len(keywords) >= 3:
-                    break
-
-        # 우선순위 2: 부분 매칭 (예: "Federal" → "federal reserve")
-        if len(keywords) < 3:
-            words = combined_text.split()
-            for word in words:
-                for key in self.KEYWORD_MAPPING.keys():
-                    if word in key or key in word:
-                        if key not in keywords and key != "default":
-                            keywords.append(key)
-                            if len(keywords) >= 3:
-                                break
-                if len(keywords) >= 3:
-                    break
-
-        # 3. Default fallback
-        if not keywords:
-            keywords.append("default")
-
-        # Deduplicate while preserving order, return max 3
-        seen = set()
-        unique_keywords = []
-        for k in keywords:
-            if k not in seen:
-                seen.add(k)
-                unique_keywords.append(k)
-            if len(unique_keywords) >= 3:
-                break
-
-        return unique_keywords
+        combined = " ".join(text_parts)
+        keyword = self.get_keyword(combined)
+        return [keyword]
 
 
 if __name__ == "__main__":
-    # Test
     from dotenv import load_dotenv
     load_dotenv()
 
     fetcher = ImageFetcher()
 
-    # Test keyword mapping
-    test_keywords = ["federal reserve", "inflation", "nvidia", "oil", "unknown term"]
-    for kw in test_keywords:
-        mapped = fetcher._map_keyword(kw)
-        print(f"{kw} → {mapped}")
+    # 키워드 매핑 테스트
+    tests = ["중동 불안 고조", "Fed 금리 인상", "유가 급등", "AI 반도체 광풍", "unknown term"]
+    for t in tests:
+        print(f"{t} → {fetcher.get_keyword(t)}")
 
-    # Test fetch with fallback
-    image = fetcher.fetch_with_fallback(["federal reserve", "economy"])
-    if image:
-        image.save("test_background.png")
-        print(f"✅ Saved test background: {image.size}")
+    # 다운로드 테스트
+    ok = fetcher.fetch(fetcher.get_keyword("중동 지정학"), "test_background.jpg")
+    print(f"fetch success: {ok}")

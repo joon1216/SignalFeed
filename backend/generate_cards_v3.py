@@ -368,17 +368,23 @@ def main():
     issue_id = script.get("issue_id", "2")
     content = CONTENT.get(issue_id, CONTENT["2"])
 
-    # Pexels 이미지 fetch
+    # Pixabay 이미지 fetch (hook_title + one_line + pexels_keyword 기반 키워드 자동 선택)
     fetcher = ImageFetcher()
-    keyword = script.get("pexels_keyword", "global economy finance")
-    logger.info(f"Pexels 검색: {keyword}")
-    image = fetcher.fetch_with_fallback([keyword])
+    issue_text = " ".join([
+        script.get("hook_title", "").replace("\n", " "),
+        script.get("one_line", ""),
+        script.get("pexels_keyword", ""),
+    ])
+    keyword = fetcher.get_keyword(issue_text)
+    logger.info(f"Pixabay 검색어: '{keyword}' (이슈: {issue_text[:50]}...)")
     temp_dir = os.path.join(ROOT, "data/temp")
     os.makedirs(temp_dir, exist_ok=True)
-    pexels_path = os.path.join(temp_dir, f"pexels_v3_{issue_id}.jpg")
-    image.save(pexels_path, quality=90)
-    img_uri = img_to_base64(pexels_path)
-    logger.info(f"Pexels 이미지 저장: {pexels_path} (base64 {len(img_uri)} bytes)")
+    img_path = os.path.join(temp_dir, f"pixabay_v3_{issue_id}.jpg")
+    if not fetcher.fetch(keyword, img_path):
+        logger.warning("Pixabay 실패 → fallback 배경 사용")
+        fetcher.save_fallback(img_path)
+    img_uri = img_to_base64(img_path)
+    logger.info(f"이미지 저장: {img_path} (base64 {len(img_uri)} bytes)")
 
     # HTML 생성
     html = build_full_html(script, content, img_uri)

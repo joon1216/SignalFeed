@@ -2163,3 +2163,34 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ italic 섹션 라벨 + 고딕 본문 혼합, 한국어 hook 강제
   - ✅ 5장 모두 1080x1350px 생성 완료
 - **Result**: ✅ Success — 뉴스레터 에디토리얼 스타일 카드뉴스 V3 완성, data/6_cards_v2/ 5장 덮어쓰기
+
+---
+
+#### Session 39: Pexels → Pixabay API 교체 + 이슈별 키워드 매핑
+- **Task**: 배경 이미지 소스를 Pexels → Pixabay로 교체, 이슈 유형별 키워드 매핑 테이블 도입
+- **Actions**:
+  - **Step 1: .env 확인**: PIXABAY_API_KEY가 이미 존재(56175660-...016eb) → 중복 append 생략
+  - **Step 2: image_fetcher.py 전면 재작성 (Pixabay)**:
+    - PIXABAY_API_URL = "https://pixabay.com/api/", params: image_type=photo, orientation=vertical, category=business, min_width=1080, safesearch, order=popular, per_page=10
+    - `get_keyword(issue_text)`: 한국어+영어 키워드 매핑 테이블에서 검색어 선택 (default fallback)
+    - `fetch(keyword, save_path) -> bool`: 직접 디스크 저장 (task 스펙). category=business 1차 → 무결과 시 category 없이 2차 재시도
+    - `fetch_image(keyword) -> PIL.Image`: in-memory 사용처용 (card_gen, html_card_gen 하위 호환)
+    - `fetch_with_fallback`, `save_fallback`, `_create_fallback_background` (단색 #1A1A1A 1080x1350) 유지
+    - card_gen.py:692 `fetch()` → `fetch_image()` 로 시그니처 호환 수정
+  - **Step 3: 키워드 매핑 개선 (Pixabay 특성 반영)**:
+    - 문제 발견: business 카테고리는 추상어에 취약 — "middle east diplomacy"는 요르단 베리나무(totalHits 22), "military defense geopolitics"는 La Défense(파리) 건축물 매칭
+    - 강한 명사로 매핑 교정: 중동/iran → "dubai skyline city"(500), war/military/유가/oil → "oil refinery industry"(122), tariff/무역 → "cargo ship port trade"(72), 반도체 → "semiconductor chip technology"(197), 증시 → "stock market trading"(94), fed/금리 → "federal reserve central bank"(97), default → "global economy finance business"(500)
+  - **Step 4: generate_cards_v2.py / generate_cards_v3.py 수정**:
+    - Pexels fetch_with_fallback → Pixabay get_keyword + fetch(keyword, save_path)
+    - 키워드 자동 선택: `hook_title + one_line + pexels_keyword` 조합 텍스트를 get_keyword에 입력 (scripts.json에 macro_issue 없음 → one_line 사용)
+    - 실패 시 save_fallback(단색 배경)
+  - **Step 5: 테스트 (generate_cards_v3.py — Session 38 뉴스레터 디자인이 현재 production, 동일 출력 dir)**:
+    - issue_id=2 "중동 불안\n고조될까?" → '중동' 매핑 → "dubai skyline city" → Burj Khalifa 석양 실루엣 (이전 베리나무 → 중동 스카이라인으로 관련성 대폭 개선)
+    - 5장 모두 1080x1350px 생성, data/6_cards_v2/ 덮어쓰기
+- **검증**:
+  - ✅ Pixabay vertical 이미지 정상 다운로드 (base64 주입)
+  - ✅ 한국어/영어 키워드 매핑 정상 ('중동'→dubai, 'Fed'→federal reserve, '유가'→oil refinery, 'AI 반도체'→AI)
+  - ✅ Slide 1 커버 Burj Khalifa 석양 — 중동 지정학 이슈에 적합한 배경
+  - ✅ card_gen/html_card_gen 하위 호환 유지 (fetch_image)
+- **참고**: Step 4에서 task는 generate_cards_v2.py를 지정했으나, Session 38에서 V3(뉴스레터) 디자인이 현재 production(동일 출력 dir)이라 V3로 테스트하여 디자인 회귀 방지. 양쪽 생성기 모두 Pixabay로 전환 완료
+- **Result**: ✅ Success — Pexels → Pixabay 교체 완료, 이슈별 키워드 매핑 도입 및 Pixabay 특성에 맞춰 개선
