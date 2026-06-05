@@ -2134,3 +2134,32 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - ✅ SIGNALFEED 브랜드 + N/5 슬라이드 번호 일관 적용
 - **파일 크기**: slide_1 (3.0MB, Pexels Retina), slides 2-5 (120-175KB)
 - **Result**: ✅ Success — 아이보리 디자인 시스템 카드뉴스 V2 완성, data/6_cards_v2/ 5장 생성
+
+---
+
+#### Session 38: 카드뉴스 V3 — 뉴스레터 에디토리얼 스타일
+- **Task**: 카드 박스 UI 폐기 → 뉴스레터/편집 디자인으로 전환 (선·텍스트 직접 배치, 노란 하이라이트, pill 태그)
+- **Actions**:
+  - **Step 1: Gemini Step 3 재실행** (`venv/bin/python backend/pipeline.py --steps 3`)
+    - 할당량 리셋 후 5/5 클러스터 모두 Gemini 성공 (이전 세션 2/5 fallback → 전부 한국어 hook 생성)
+    - 선택 클러스터: issue_id=2 "중동 불안\n고조될까?" (한국어 hook 우선 선택)
+  - **Step 2: backend/generate_cards_v3.py 신규 생성** (~430 LOC, 자체 완결형):
+    - 디자인 토큰: IVORY #F8F6F0, DARK #0D0D0D, TEXT #1A1A1A, BORDER #D0CCC6, YELLOW #FFE566, GREEN #00C853, RED #FF3D3D
+    - `hl()`: 수치를 노란 배경 하이라이트(#FFE566)로 강조 (V2의 컬러 텍스트 → V3 형광펜 스타일)
+    - `stock_pills()`: 관련주 pill 태그 (bullish #E8F5E9/#0A5C3A, bearish #FFEBEE/#8B2020)
+    - CONTENT 딕셔너리에 sector별 stocks 필드 추가 (S-Oil·GS·SK이노베이션, 한화에어로·LIG넥스원 등)
+  - **Step 3: 5장 뉴스레터 HTML 빌더**:
+    - Slide 1 (Cover, Dark): 상단 55% Pexels + 하단 45% #0D0D0D, hook 80px, 상단 1px선 #333 + 브랜드/날짜, 해시태그 pill, 하단 3px 그린 라인
+    - Slide 2 (Context): 아이보리, "In Brief" italic, 키워드 노란 하이라이트 헤드라인 56px, ✓ 체크마크 팩트 3개 (박스 없이 1px 구분선만), 출처 border pill
+    - Slide 3 (Bullish): "↑ 수혜" green pill, "이번 이슈, 누가 웃나?" italic, 섹터명 72px + 이유 + 관련주 green pill, FACT 라인
+    - Slide 4 (Bearish): "↓ 주의" red pill, "이번 이슈, 누가 우나?" italic, 관련주 red pill, FACT 라인 #FF3D3D
+    - Slide 5 (Conclusion): 아이보리 유지(다크 아님), "01." "02." "03." 번호 요약 (green/red/gray), 주목 포인트 좌측 3px선, CTA 다크박스
+    - 공통: 1080x1350px, 72px 여백, 상하단 1px #D0CCC6 선, 좌상단 SIGNALFEED + 우상단 슬라이드 번호, word-break:keep-all
+  - **Step 4: Pexels + Playwright**: keyword "middle east diplomacy oil" → "oil refinery petroleum industry" (Ugo Montaldo), base64 주입, device_scale_factor=2, data/temp/cards_v3.html → data/6_cards_v2/slide_1~5.png 덮어쓰기
+- **검증 (시각적 확인)**:
+  - ✅ 카드 박스 완전 제거, 선·텍스트 직접 배치 (뉴스레터 룩)
+  - ✅ 수치 노란 형광펜 하이라이트 정상 (0.71%, 11,540.21p, 85달러, 3.8% 등)
+  - ✅ pill 태그 정상 (관련주, 출처, 해시태그, 섹션 라벨 색상 구분)
+  - ✅ italic 섹션 라벨 + 고딕 본문 혼합, 한국어 hook 강제
+  - ✅ 5장 모두 1080x1350px 생성 완료
+- **Result**: ✅ Success — 뉴스레터 에디토리얼 스타일 카드뉴스 V3 완성, data/6_cards_v2/ 5장 덮어쓰기
