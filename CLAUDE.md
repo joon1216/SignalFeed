@@ -2318,3 +2318,46 @@ issuefit_project/  (레포 이름 유지 - SignalFeed 프로젝트)
   - Gemini free tier는 일시적 503/quota 발생 가능 → fallback 에디토리얼 템플릿이 항상 유효 카드 생성 (안정성 확보)
   - max_output_tokens=8192는 4장 완전 HTML에 빠듯할 수 있음(가끔 3/4 파싱) → 재시도로 4/4 확보
 - **Result**: ✅ Success — Slide 2~5 생성 Gemini 2.5 Flash로 교체 완료, anthropic 의존성 제거, 공장 방식(고정 표지 + 자유 내지) 유지
+
+---
+
+#### Session 43: 티커명 enum 근본 차단 + 팩트검증 연동 + 텍스트 키우기 + grain 텍스처
+- **Task**: 종목 티커명 근본 차단(Pydantic enum), fact_checker 실제 연동, 카드 텍스트 크기 확대, Slide 2~4 grain 텍스처 적용
+- **핵심 아키텍처 전환**:
+  - 기존(Session 42): Gemini가 Slide 2~5 HTML을 자유 생성 → 티커명 차단을 프롬프트 규칙에만 의존
+  - 변경: Gemini가 **구조화 JSON(InnerSlides)** 출력 → Python이 HTML 렌더링
+  - 이유: `response_schema`로 섹터 enum을 강제하려면 free-form HTML이 아닌 구조화 출력 필요 (enum 위반 = 출력 불가)
+- **Actions**:
+  - **변경 1: 티커명 근본 차단 (Pydantic enum)**:
+    - 블랙리스트 방식 폐기 → `KoreanSector(str, Enum)` 16개 업종으로 섹터명 강제
+      - 정유업종, 항공사들, 해운업체, 반도체 기업, 방산업체, 화학업종, 자동차 제조사, 은행·금융, 바이오·제약, 건설업종, 유통·소비재, 전력·설비, 철강·소재, 엔터·미디어, IT·플랫폼, 여행·레저
+    - `Sector(BaseModel)`: name(KoreanSector) + reason(str)
+    - `InnerSlides(BaseModel)`: slide2_facts, slide2_source, slide3_sectors, slide3_fact, slide4_sectors, slide4_fact, slide5_summaries, slide5_watch_point
+    - Gemini config: `response_mime_type="application/json"`, `response_schema=InnerSlides` → 어떤 종목명도 출력 불가
+  - **변경 2: fact_checker.py 실제 연동**:
+    - `from backend.modules.fact_checker import FactChecker`
+    - `checker.validate(macro_text=hook+one_line, llm_pos_sectors=[s.name for s in slide3], llm_neg_sectors=[s.name for s in slide4])`
+    - status=="failed" → `override_sectors()`로 correct_pos/correct_neg 교체
+    - status=="warning" → 면책 강화 "※ 현재 시장 지표가 엇갈리고 있어 실제 반응은 다를 수 있습니다."
+  - **변경 3: 텍스트 크기 확대**:
+    - Slide 2: 헤드라인 60px, 팩트 34px, 번호 48px
+    - Slide 3~4: 섹터명 88px, 이유 32px, FACT 26px, 우상단 태그 24px
+    - Slide 5: 번호 64px, 요약 34px, 주목 포인트 28px
+  - **변경 4: grain 텍스처**:
+    - Slide 2~4 배경 #E8E5DF + `::before` SVG fractalNoise (opacity 0.12, 180px 타일)
+    - `.content` z-index:1로 grain(z-index:0) 위에 배치
+- **테스트 결과**:
+  - `venv/bin/python backend/generate_cards_v2.py`
+  - 선택 클러스터: issue_id=6 "물가 다시\n오를까?" (한국어 hook 우선)
+  - Gemini 시도 1/3 성공 — 구조화 출력 파싱 성공 (enum 섹터 강제)
+  - 팩트 검증: '금리 인상' 토픽 감지 → 검증 통과
+  - 5장 생성 완료 (data/6_cards_v2/slide_1~5.png)
+  - 시각 검증:
+    - Slide 3 수혜: 은행·금융, 바이오·제약 (enum 섹터, 88px)
+    - Slide 4 주의: 건설업종, 유통·소비재 (enum 섹터)
+    - grain 텍스처 적용 확인 (Slide 2~4 #E8E5DF)
+    - 모든 텍스트 한국어, 티커명 0개, 수치 하이라이트, 면책 포함
+- **참고**:
+  - fact_checker 룰셋 섹터명("은행","건설")과 enum 값("은행·금융","건설업종")이 달라 set-intersection failed는 드물게 발화 → warning(시장 추세 불일치)이 현실적 경로
+  - 구조화 출력 전환으로 enum 강제가 가능해졌으나, 레이아웃 다양성은 Python 빌더 고정 (Session 42 자유 레이아웃 대비 trade-off)
+- **Result**: ✅ Success — 티커명 enum 근본 차단(구조화 출력), fact_checker 연동, 텍스트 확대, grain 텍스처 완료
