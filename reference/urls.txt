@@ -1,0 +1,10 @@
+# SignalFeed 벤치마크 콘텐츠 URL 목록
+# 한 줄에 하나씩. '#'로 시작하는 줄은 무시.
+# 지원: Instagram 게시물/릴스 URL, YouTube 영상/쇼츠 URL
+#
+# 수집:   venv/bin/python backend/reference/collect.py
+# 분석:   reference/ANALYZE.md 절차에 따라 Claude Code 세션에서 직접 수행
+#
+# 예시 (실제 URL로 교체):
+# https://www.instagram.com/p/XXXXXXXXXXX/
+# https://www.youtube.com/shorts/XXXXXXXXXXX

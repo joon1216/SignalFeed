@@ -1,0 +1,52 @@
+{
+  "_schema": {
+    "id": "고유 슬러그",
+    "source_url": "패턴을 추출한 벤치마크 URL ('seed'면 과거 세션 관찰 기반)",
+    "type": "hook | layout | color | typography | thumbnail",
+    "token": "짧은 패턴 이름 (프롬프트 주입용)",
+    "description": "패턴이 작동하는 이유/적용 방법",
+    "examples": ["실제 사례 문구/구조"]
+  },
+  "patterns": [
+    {
+      "id": "hook-question-2line",
+      "source_url": "seed",
+      "type": "hook",
+      "token": "2줄 질문형 훅",
+      "description": "이슈를 단정하지 않고 독자가 답을 확인하러 넘기게 만드는 질문. 1줄째 주제, 2줄째 질문.",
+      "examples": ["물가 다시\n오를까?", "휴전 소식에\n달러가 흔들?"]
+    },
+    {
+      "id": "hook-number-shock",
+      "source_url": "seed",
+      "type": "hook",
+      "token": "수치 충격형 훅",
+      "description": "구체적 숫자를 훅에 직접 노출해 신뢰+호기심을 동시에 자극.",
+      "examples": ["기름값 85달러\n뚫었다"]
+    },
+    {
+      "id": "hook-winner-loser",
+      "source_url": "seed",
+      "type": "hook",
+      "token": "승자/패자 대비형 훅",
+      "description": "같은 이슈에서 웃는 쪽과 우는 쪽이 갈린다는 긴장 구도를 암시.",
+      "examples": ["금리 오르면\n누가 웃을까?"]
+    },
+    {
+      "id": "layout-numbered-facts",
+      "source_url": "seed",
+      "type": "layout",
+      "token": "번호 팩트 블록",
+      "description": "01/02/03 큰 번호 + 팩트 한 문장. 수치는 컬러 하이라이트. 한국 주식 카드뉴스 표준 문법.",
+      "examples": ["01 — 연준 긴축 재확인 (5.50%)"]
+    },
+    {
+      "id": "color-signal-discipline",
+      "source_url": "seed",
+      "type": "color",
+      "token": "시그널 컬러 절제",
+      "description": "포인트 컬러는 의미가 있을 때만 (수혜=green, 주의=red). 장식용 그라데이션 금지.",
+      "examples": []
+    }
+  ]
+}
