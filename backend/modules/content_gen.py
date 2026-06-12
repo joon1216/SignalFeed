@@ -234,8 +234,14 @@ class ContentGenerator:
         if self.cache:
             cached = self.cache.get(cache_key)
             if cached:
-                cached["from_cache"] = True
-                return cached
+                if cached.get("from_fallback"):
+                    # fallback 결과가 캐시에 있으면 quota 회복 후에도 영영 fallback에
+                    # 갇히게 됨 — 무시하고 오염 항목 삭제 (S44 hotfix)
+                    logger.warning(f"오염된 fallback 캐시 무시·삭제: {cache_key}")
+                    self.cache.delete(cache_key)
+                else:
+                    cached["from_cache"] = True
+                    return cached
 
         raw = self._call_gemini(material)
         script = self._build_script(issue_id, raw, from_fallback=False) if raw else None
@@ -268,7 +274,9 @@ class ContentGenerator:
             script["extra_disclaimer"] = "※ 현재 시장 지표가 엇갈리고 있어 실제 반응은 다를 수 있습니다."
 
         script["from_cache"] = False
-        if self.cache:
+        # Gemini 성공 결과만 캐시 — fallback을 캐시하면 다음 quota에서도
+        # Gemini를 재시도하지 못함 (S44 hotfix)
+        if self.cache and not script["from_fallback"]:
             self.cache.set(cache_key, script)
         return script
 

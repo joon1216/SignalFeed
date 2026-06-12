@@ -172,6 +172,7 @@ venv/bin/python -m pytest tests/ -q                   # 테스트
 - `gen_cache`: 캐시 적중 시 Gemini·yfinance 호출 0회 (quota 보호)
 - 레퍼런스 분석 골격: `reference/` (urls.txt → collect.py → 세션 직접 분석 → patterns.json → 훅 프롬프트 주입)
 - pytest 86개 통과, fixture 렌더 검증본 `outputs/session44_review/` — 중대 결정 전부 `docs/DECISIONS_S44.md`
+- **S44 hotfix**: gen_cache가 fallback 결과까지 캐시해 quota 회복 후에도 fallback에 갇히던 버그 수정 — Gemini 성공만 캐시, 오염 캐시는 로드 시 무시·삭제 (회귀 테스트 6개, 총 92개 통과)
 
 ---
 

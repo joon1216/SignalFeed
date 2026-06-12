@@ -49,6 +49,16 @@ class GenCache:
             logger.warning(f"캐시 읽기 실패 ({key}): {e}")
             return None
 
+    def delete(self, key: str) -> None:
+        """캐시 항목 삭제 (오염된 항목 제거용)"""
+        path = self._path(key)
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                logger.info(f"🗑️ 캐시 삭제: {key}")
+        except Exception as e:
+            logger.warning(f"캐시 삭제 실패 ({key}): {e}")
+
     def set(self, key: str, value: Dict) -> None:
         """캐시 저장"""
         os.makedirs(self.cache_dir, exist_ok=True)

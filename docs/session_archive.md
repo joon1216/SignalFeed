@@ -1859,3 +1859,21 @@
   - fact_checker 룰셋 섹터명("은행","건설")과 enum 값("은행·금융","건설업종")이 달라 set-intersection failed는 드물게 발화 → warning(시장 추세 불일치)이 현실적 경로
   - 구조화 출력 전환으로 enum 강제가 가능해졌으나, 레이아웃 다양성은 Python 빌더 고정 (Session 42 자유 레이아웃 대비 trade-off)
 - **Result**: ✅ Success — 티커명 enum 근본 차단(구조화 출력), fact_checker 연동, 텍스트 확대, grain 텍스처 완료
+
+---
+
+#### Session 44 Hotfix: gen_cache가 fallback 결과를 캐시하던 버그 (2026-06-12)
+- **버그**: `content_gen.generate_script()`가 fallback(`from_fallback=True`) 결과까지 gen_cache에 저장
+  → Gemini quota가 회복돼도 해당 클러스터는 캐시 적중으로 영영 일반 fallback 콘텐츠에 갇힘.
+  실제로 S44 E2E 검증 실행에서 5개 클러스터의 fallback 스크립트가 캐시에 저장돼 있었음.
+- **수정**:
+  - 캐시 쓰기: `from_fallback=False`(Gemini 성공)인 결과만 저장
+  - 캐시 읽기: 적중 항목이 `from_fallback=True`면 무시하고 해당 캐시 파일 삭제 (구버전 오염 자동 정리)
+  - `GenCache.delete(key)` 메서드 추가
+- **회귀 테스트 6개 추가** (총 92개 통과):
+  - fallback 결과 캐시 미저장 / fallback은 캐시에서 서빙되지 않음
+  - 오염된 fallback 캐시 무시·삭제 후 신선한 결과로 교체 (Gemini 가용/불가용 양쪽)
+  - GenCache.delete 단위 테스트
+  - 기존 캐시 테스트는 Gemini 성공 모킹(`VALID_RAW`) 기반으로 재작성
+- **로컬 정리**: data/cache/gen의 오염 항목 5개 즉시 삭제
+- **Result**: ✅ Gemini 성공 결과만 캐시되며, 기존 오염 캐시는 로드 시 자가 치유됨

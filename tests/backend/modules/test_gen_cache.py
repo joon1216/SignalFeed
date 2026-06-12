@@ -41,6 +41,16 @@ class TestRoundtrip:
             f.write("{not json")
         assert cache.get("bad") is None
 
+    def test_delete_removes_entry(self, tmp_path):
+        cache = GenCache(str(tmp_path))
+        cache.set("k", {"a": 1})
+        assert cache.get("k") is not None
+        cache.delete("k")
+        assert cache.get("k") is None
+
+    def test_delete_missing_key_safe(self, tmp_path):
+        GenCache(str(tmp_path)).delete("nonexistent")  # 예외 없이 통과
+
     def test_korean_preserved(self, tmp_path):
         cache = GenCache(str(tmp_path))
         cache.set("k", {"text": "유로존 물가 2.8% 반등"})
