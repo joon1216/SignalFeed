@@ -38,12 +38,15 @@ class ImageFetcher:
         "opec": "oil refinery sunset",
         "energy": "oil refinery sunset silhouette",
 
-        # 금리/통화
-        "rate hike": "business graph falling dark financial district",
-        "rate cut": "seedling growing coins bright office",
-        "금리 인상": "dark financial district serious meeting",
-        "금리 인하": "seedling growing coins green arrow",
+        # 금리/통화 — 구체적 장소/사물 명사 위주 (추상어는 무관 이미지 매칭됨)
+        # 기관명(연준/fed)이 금리 키워드보다 먼저 매칭되도록 순서 유지
+        "연준": "federal reserve building washington",
+        "fomc": "federal reserve building washington",
         "fed": "federal reserve building washington",
+        "rate hike": "skyscraper bank building night city",
+        "rate cut": "coins money growth green",
+        "금리 인상": "skyscraper bank building night city",
+        "금리 인하": "coins money growth green",
         "inflation": "business graph falling red",
 
         # 환율/무역
@@ -118,11 +121,12 @@ class ImageFetcher:
     )
 
     @classmethod
-    def score_hit(cls, hit: dict) -> float:
+    def score_hit(cls, hit: dict, keyword: str = "") -> float:
         """Pixabay 검색 결과 1건 점수화 — 높을수록 커버 배경으로 적합.
 
         - 블랙리스트 태그(왜곡 파노라마/일러스트 등) → 건당 -100 (사실상 탈락)
         - 극단적 종횡비(초광각 파노라마 등) → -50
+        - 검색어 단어가 태그에 실제로 포함 → 건당 +20 (주제 관련성)
         - 다운로드 수는 약한 가산점 (동률 시 인기순)
         """
         tags = (hit.get("tags") or "").lower()
@@ -132,16 +136,19 @@ class ImageFetcher:
         aspect = w / max(h, 1)
         if aspect > 2.2 or aspect < 0.4:
             score -= 50.0
+        for word in keyword.lower().split():
+            if len(word) >= 4 and word in tags:
+                score += 20.0
         score += min((hit.get("downloads") or 0) / 10000.0, 10.0)
         return score
 
     @classmethod
-    def pick_best(cls, hits: list) -> Optional[dict]:
+    def pick_best(cls, hits: list, keyword: str = "") -> Optional[dict]:
         """후보 중 최고 점수 hit. 전부 블랙리스트면 None (fallback 배경 사용)"""
         if not hits:
             return None
-        best = max(hits, key=cls.score_hit)
-        if cls.score_hit(best) <= -50.0:
+        best = max(hits, key=lambda h: cls.score_hit(h, keyword))
+        if cls.score_hit(best, keyword) <= -50.0:
             logger.warning("Pixabay 후보 전원 부적합 (왜곡/스타일 미스매치)")
             return None
         return best
@@ -166,7 +173,7 @@ class ImageFetcher:
             resp = requests.get(self.PIXABAY_API_URL, params=params, timeout=10)
             resp.raise_for_status()
             hits = resp.json().get("hits", [])
-            best = self.pick_best(hits)
+            best = self.pick_best(hits, keyword)
             return best["largeImageURL"] if best else None
         except Exception as e:
             logger.error(f"Pixabay 검색 실패 '{keyword}': {e}")
@@ -195,17 +202,21 @@ class ImageFetcher:
             logger.warning(f"No photos found for keyword: {keyword}")
             return False
 
-        try:
-            img_resp = requests.get(img_url, timeout=15)
-            img_resp.raise_for_status()
-            os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
-            with open(save_path, "wb") as f:
-                f.write(img_resp.content)
-            logger.info(f"✅ Pixabay 이미지 저장: {save_path} ('{keyword}')")
-            return True
-        except Exception as e:
-            logger.error(f"이미지 다운로드 실패 '{keyword}': {e}")
-            return False
+        for attempt in range(1, 4):
+            try:
+                img_resp = requests.get(img_url, timeout=15)
+                img_resp.raise_for_status()
+                os.makedirs(os.path.dirname(os.path.abspath(save_path)), exist_ok=True)
+                with open(save_path, "wb") as f:
+                    f.write(img_resp.content)
+                logger.info(f"✅ Pixabay 이미지 저장: {save_path} ('{keyword}')")
+                return True
+            except Exception as e:
+                logger.warning(f"이미지 다운로드 실패 ({attempt}/3) '{keyword}': {e}")
+                if attempt < 3:
+                    import time
+                    time.sleep(5 * attempt)  # 백오프 (429 rate limit 대응)
+        return False
 
     def fetch_image(self, keyword: str) -> Optional[Image.Image]:
         """Pixabay 이미지를 PIL Image로 반환 (in-memory 사용처용)"""

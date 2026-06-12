@@ -15,8 +15,13 @@ class TestKeywordMapping:
     def test_fed_mapping(self):
         assert self.fetcher.get_keyword("fed 의사록 공개") == ImageFetcher.KEYWORD_MAPPING["fed"]
 
-    def test_rate_hike_mapping(self):
+    def test_institution_beats_rate_keyword(self):
+        """연준(기관명)이 금리 키워드보다 우선 매칭 — 더 구체적인 시각 앵커"""
         kw = self.fetcher.get_keyword("연준 금리 인상 시사")
+        assert kw == ImageFetcher.KEYWORD_MAPPING["연준"]
+
+    def test_rate_hike_mapping(self):
+        kw = self.fetcher.get_keyword("기준금리 인상… 금리 인상 부담")
         assert kw == ImageFetcher.KEYWORD_MAPPING["금리 인상"]
 
     def test_default_fallback(self):
@@ -57,3 +62,10 @@ class TestHitScoring:
         a = make_hit("city, skyline", downloads=100)
         b = make_hit("city, skyline", downloads=90000)
         assert ImageFetcher.pick_best([a, b]) is b
+
+    def test_topic_relevance_beats_popularity(self):
+        """검색어와 무관한 인기 이미지(숲속 인물 등)보다 태그가 일치하는 이미지 우선"""
+        irrelevant = make_hit("man, forest, thinking, nature", downloads=900000)
+        relevant = make_hit("skyscraper, bank, building, night", downloads=5000)
+        best = ImageFetcher.pick_best([irrelevant, relevant], keyword="skyscraper bank building night city")
+        assert best is relevant
