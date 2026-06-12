@@ -99,14 +99,14 @@ def collect_youtube(url: str, out_dir: str) -> bool:
         return False
 
 
-def main():
-    urls = read_urls()
-    if not urls:
-        logger.info("수집할 URL 없음. reference/urls.txt에 벤치마크 URL을 추가하세요.")
-        return
+def collect_urls(urls: list) -> int:
+    """URL 목록 수집. 이미 수집된 디렉토리(비어있지 않음)는 skip — discover.py 재실행 안전"""
     ok = 0
     for url in urls:
         out_dir = os.path.join(RAW_DIR, slugify(url))
+        if os.path.isdir(out_dir) and os.listdir(out_dir):
+            logger.info(f"이미 수집됨 → skip: {url}")
+            continue
         os.makedirs(out_dir, exist_ok=True)
         if "instagram.com" in url:
             ok += collect_instagram(url, out_dir)
@@ -115,6 +115,15 @@ def main():
         else:
             logger.warning(f"지원하지 않는 URL: {url}")
     logger.info(f"수집 완료: {ok}/{len(urls)}. 다음 단계 → reference/ANALYZE.md")
+    return ok
+
+
+def main():
+    urls = read_urls()
+    if not urls:
+        logger.info("수집할 URL 없음. reference/urls.txt에 벤치마크 URL을 추가하세요.")
+        return
+    collect_urls(urls)
 
 
 if __name__ == "__main__":
