@@ -165,7 +165,13 @@ venv/bin/python -m pytest tests/ -q                   # 테스트
 - **S44 (2026-06-12)**: 전면 재구축 — 상세는 아래
 
 ### Session 44: 전면 재구축 (컨텍스트 위생 + 결함 해결 + 레퍼런스 시스템)
-- (이 섹션은 세션 종료 시 작성)
+- CLAUDE.md 144k→10k자 다이어트, 세션 로그 `docs/session_archive.md` 이전, 로그 작성 규칙 신설
+- 죽은 코드 ~5,000 LOC 삭제 (정치뉴스 레거시/FinBERT/Pillow 카드 등), torch/transformers 의존성 제거, data/ 산출물 128파일 untrack — `docs/audit_session44.md`
+- 생성 경로 단일화: Gemini 클러스터당 1회 호출(기존 2회), 자유 HTML 폐기 → 구조화 데이터 + `card_renderer`
+- 실물 카드 결함 5종 구조적 해결: `content_validator`(섹터-이유 정합성/중복/출처 정제/금지어/한국어 커버), flex:1 레이아웃, 이미지 스코어링 — 회귀 테스트로 재발 차단
+- `gen_cache`: 캐시 적중 시 Gemini·yfinance 호출 0회 (quota 보호)
+- 레퍼런스 분석 골격: `reference/` (urls.txt → collect.py → 세션 직접 분석 → patterns.json → 훅 프롬프트 주입)
+- pytest 86개 통과, fixture 렌더 검증본 `outputs/session44_review/` — 중대 결정 전부 `docs/DECISIONS_S44.md`
 
 ---
 
