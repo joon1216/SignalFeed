@@ -80,6 +80,29 @@ class ImageFetcher:
         "default": "global economy finance business city",
     }
 
+    # fact_checker 토픽 → 커버 검색어 (Session 45 — 토픽이 키워드의 1순위 소스)
+    # 텍스트 부분 문자열 매핑은 섹터/부가 단어('defense' 등)에 오염될 수 있어,
+    # 이슈의 매크로 토픽이 감지됐다면 그것을 우선한다.
+    TOPIC_KEYWORDS = {
+        "유가 상승": "oil refinery sunset pump jack",
+        "유가 하락": "calm ocean aerial clear sky",
+        "금리 인상": "skyscraper bank building night city",
+        "금리 인하": "coins money growth green",
+        "달러 강세": "us dollar bills money stack",
+        "달러 약세": "currency exchange money global",
+        "지정학 리스크": "stormy dark clouds sky",
+        "지정학 해소": "bright sunrise city skyline",
+        "중국 경기 호조": "shanghai skyline night city",
+        "AI 반도체": "glowing microchip blue server room",
+    }
+
+    @classmethod
+    def keyword_for_topic(cls, topic: Optional[str]) -> Optional[str]:
+        """매크로 토픽 → 커버 검색어. 매핑 없는 토픽이면 None"""
+        if not topic:
+            return None
+        return cls.TOPIC_KEYWORDS.get(topic)
+
     def __init__(self, api_key: Optional[str] = None):
         """
         Initialize ImageFetcher

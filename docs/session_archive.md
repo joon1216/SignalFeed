@@ -1877,3 +1877,27 @@
   - 기존 캐시 테스트는 Gemini 성공 모킹(`VALID_RAW`) 기반으로 재작성
 - **로컬 정리**: data/cache/gen의 오염 항목 5개 즉시 삭제
 - **Result**: ✅ Gemini 성공 결과만 캐시되며, 기존 오염 캐시는 로드 시 자가 치유됨
+
+---
+
+#### Session 45: 벤치마크 자동 발굴 + 픽스 묶음 (2026-06-12)
+- **Phase 1 — backend/reference/discover.py 신규**:
+  - 입력 reference/accounts.txt (`ig:계정명` / `yt:채널URL`)
+  - Instagram (instaloader, IG_SESSION_FILE 세션): 팔로워 수 + 최근 50개 게시물 메타데이터만
+    (미디어 다운로드 없음, 게시물당 1s·계정 간 10s sleep) → engagement_rate=(좋아요+댓글)/팔로워 상위 5개
+  - YouTube (yt-dlp flat-playlist, 키·다운로드 불필요): 구독자 대비 조회수 비율 상위 5개
+  - 출력 reference/discovered.json (url/계정/지표/선정 사유) + urls.txt 중복 제거 append
+  - 실패 계정 skip + reference/failed.log 기록, `--collect`로 선별 게시물만 collect.py 수집
+    (collect.py에 이미 수집된 디렉토리 skip 추가)
+  - mock 기반 테스트 16개 (파싱/랭킹/중복 append/실패 로그/전체 플로우/--collect 연동)
+- **Phase 2 — 픽스 5건**:
+  1. 커버 이미지 키워드 토픽 1순위: `resolve_cover_keyword()` — fact_check.topic → 토픽 재감지 →
+     부분 문자열 매핑 순. ImageFetcher.TOPIC_KEYWORDS 신설 (룰 테이블 10개 토픽 전부 커버, 테스트로 강제).
+     '달러·인도 외환' 이슈에 'defense'→military 키보드 사진이 잡히던 문제 차단 (회귀 테스트 7개)
+  2. 디자인 색상 단일화: card_renderer 실측 #E8E5DF (Session 43 확정)가 정본 — 미사용 IVORY(#F8F6F0) 상수
+     삭제, CLAUDE.md 디자인 결정 #5를 #E8E5DF로 일치, 색상 단일 출처는 card_renderer 토큰 상수로 명시
+  3. reference/ 이원화 의도 명시: backend/reference/=코드, reference/=데이터 — CLAUDE.md File Structure 주석
+  4. CLAUDE.md Maintainer 줄 이메일 제거 (joon1216만)
+  5. pipeline 최종 로그 "(25 clusters)" → "(카드 25장)" 표기 수정
+- **부수**: .env.example 현행화 (Polygon/OpenAI/Pexels 등 폐기 키 제거, PIXABAY/IG_SESSION_FILE 추가)
+- **Result**: ✅ pytest 115개 통과 (92 → 115)

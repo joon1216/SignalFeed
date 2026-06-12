@@ -52,15 +52,34 @@ def prepare_script(script: dict) -> dict | None:
     return script
 
 
-def fetch_cover_image(script: dict, temp_dir: str) -> str:
-    """Pixabay 커버 이미지 → base64 data URI ('' 가능)"""
-    fetcher = ImageFetcher()
+def resolve_cover_keyword(script: dict) -> str:
+    """커버 이미지 검색어 결정 — 우선순위 (Session 45):
+
+    1. 생성 시 저장된 fact_check.topic → TOPIC_KEYWORDS
+    2. 훅+한줄요약에서 토픽 재감지 → TOPIC_KEYWORDS
+    3. 텍스트 부분 문자열 매핑 (이때는 이슈 텍스트만 — image_keyword/섹터 단어가
+       'defense'→military 식으로 무관 이미지를 끌어오던 문제 차단)
+    """
+    topic = (script.get("fact_check") or {}).get("topic")
     issue_text = " ".join([
         script.get("hook_title", "").replace("\n", " "),
         script.get("one_line", ""),
-        script.get("image_keyword", ""),
     ])
-    keyword = fetcher.get_keyword(issue_text)
+    if not topic:
+        from backend.modules.fact_checker import FactChecker
+        topic = FactChecker().detect_topic(issue_text)
+
+    keyword = ImageFetcher.keyword_for_topic(topic)
+    if keyword:
+        logger.info(f"토픽 '{topic}' → 커버 검색어 '{keyword}'")
+        return keyword
+    return ImageFetcher().get_keyword(issue_text + " " + script.get("image_keyword", ""))
+
+
+def fetch_cover_image(script: dict, temp_dir: str) -> str:
+    """Pixabay 커버 이미지 → base64 data URI ('' 가능)"""
+    fetcher = ImageFetcher()
+    keyword = resolve_cover_keyword(script)
     logger.info(f"Pixabay 검색어: '{keyword}'")
     os.makedirs(temp_dir, exist_ok=True)
     img_path = os.path.join(temp_dir, f"cover_{script.get('issue_id', '0')}.jpg")

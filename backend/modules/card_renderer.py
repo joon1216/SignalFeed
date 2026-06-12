@@ -2,7 +2,8 @@
 SignalFeed 카드 렌더러 (Session 44)
 
 구조화 스크립트(dict) → HTML 5장 → Playwright PNG.
-디자인: 미니멀 아이보리/크리미 베이지(순백 금지), 폰 기준 큰 텍스트, 다크 커버(어그로 훅).
+디자인: 미니멀 크리미 베이지(GRAIN_BG #E8E5DF + grain 텍스처, 순백 금지),
+폰 기준 큰 텍스트, 다크 커버(어그로 훅). 배경 색상의 단일 출처는 GRAIN_BG 상수.
 
 레이아웃 원칙 (Session 44 결함 수정):
 - Slide 2~4: 콘텐츠 블록이 가용 영역을 flex:1로 균등 점유 — 상단 거대 공백 불가
@@ -24,8 +25,7 @@ logger = logging.getLogger(__name__)
 # ──────────────────────────────────────────────────────────────
 # 디자인 토큰
 # ──────────────────────────────────────────────────────────────
-IVORY = "#F8F6F0"
-GRAIN_BG = "#E8E5DF"          # Slide 2~4 grain 텍스처 배경
+GRAIN_BG = "#E8E5DF"          # Slide 2~4 배경 (Session 43 확정, grain 텍스처와 합성)
 DARK = "#0D0D0D"
 DIVIDER = "#D0CCC6"
 GREEN = "#00C853"

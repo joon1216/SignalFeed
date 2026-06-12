@@ -265,7 +265,7 @@ def main():
         if '3' in steps:
             print(f"   3️⃣ {generated_file}")
         if '4' in steps:
-            print(f"   4️⃣ data/4_cards/ ({cards_result} clusters)")
+            print(f"   4️⃣ data/4_cards/ (카드 {cards_result}장)")
         if '5' in steps:
             print(f"   5️⃣ data/5_shorts/ ({shorts_result} videos)")
 
