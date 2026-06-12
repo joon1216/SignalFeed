@@ -93,3 +93,8 @@ logs/
 # Streamlit
 .streamlit/secrets.toml
 
+
+# ─── Session 44: 파이프라인 산출물은 커밋하지 않음 ───
+data/
+outputs/
+reference/raw/
