@@ -109,8 +109,45 @@ class ImageFetcher:
     # ──────────────────────────────────────────────────────────────
     # 다운로드
     # ──────────────────────────────────────────────────────────────
+    # 왜곡/스타일 미스매치 이미지 차단용 태그 블랙리스트 (Session 44)
+    # tiny planet 파노라마, 일러스트, 추상 이미지 등이 popular 1위로 선택되던 문제
+    BAD_TAGS = (
+        "panorama", "panoramic", "360", "fisheye", "fish eye", "planet",
+        "sphere", "abstract", "cartoon", "illustration", "drawing", "render",
+        "collage", "wallpaper", "map", "flag", "logo", "halloween", "christmas",
+    )
+
+    @classmethod
+    def score_hit(cls, hit: dict) -> float:
+        """Pixabay 검색 결과 1건 점수화 — 높을수록 커버 배경으로 적합.
+
+        - 블랙리스트 태그(왜곡 파노라마/일러스트 등) → 건당 -100 (사실상 탈락)
+        - 극단적 종횡비(초광각 파노라마 등) → -50
+        - 다운로드 수는 약한 가산점 (동률 시 인기순)
+        """
+        tags = (hit.get("tags") or "").lower()
+        score = 0.0
+        score -= 100.0 * sum(1 for t in cls.BAD_TAGS if t in tags)
+        w, h = hit.get("imageWidth") or 1, hit.get("imageHeight") or 1
+        aspect = w / max(h, 1)
+        if aspect > 2.2 or aspect < 0.4:
+            score -= 50.0
+        score += min((hit.get("downloads") or 0) / 10000.0, 10.0)
+        return score
+
+    @classmethod
+    def pick_best(cls, hits: list) -> Optional[dict]:
+        """후보 중 최고 점수 hit. 전부 블랙리스트면 None (fallback 배경 사용)"""
+        if not hits:
+            return None
+        best = max(hits, key=cls.score_hit)
+        if cls.score_hit(best) <= -50.0:
+            logger.warning("Pixabay 후보 전원 부적합 (왜곡/스타일 미스매치)")
+            return None
+        return best
+
     def _query_pixabay(self, keyword: str, with_category: bool = True) -> Optional[str]:
-        """Pixabay API 검색 → 첫 이미지 largeImageURL 반환"""
+        """Pixabay API 검색 → 스코어링 후 최적 이미지 largeImageURL 반환"""
         if not self.api_key:
             return None
         params = {
@@ -121,7 +158,7 @@ class ImageFetcher:
             "min_width": 1080,
             "safesearch": "true",
             "order": "popular",
-            "per_page": 10,
+            "per_page": 20,
         }
         if with_category:
             params["category"] = "business"
@@ -129,9 +166,8 @@ class ImageFetcher:
             resp = requests.get(self.PIXABAY_API_URL, params=params, timeout=10)
             resp.raise_for_status()
             hits = resp.json().get("hits", [])
-            if hits:
-                return hits[0]["largeImageURL"]
-            return None
+            best = self.pick_best(hits)
+            return best["largeImageURL"] if best else None
         except Exception as e:
             logger.error(f"Pixabay 검색 실패 '{keyword}': {e}")
             return None

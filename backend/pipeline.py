@@ -1,6 +1,6 @@
 """
 SignalFeed 전체 파이프라인
-수집 → 필터 → 클러스터링 → EXAONE CoT 생성 → 카드 생성
+수집 → 클러스터링 → 생성(Gemini 구조화 + 검증 + 캐시) → 카드 렌더링 → Shorts
 
 각 단계별로 폴더를 생성하여 JSONL/JSON 파일 저장
 """
@@ -26,7 +26,7 @@ load_dotenv()
 from backend.modules.collector import NewsCollector
 from backend.modules.clusterer import cluster_news_articles
 from backend.modules.content_gen import ContentGenerator
-from backend.modules.html_card_gen import HTMLCardGenerator
+from backend.generate_cards import generate_from_scripts
 from backend.modules.shorts_gen import ShortsGenerator
 
 
@@ -104,7 +104,7 @@ def step2_clustering(input_file):
 
 def step3_content_generation(input_file):
     """
-    Step 3: Gemini HTML 직접 생성
+    Step 3: 콘텐츠 생성 (Gemini 구조화 출력 + 검증 + 캐시)
 
     Args:
         input_file: 클러스터링 결과 파일 (data/2_clustered/clustered.jsonl)
@@ -113,7 +113,7 @@ def step3_content_generation(input_file):
         str: 출력 파일 경로
     """
     print("\n" + "="*70)
-    print("3️⃣ HTML 생성 단계 (Gemini HTML Direct)")
+    print("3️⃣ 콘텐츠 생성 단계 (Gemini 구조화 + validator + 캐시)")
     print("="*70)
 
     if not os.path.exists(input_file):
@@ -122,31 +122,30 @@ def step3_content_generation(input_file):
     generator = ContentGenerator()
     scripts = generator.run(input_file)
 
-    print(f"\n✅ HTML 생성 완료! {len(scripts)}개 스크립트 → data/3_generated/scripts.json")
+    print(f"\n✅ 콘텐츠 생성 완료! {len(scripts)}개 스크립트 → data/3_generated/scripts.json")
     return 'data/3_generated/scripts.json'
 
 
 def step4_card_generation(input_file):
     """
-    Step 4: Playwright 스크린샷 (HTML → PNG)
+    Step 4: 카드 렌더링 (card_renderer + Playwright → PNG)
 
     Args:
-        input_file: HTML 스크립트 파일 (data/3_generated/scripts.json)
+        input_file: 스크립트 파일 (data/3_generated/scripts.json)
 
     Returns:
         int: 생성된 카드 수
     """
     print("\n" + "="*70)
-    print("4️⃣ 스크린샷 단계 (Playwright HTML → PNG)")
+    print("4️⃣ 카드 렌더링 단계 (Playwright HTML → PNG)")
     print("="*70)
 
     if not os.path.exists(input_file):
         raise FileNotFoundError(f"입력 파일을 찾을 수 없습니다: {input_file}")
 
-    generator = HTMLCardGenerator()
-    results = generator.run(input_file)
+    results = generate_from_scripts(input_file)
 
-    print(f"\n✅ 스크린샷 완료! {results}장 카드 → data/4_cards/")
+    print(f"\n✅ 렌더링 완료! {results}장 카드 → data/4_cards/")
     return results
 
 

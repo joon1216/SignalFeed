@@ -76,6 +76,54 @@ MACRO_ECONOMIC_RULES = {
 }
 
 
+# 카드 섹터명(KoreanSector enum) ↔ 룰 테이블 토큰 연결 (Session 44)
+# enum 표기("은행·금융")와 룰 토큰("은행")이 달라 set 교집합이 발화하지 않던 문제 해결
+SECTOR_ALIASES = {
+    "은행·금융": {"은행", "금융"},
+    "보험": {"보험"},
+    "바이오·제약": {"바이오", "제약"},
+    "건설업종": {"건설"},
+    "정유업종": {"정유", "에너지"},
+    "항공사들": {"항공"},
+    "해운업체": {"해운", "운송"},
+    "방산업체": {"방위산업"},
+    "반도체 기업": {"반도체"},
+    "IT·플랫폼": {"IT", "소프트웨어"},
+    "유통·소비재": {"유통", "소비재"},
+    "여행·레저": {"여행"},
+    "화학업종": {"화학"},
+    "자동차 제조사": {"자동차"},
+    "전력·설비": {"전력설비", "유틸리티"},
+    "철강·소재": {"철강"},
+    "엔터·미디어": {"엔터"},
+}
+
+# 룰 토큰 → enum 섹터명 역매핑 (검증 실패 시 올바른 enum 섹터 제안용)
+_TOKEN_TO_ENUM = {}
+for _enum_name, _tokens in SECTOR_ALIASES.items():
+    for _t in _tokens:
+        _TOKEN_TO_ENUM.setdefault(_t, _enum_name)
+
+
+def expand_sector_names(names):
+    """enum 섹터명 목록 → 룰 토큰 집합 (자기 자신 포함)"""
+    expanded = set()
+    for n in names or []:
+        expanded.add(n)
+        expanded |= SECTOR_ALIASES.get(n, set())
+    return expanded
+
+
+def rule_tokens_to_enum(tokens):
+    """룰 토큰 목록 → enum 섹터명 목록 (중복 제거, 순서 보존)"""
+    out = []
+    for t in tokens or []:
+        enum_name = _TOKEN_TO_ENUM.get(t, t)
+        if enum_name not in out:
+            out.append(enum_name)
+    return out
+
+
 class FactChecker:
     """규칙 + yfinance 기반 팩트 검증"""
 
@@ -116,14 +164,26 @@ class FactChecker:
             return "금리 인하"
         if any(k in text_lower for k in ["dollar strong", "달러 강세"]):
             return "달러 강세"
-        if any(k in text_lower for k in ["ai", "semiconductor", "반도체", "nvidia"]):
+        # "ai"는 단어 경계로만 매칭 (said/Ukraine 등 부분 문자열 오탐 방지)
+        import re as _re
+        if _re.search(r"\bai\b", text_lower) or any(
+            k in text_lower for k in ["semiconductor", "반도체", "nvidia", "인공지능"]
+        ):
             return "AI 반도체"
         return None
 
-    def validate(self, macro_text, llm_pos_sectors, llm_neg_sectors):
+    def validate(self, macro_text, llm_pos_sectors, llm_neg_sectors, check_market=True):
         """
         매크로 텍스트와 LLM이 생성한 섹터 분석 검증
-        Returns: {"status": "passed"/"failed"/"warning", "message": str}
+
+        섹터 논리(failed)를 시장 추세(warning)보다 먼저 검사한다 —
+        경제 논리 오류가 시장 경고에 가려지지 않도록 (Session 44).
+        enum 섹터명("은행·금융")은 alias로 룰 토큰("은행")에 매칭된다.
+
+        Args:
+            check_market: False면 yfinance 호출 생략 (테스트/캐시 재사용 시)
+
+        Returns: {"status": "passed"/"failed"/"warning", "message": str, ...}
         """
         topic = self.detect_topic(macro_text)
         if not topic or topic not in MACRO_ECONOMIC_RULES:
@@ -131,20 +191,9 @@ class FactChecker:
 
         rule = MACRO_ECONOMIC_RULES[topic]
 
-        # 시장 팩트 체크
-        if "ticker" in rule:
-            is_valid, pct = self.verify_market_trend(
-                rule["ticker"], rule["expected_trend"]
-            )
-            if not is_valid:
-                return {
-                    "status": "warning",
-                    "message": f"시장 데이터 불일치: {rule['ticker']} 실제 {pct:.1f}% 변동 (예상 방향과 다름). 면책 문구 추가 권장."
-                }
-
-        # 섹터 논리 검증
-        pos_set = set(llm_pos_sectors)
-        neg_set = set(llm_neg_sectors)
+        # 1) 섹터 논리 검증 (alias 확장 후 교집합)
+        pos_set = expand_sector_names(llm_pos_sectors)
+        neg_set = expand_sector_names(llm_neg_sectors)
 
         wrong_pos = pos_set.intersection(rule.get("neg", set()))
         wrong_neg = neg_set.intersection(rule.get("pos", set()))
@@ -154,11 +203,23 @@ class FactChecker:
                 "status": "failed",
                 "topic": topic,
                 "message": f"경제 논리 오류: 수혜에 잘못 포함된 섹터 {wrong_pos}, 주의에 잘못 포함된 섹터 {wrong_neg}",
-                "correct_pos": list(rule["pos"]),
-                "correct_neg": list(rule.get("neg", set()))
+                "correct_pos": rule_tokens_to_enum(sorted(rule["pos"])),
+                "correct_neg": rule_tokens_to_enum(sorted(rule.get("neg", set()))),
             }
 
-        return {"status": "passed", "message": f"'{topic}' 검증 통과"}
+        # 2) 시장 팩트 체크 (yfinance)
+        if check_market and "ticker" in rule:
+            is_valid, pct = self.verify_market_trend(
+                rule["ticker"], rule["expected_trend"]
+            )
+            if not is_valid:
+                return {
+                    "status": "warning",
+                    "topic": topic,
+                    "message": f"시장 데이터 불일치: {rule['ticker']} 실제 {pct:.1f}% 변동 (예상 방향과 다름). 면책 문구 추가 권장."
+                }
+
+        return {"status": "passed", "topic": topic, "message": f"'{topic}' 검증 통과"}
 
 
 if __name__ == "__main__":
