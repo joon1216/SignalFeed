@@ -1901,3 +1901,32 @@
   5. pipeline 최종 로그 "(25 clusters)" → "(카드 25장)" 표기 수정
 - **부수**: .env.example 현행화 (Polygon/OpenAI/Pexels 등 폐기 키 제거, PIXABAY/IG_SESSION_FILE 추가)
 - **Result**: ✅ pytest 115개 통과 (92 → 115)
+
+---
+
+### Session 47: 포트폴리오용 README 갱신 + 샘플 이미지 (2026-07-03)
+- **배경**: 레포명이 issuefit_project → SignalFeed로 바뀐 뒤에도 README.md가 4개월 전
+  "IssueFit - 로컬 버전"(정치 뉴스 이슈 분석, Docker/Ollama/gemma2 기반) 설명 그대로 남아
+  실제 코드(SignalFeed, 매크로 경제 카드뉴스 자동생성)와 완전히 불일치 — 이력서 제출 전 긴급 교체
+- **README.md 전면 교체**: Pipeline 개요, 기술적 특징 5개(무료 API 구성/LLM 비신뢰 아키텍처/구조적
+  안전장치/비용 관리/레퍼런스 학습 시스템), Tech Stack, Sample Output 섹션으로 재작성
+- **샘플 이미지 선정**: `data/4_cards/` 5개 클러스터(0,2,3,4,6) 커버를 전수 검토
+  - cluster_6("달러 강세, 인도는 비상?")은 커버가 키보드 클로즈업 사진으로 주제와 완전히 무관한
+    이미지 미스매치 결함 확인. 이는 Session 45 Phase 2 fix #1에서 이미 문서화된
+    "'defense'→키보드 사진" 버그의 수정 이전 산출물로 판단(파일 생성 시각이 다른 클러스터보다 늦어
+    가장 최근처럼 보였으나 실제로는 fix 반영 전 상태)
+  - cluster_2 / cluster_4는 서로 다른 이슈(이란 핵합의/중동 긴장)에 동일한 정장 남성 스톡사진을 재사용
+  - cluster_3("국방비 증가, 어디에 영향?")를 채택: 야간 도시 건물 커버가 지정학 이슈와 자연스럽게
+    어울리고, 내지 5장 전체에서 섹터-이유 불일치/중복/영문 헤드라인/여백/이미지 미스매치 중
+    해당하는 결함 없음을 확인
+  - `data/4_cards/cluster_3/slide_1.png` → `docs/assets/sample_cover.png`로 복사
+    (`docs/assets/`는 `.gitignore`의 `data/`, `outputs/` 제외 패턴에 걸리지 않음을
+    `git check-ignore`로 확인)
+- **GitHub About 메타데이터**: `gh repo view`로 확인한 결과 description·topics
+  (python/llm/automation/content-generation/gemini-api)가 이미 요청 문구와 일치하게
+  설정되어 있어 추가 조치 불필요
+- **커밋 범위**: 세션 시작 시점에 이미 존재하던 `reference/accounts.txt`,
+  `reference/urls.txt`, `reference/discovered.json`의 미커밋 변경(Session 45 discover.py
+  실행 잔여물로 추정)은 이번 README 작업과 무관해 커밋에서 제외 — `README.md`,
+  `docs/assets/sample_cover.png`만 스테이징
+- **Result**: ✅ README.md 교체, 샘플 이미지 추가, GitHub About 확인 완료
