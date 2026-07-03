@@ -69,3 +69,46 @@ class TestHitScoring:
         relevant = make_hit("skyscraper, bank, building, night", downloads=5000)
         best = ImageFetcher.pick_best([irrelevant, relevant], keyword="skyscraper bank building night city")
         assert best is relevant
+
+
+class TestCategoryFallbackMerge:
+    """business 카테고리 커버리지 공백 시 무제한 검색 결과와 합쳐 스코어링
+    (Session 48 — '국방비 증가' 커버가 business 카테고리 내 화물선/합성 이미지로
+    잡히던 문제. business는 항상 hits>0을 반환해 기존 '무결과 시에만 재시도'
+    로직이 발동하지 않았음)"""
+
+    def setup_method(self):
+        self.fetcher = ImageFetcher(api_key="dummy")
+
+    def test_merges_business_and_unrestricted_pools(self, monkeypatch):
+        weak_business_hit = {
+            "id": 1, "tags": "cargo, ship, port, business",
+            "imageWidth": 2000, "imageHeight": 3000, "downloads": 5000,
+            "largeImageURL": "http://example.com/weak.jpg",
+        }
+        strong_unrestricted_hit = {
+            "id": 2, "tags": "military, aircraft, carrier, navy",
+            "imageWidth": 2000, "imageHeight": 3000, "downloads": 5000,
+            "largeImageURL": "http://example.com/strong.jpg",
+        }
+
+        def fake_search_hits(keyword, with_category):
+            return [weak_business_hit] if with_category else [strong_unrestricted_hit]
+
+        monkeypatch.setattr(self.fetcher, "_search_hits", fake_search_hits)
+        url = self.fetcher._query_pixabay("military aircraft carrier navy")
+        assert url == "http://example.com/strong.jpg"
+
+    def test_dedupes_by_id_across_pools(self, monkeypatch):
+        hit = {
+            "id": 1, "tags": "military, aircraft",
+            "imageWidth": 2000, "imageHeight": 3000, "downloads": 5000,
+            "largeImageURL": "http://example.com/only.jpg",
+        }
+
+        def fake_search_hits(keyword, with_category):
+            return [hit]
+
+        monkeypatch.setattr(self.fetcher, "_search_hits", fake_search_hits)
+        url = self.fetcher._query_pixabay("military aircraft")
+        assert url == "http://example.com/only.jpg"

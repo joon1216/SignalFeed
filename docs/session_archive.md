@@ -1930,3 +1930,49 @@
   실행 잔여물로 추정)은 이번 README 작업과 무관해 커밋에서 제외 — `README.md`,
   `docs/assets/sample_cover.png`만 스테이징
 - **Result**: ✅ README.md 교체, 샘플 이미지 추가, GitHub About 확인 완료
+
+---
+
+### Session 48: README 샘플 이미지 교체 — 5장 전체 + 정상 케이스 (2026-07-03)
+- **문제 인지**: Session 47에서 채택한 `sample_cover.png`(cluster_3, "국방비 증가")가
+  유럽 건물 야경 이미지였음 — 실제로는 `image_fetcher`의 토픽 매핑 실패로 fallback
+  검색어("지정학")에 빠진 산출물이었고, README에 커버 1장만 노출돼 5장 카드뉴스
+  구조라는 핵심 기능이 드러나지 않았음
+- **Phase 1 원인 확인**: `data/3_generated/scripts.json`을 직접 확인한 결과
+  issue_id 3(국방비 증가)의 `fact_check`가 `{"status": "passed", "message": "알 수 없는
+  토픽, 검증 통과"}`로, `fact_checker.MACRO_ECONOMIC_RULES`(10개 매크로 토픽) 중
+  "국방비" 관련 토픽 자체가 없어 `detect_topic()`이 감지하지 못하고 있었음. 이 때문에
+  `generate_cards.resolve_cover_keyword()`의 1순위(저장된 topic)와 2순위(재감지)가
+  모두 빠지고, 3순위 부분 문자열 매핑에서 "지정학적"이 "defense"보다 먼저 매칭돼
+  일반적인 "stormy dark clouds city" 검색어로 떨어졌던 것
+- **fact_checker.py**: `MACRO_ECONOMIC_RULES`에 "국방비 증가" 토픽 신설
+  (ticker=ITA, pos={방위산업, IT}, neg=set() — 국방비 증가에 대한 확립된 매크로 손실
+  섹터가 없어 AI 반도체/중국 경기 호조 토픽과 동일하게 neg 비움, cluster_3의 실제
+  수혜 섹터 선택과 충돌 없이 통과함을 검증). `detect_topic()`에 "국방비"/"방위비"/
+  "defense spending"/"defense budget"/"military spending" 키워드 분기 추가
+- **image_fetcher.py**: `TOPIC_KEYWORDS`에 "국방비 증가" 키 추가. 여기서 2차 문제
+  발견 — Pixabay `category=business` 필터는 대부분의 매크로 키워드에 대해 항상
+  hits>0을 반환해(느슨한 OR 매칭) 기존 "무결과 시에만 category 없이 재시도" 로직이
+  사실상 죽은 코드였고, 방산/군사처럼 business 카테고리 내 실제 커버리지가 얕은
+  주제에서는 소수 후보 중 최고점이 화물선(민간 해운)이나 한 아티스트의 반복
+  등장하는 초현실 합성 사진("Navy 항공기에 매달린 사람과 새떼", id 4875444 —
+  military/aircraft/army/jet/war 등 거의 모든 방산 어휘에 태그가 걸려 최고점을
+  독식)으로 잡히는 것을 다수 키워드 실측으로 확인. `_query_pixabay()`를
+  business 카테고리 검색과 무제한 검색 결과를 id로 중복 제거 후 병합해 하나의
+  풀에서 스코어링하도록 재작성(`_search_hits()` 신설) — 카테고리 커버리지 공백의
+  영향을 받지 않게 됨. `fetch()`/`fetch_image()`의 1차/2차 재시도 호출부 정리
+- **Phase 2 재검증**: `backend/generate_cards.py --issue 3`으로 캐시된 scripts.json을
+  Gemini 재호출 없이 재렌더링. 새 로직으로 실제 선택된 커버는 항공모함 비행갑판에서
+  전투기 이륙을 지시하는 flight director 사진(id 79571) — 국방비 증가 주제와 명확히
+  매칭됨을 육안 확인. 내지 4장도 재확인해 섹터-이유 정합성/중복/여백 결함 없음 재검증
+  (콘텐츠 자체는 캐시 재사용이라 Session 47 검증과 동일, 커버 이미지만 교체됨)
+- **Phase 3 README**: Sample Output을 표 레이아웃으로 5장 전체 노출
+  (`docs/assets/sample_1.png` ~ `sample_5.png`), 기존 `sample_cover.png` 삭제
+- **회귀 테스트 6개 추가** (총 121개 통과): `detect_topic` 한/영 국방비 케이스,
+  국방비 토픽 sector 검증 통과 케이스, `resolve_cover_keyword` 국방비 케이스,
+  business+무제한 검색 병합 케이스, id 중복 제거 케이스
+- **커밋 범위**: 세션 시작 시점부터 있던 `reference/accounts.txt`, `reference/urls.txt`,
+  `reference/discovered.json`의 미커밋 변경(Session 45 discover.py 실행 잔여물)은
+  이번 작업과 무관해 계속 커밋에서 제외
+- **Result**: ✅ 국방 관련 토픽 이미지 매핑 결함 근본 수정(토픽 감지 + 검색 전략),
+  README가 카드뉴스 5장 구조 전체를 노출하도록 갱신, pytest 121개 통과

@@ -47,6 +47,18 @@ class TestTopicFirstKeyword:
         # '반도체'는 detect_topic에서 'AI 반도체' 토픽으로 감지됨 → 토픽 키워드
         assert kw == ImageFetcher.TOPIC_KEYWORDS["AI 반도체"]
 
+    def test_defense_topic_redetected_when_not_stored(self):
+        """실물 결함 재현: '국방비 증가' 클러스터가 토픽 미감지로 빠져 부분 문자열
+        매핑에서 'defense'→military 키보드 사진에 밀리던 문제 (Session 48)"""
+        script = make_script(
+            hook_title="국방비 증가\n어디에 영향?",
+            one_line="싱가포르 샹그릴라 대화에서 국방비 증액이 논의되었다.",
+            image_keyword="Military defense meeting",
+            fact_check={},
+        )
+        kw = resolve_cover_keyword(script)
+        assert kw == ImageFetcher.TOPIC_KEYWORDS["국방비 증가"]
+
     def test_default_when_nothing_matches(self):
         script = make_script(
             hook_title="오늘의 글로벌\n경제 시그널",

@@ -94,6 +94,7 @@ class ImageFetcher:
         "지정학 해소": "bright sunrise city skyline",
         "중국 경기 호조": "shanghai skyline night city",
         "AI 반도체": "glowing microchip blue server room",
+        "국방비 증가": "aircraft carrier navy ship",
     }
 
     @classmethod
@@ -176,10 +177,10 @@ class ImageFetcher:
             return None
         return best
 
-    def _query_pixabay(self, keyword: str, with_category: bool = True) -> Optional[str]:
-        """Pixabay API 검색 → 스코어링 후 최적 이미지 largeImageURL 반환"""
+    def _search_hits(self, keyword: str, with_category: bool) -> list:
+        """Pixabay API 검색 → 원본 hits 리스트 (에러/키 없음 시 빈 리스트)"""
         if not self.api_key:
-            return None
+            return []
         params = {
             "key": self.api_key,
             "q": keyword,
@@ -195,12 +196,27 @@ class ImageFetcher:
         try:
             resp = requests.get(self.PIXABAY_API_URL, params=params, timeout=10)
             resp.raise_for_status()
-            hits = resp.json().get("hits", [])
-            best = self.pick_best(hits, keyword)
-            return best["largeImageURL"] if best else None
+            return resp.json().get("hits", [])
         except Exception as e:
             logger.error(f"Pixabay 검색 실패 '{keyword}': {e}")
-            return None
+            return []
+
+    def _query_pixabay(self, keyword: str) -> Optional[str]:
+        """business 카테고리 + 무제한 검색 결과를 합쳐 스코어링 후 최적 이미지 반환.
+
+        business 카테고리는 대부분의 매크로 키워드에 대해 항상 hits>0을 반환하지만
+        (Pixabay의 느슨한 OR 매칭), 방산/군사처럼 category=business 내 실제 사진
+        커버리지가 얕은 주제에서는 그 소수 후보 중 최고점이 여전히 무관한 이미지인
+        경우가 있었다 (Session 48 — '국방비 증가' 커버가 화물선/합성 이미지로 잡힘).
+        두 풀을 합쳐 하나의 스코어링 경쟁에 부치면 카테고리 커버리지 공백의 영향을
+        받지 않는다.
+        """
+        merged = {}
+        for hit in self._search_hits(keyword, with_category=True) + self._search_hits(keyword, with_category=False):
+            if hit.get("id") is not None:
+                merged[hit["id"]] = hit
+        best = self.pick_best(list(merged.values()), keyword)
+        return best["largeImageURL"] if best else None
 
     def fetch(self, keyword: str, save_path: str) -> bool:
         """
@@ -217,10 +233,7 @@ class ImageFetcher:
             logger.warning("No Pixabay API key")
             return False
 
-        # 1차: category=business / 2차: category 없이 재시도
-        img_url = self._query_pixabay(keyword, with_category=True)
-        if not img_url:
-            img_url = self._query_pixabay(keyword, with_category=False)
+        img_url = self._query_pixabay(keyword)
         if not img_url:
             logger.warning(f"No photos found for keyword: {keyword}")
             return False
@@ -243,9 +256,7 @@ class ImageFetcher:
 
     def fetch_image(self, keyword: str) -> Optional[Image.Image]:
         """Pixabay 이미지를 PIL Image로 반환 (in-memory 사용처용)"""
-        img_url = self._query_pixabay(keyword, with_category=True)
-        if not img_url:
-            img_url = self._query_pixabay(keyword, with_category=False)
+        img_url = self._query_pixabay(keyword)
         if not img_url:
             return None
         try:

@@ -86,3 +86,26 @@ class TestTopicDetection:
 
     def test_geopolitics(self):
         assert self.checker.detect_topic("missile strike conflict") == "지정학 리스크"
+
+    def test_defense_spending_korean(self):
+        """실물 결함 재현: '국방비 증가' 클러스터가 '알 수 없는 토픽'으로 빠져
+        커버 이미지가 무관한 fallback 검색어로 밀리던 문제 (Session 48)"""
+        assert self.checker.detect_topic("국방비 증가 어디에 영향?") == "국방비 증가"
+
+    def test_defense_spending_english(self):
+        assert self.checker.detect_topic(
+            "Defense spending, China in Asia and lessons from Ukraine"
+        ) == "국방비 증가"
+
+
+class TestDefenseSpendingRule:
+    def setup_method(self):
+        self.checker = FactChecker()
+
+    def test_defense_sector_as_beneficiary_passes(self):
+        result = self.checker.validate(
+            "국방비 증가 어디에 영향?",
+            ["방산업체", "IT·플랫폼"], ["해운업체", "항공사들"],
+            check_market=False,
+        )
+        assert result["status"] == "passed"

@@ -26,7 +26,11 @@ Python · Google Gemini API · scikit-learn / UMAP / HDBSCAN ·
 Playwright · Pydantic · yfinance
 
 ## Sample Output
-![카드뉴스 샘플](docs/assets/sample_cover.png)
+카드뉴스 5장 구조 (커버 → 팩트 → 수혜 섹터 → 주의 섹터 → 결론)
+
+| ![1](docs/assets/sample_1.png) | ![2](docs/assets/sample_2.png) | ![3](docs/assets/sample_3.png) |
+|---|---|---|
+| ![4](docs/assets/sample_4.png) | ![5](docs/assets/sample_5.png) | |
 
 ---
 개인 프로젝트 · 진행 중

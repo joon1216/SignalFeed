@@ -72,6 +72,12 @@ MACRO_ECONOMIC_RULES = {
         "expected_trend": "up",
         "pos": {"반도체", "IT", "전력설비"},
         "neg": set()
+    },
+    "국방비 증가": {
+        "ticker": "ITA",
+        "expected_trend": "up",
+        "pos": {"방위산업", "IT"},
+        "neg": set()
     }
 }
 
@@ -154,6 +160,8 @@ class FactChecker:
             return "지정학 해소"
         if any(k in text_lower for k in ["war", "conflict", "missile", "전쟁"]):
             return "지정학 리스크"
+        if any(k in text_lower for k in ["defense spending", "defense budget", "military spending", "국방비", "방위비"]):
+            return "국방비 증가"
         if any(k in text_lower for k in ["oil rise", "opec cut", "유가 상승"]):
             return "유가 상승"
         if any(k in text_lower for k in ["oil fall", "oil drop", "유가 하락"]):
