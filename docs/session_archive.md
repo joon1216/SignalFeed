@@ -1976,3 +1976,33 @@
   이번 작업과 무관해 계속 커밋에서 제외
 - **Result**: ✅ 국방 관련 토픽 이미지 매핑 결함 근본 수정(토픽 감지 + 검색 전략),
   README가 카드뉴스 5장 구조 전체를 노출하도록 갱신, pytest 121개 통과
+
+---
+
+### Session 49: README에 설계 철학 섹션 추가 (2026-07-05)
+- **배경**: 포트폴리오 제출 완료 후 "README가 기술 스택·결과물만 보여주고 어떤 판단을
+  직접 내렸는지가 안 드러난다"는 피드백. Claude Code를 페어 프로그래밍 도구로 썼다는
+  사실(CLAUDE.md, git commit의 Co-Authored-By 표기)은 숨길 게 아니라 개발 워크플로우
+  활용 능력으로 프레이밍하기로 함
+- **README.md 수정**: `Tech Stack` 섹션과 `Sample Output` 섹션 사이에 "개발 방식" 섹션
+  신설. 내용:
+  1. Claude Code를 페어 프로그래밍 파트너로 활용했다는 사실 + CLAUDE.md/git
+     co-author 표기를 그대로 노출한다는 점 명시
+  2. 아키텍처 결정·검증 로직 설계·버그 근본 원인 진단은 직접 주도했다는 서술
+  3. 구체적 실사례 1건 인용: Session 44에서 실물 카드 산출물을 검토하다 발견한
+     "바이오·제약" 섹터에 "보험·운용자산 수익률" 이유가 붙는 결함(`docs/audit_session44.md`
+     실물 카드 결함 #1). 원인은 `KoreanSector` enum에 '보험' 섹터 자체가 없었던 것
+     (`docs/DECISIONS_S44.md` D4)이었고, "섹터-이유 불일치 금지"를 프롬프트로만
+     지시했음에도 발생했다는 점에서 "LLM 출력은 신뢰하지 않는다"는 원칙 아래 검증을
+     코드 레벨 `content_validator.py`로 이동시킨 결정(D5)으로 이어진 과정을 서술
+  4. CLAUDE.md·`docs/session_archive.md`를 전체 판단 근거 출처로 링크
+- **자료 조사**: 지어낸 사례가 아님을 보장하기 위해 `docs/audit_session44.md`,
+  `docs/DECISIONS_S44.md`를 직접 확인해 실제 문서화된 결함·결정만 인용. Session 48의
+  "국방비 토픽 미감지" 사례도 검토했으나 하나만 쓰기로 하고 섹터-이유 정합성 사례를 채택
+  (해당 사례가 CLAUDE.md 절대 규칙 5/불변 원칙과 더 직접적으로 연결됨)
+- **검토**: 기술 스택 → 개발 방식 → 샘플 결과물 순서로 흐름이 자연스러운지 확인,
+  마크다운 헤더 레벨(`##`)과 `docs/session_archive.md` 상대 경로 링크 확인
+- **커밋 범위**: 세션 시작 시점부터 있던 `reference/accounts.txt`, `reference/urls.txt`,
+  `reference/discovered.json`의 미커밋 변경(Session 45 discover.py 실행 잔여물)은
+  이번 작업과 무관해 계속 커밋에서 제외, `README.md`만 스테이징
+- **Result**: ✅ README에 "개발 방식" 섹션 추가, CLAUDE.md Recent Sessions 갱신

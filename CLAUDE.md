@@ -182,9 +182,10 @@ venv/bin/python -m pytest tests/ -q                   # 테스트
 - **S45 (2026-06-12)**: 벤치마크 자동 발굴 `discover.py` (계정별 engagement/조회수 비율 상위 5개 → discovered.json + urls.txt, `--collect` 연동) + 픽스 5건 (커버 키워드 토픽 1순위 `TOPIC_KEYWORDS`, 디자인 색상 #E8E5DF 단일화, reference/ 코드·데이터 이원화 명시, Maintainer 이메일 제거, pipeline 로그 표기) + .env.example 현행화 — pytest 115개 통과
 - **S47 (2026-07-03)**: 레포명 변경(issuefit_project→SignalFeed) 후 방치돼 있던 구버전(IssueFit 정치뉴스) README를 실제 프로젝트 설명으로 전면 교체, `data/4_cards/cluster_3`(국방비 이슈, 결함 없음) 커버를 `docs/assets/sample_cover.png`로 채택해 README에 삽입. GitHub About description·topics는 이미 현행화되어 있어 추가 조치 불필요
 - **S48 (2026-07-03)**: S47 샘플 커버가 실은 토픽 미감지 결함 산출물이었음을 발견 — `fact_checker`에 "국방비 증가" 토픽(+ `TOPIC_KEYWORDS`) 신설, `image_fetcher`는 Pixabay `category=business` 단독 검색이 방산/군사처럼 커버리지가 얕은 주제에서 무관한 이미지를 최고점으로 뽑던 구조적 문제를 발견해 business+무제한 검색 결과를 합쳐 스코어링하도록 개선. README Sample Output을 5장 전체 노출(표 레이아웃)로 교체, `sample_cover.png`→`sample_1~5.png`. 회귀 테스트 6개 추가(총 121개 통과)
+- **S49 (2026-07-05)**: README에 "개발 방식" 섹션 신설 — Claude Code를 페어 프로그래밍 파트너로 썼다는 사실과 CLAUDE.md/git co-author 표기를 숨기지 않고 명시. Session 44에서 실제 있었던 사례(카드 산출물에서 "바이오·제약" 섹터에 "보험" 이유가 붙은 걸 발견 → `KoreanSector` enum에 '보험' 누락이 원인 → 검증을 프롬프트가 아닌 코드 레벨 `content_validator`로 강제하기로 결정)를 근거로 인용, CLAUDE.md·`docs/session_archive.md`를 판단 근거 출처로 링크
 
 ---
 
-**Last Updated**: 2026-07-03
+**Last Updated**: 2026-07-05
 **Version**: 2.1 (SignalFeed)
 **Maintainer**: joon1216
